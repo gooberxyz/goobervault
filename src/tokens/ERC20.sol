@@ -43,12 +43,12 @@ abstract contract ERC20 is Initializable, Context, IERC20Metadata {
      * All three of these values are immutable: they can only be set once during
      * construction.
      */
-    function __ERC20_init(string memory name_, string memory symbol_) internal initializer {
+    function __ERC20_init(string memory name_, string memory symbol_) internal onlyInitializing {
         __Context_init_unchained();
         __ERC20_init_unchained(name_, symbol_);
     }
 
-    function __ERC20_init_unchained(string memory name_, string memory symbol_) internal initializer {
+    function __ERC20_init_unchained(string memory name_, string memory symbol_) internal onlyInitializing {
         name = name_;
         symbol = symbol_;
         decimals = 18;

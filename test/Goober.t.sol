@@ -18,7 +18,7 @@ contract TestUERC20Functionality is Test {
         goober_proxy = new ERC1967Proxy(address(goober_implementation),  abi.encodeWithSignature("initialize()"));
     }
 
-    function test_proxyf() public {
+    function test_proxy() public {
         // Assertions
         assertEq(IERC20Metadata(address(goober_proxy)).name(), "Goober");
         assertEq(IERC20Metadata(address(goober_proxy)).symbol(), "GBR");

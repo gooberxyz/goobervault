@@ -10,6 +10,8 @@ import "./security/Pausable.sol";
 import "./security/ReentrancyGuard.sol";
 
 contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, ReentrancyGuard, ERC20 {
+    constructor() initializer {}
+
     function initialize() public initializer {
         __ERC20_init("Goober", "GBR");
         __ReentrancyGuard_init(); // @dev as there is no constructor, we need to initialise the ReentrancyGuard explicitly
