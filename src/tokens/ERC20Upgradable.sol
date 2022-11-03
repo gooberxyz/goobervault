@@ -9,7 +9,7 @@ import "../utils/Context.sol";
 /// @author Modified from (https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC20.sol)
 /// @author Modified from Uniswap (https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2ERC20.sol)
 /// @dev Do not manually set balances without updating totalSupply, as the sum of all user balances must not exceed it.
-abstract contract ERC20 is Initializable, Context, IERC20Metadata {
+abstract contract ERC20Upgradable is Initializable, Context, IERC20Metadata {
     // METADATA STORAGE
 
     string public name;
