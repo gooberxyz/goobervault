@@ -4,3 +4,6 @@
 [submodule "lib/art-gobblers"]
 	path = lib/art-gobblers
 	url = https://github.com/artgobblers/art-gobblers
+[submodule "lib/solmate"]
+	path = lib/solmate
+	url = https://github.com/transmissions11/solmate
