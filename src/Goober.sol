@@ -2,21 +2,24 @@
 
 pragma solidity ^0.8.17;
 
-import "./utils/Initializable.sol";
-import "./proxy/UUPSUpgradeable.sol";
-import "./utils/Ownable.sol";
-import "./tokens/ERC20Upgradable.sol";
-import "./security/Pausable.sol";
-import "./security/ReentrancyGuard.sol";
+import "openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable/security/PausableUpgradeable.sol";
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import "art-gobblers/Pages.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import "./tokens/ERC20Upgradable.sol";
 
-
-contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, ReentrancyGuard, ERC20Upgradable {
-
+contract Goober is
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    ERC20Upgradable
+{
     using SafeTransferLib for Goo;
     using FixedPointMathLib for uint256;
 
@@ -187,13 +190,9 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
         return balanceOf[owner];
     }
 
-    function beforeWithdraw(uint256 assets, uint256 shares) internal {
+    function beforeWithdraw(uint256 assets, uint256 shares) internal {}
 
-    }
-
-    function afterDeposit(uint256 assets, uint256 shares) internal {
-
-    }
+    function afterDeposit(uint256 assets, uint256 shares) internal {}
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

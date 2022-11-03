@@ -2,14 +2,14 @@
 pragma solidity >=0.8.0;
 
 import "../interfaces/IERC20Metadata.sol";
-import "../utils/Initializable.sol";
-import "../utils/Context.sol";
+import "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
+import "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 /// @notice Modern and gas efficient upgradable ERC20 + EIP-2612 implementation.
 /// @author Modified from (https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC20.sol)
 /// @author Modified from Uniswap (https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2ERC20.sol)
 /// @dev Do not manually set balances without updating totalSupply, as the sum of all user balances must not exceed it.
-abstract contract ERC20Upgradable is Initializable, Context, IERC20Metadata {
+abstract contract ERC20Upgradable is Initializable, ContextUpgradeable, IERC20Metadata {
     // METADATA STORAGE
 
     string public name;
