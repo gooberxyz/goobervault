@@ -2,9 +2,9 @@
 pragma solidity ^0.8.15;
 
 import "forge-std/Test.sol";
-import "../src/interfaces/IERC20Metadata.sol";
-import "../src/Goober.sol";
+import "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "../src/Goober.sol";
 
 contract TestUERC20Functionality is Test {
     using stdStorage for StdStorage;

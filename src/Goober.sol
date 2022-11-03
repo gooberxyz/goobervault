@@ -11,7 +11,7 @@ import "art-gobblers/ArtGobblers.sol";
 import "art-gobblers/Pages.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import "./tokens/ERC20Upgradable.sol";
+import "./ERC20Upgradable.sol";
 
 contract Goober is
     UUPSUpgradeable,

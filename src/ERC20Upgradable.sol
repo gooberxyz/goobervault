@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.8.0;
 
-import "../interfaces/IERC20Metadata.sol";
 import "openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
 import "openzeppelin-contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @notice Modern and gas efficient upgradable ERC20 + EIP-2612 implementation.
 /// @author Modified from (https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC20.sol)
