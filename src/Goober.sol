@@ -11,8 +11,15 @@ import "./security/ReentrancyGuard.sol";
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import "art-gobblers/Pages.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+
 
 contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, ReentrancyGuard, ERC20Upgradable {
+
+    using SafeTransferLib for Goo;
+    using FixedPointMathLib for uint256;
+
     // Constant/Immutable storage
 
     // TODO(Add casing for gorli deploy)
@@ -69,7 +76,7 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
         require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
 
         // Need to transfer before minting or ERC777s could reenter.
-        goo.transferFrom(msg.sender, address(this), assets);
+        goo.safeTransferFrom(msg.sender, address(this), assets);
 
         _mint(receiver, shares);
 
@@ -82,7 +89,7 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
         assets = previewMint(shares); // No need to check for rounding error, previewMint rounds up.
 
         // Need to transfer before minting or ERC777s could reenter.
-        goo.transferFrom(msg.sender, address(this), assets);
+        goo.safeTransferFrom(msg.sender, address(this), assets);
 
         _mint(receiver, shares);
 
@@ -106,7 +113,7 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
 
         emit Withdraw(msg.sender, receiver, owner, assets, shares);
 
-        goo.transfer(receiver, assets);
+        goo.safeTransfer(receiver, assets);
     }
 
     function redeem(uint256 shares, address receiver, address owner) public virtual returns (uint256 assets) {
