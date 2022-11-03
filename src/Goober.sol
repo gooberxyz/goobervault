@@ -50,10 +50,12 @@ contract Goober is
     constructor() initializer {}
 
     function initialize() public initializer {
+        // @dev as there is no constructor, we need to initialise the these explicitly
+        __UUPSUpgradeable_init();
+        __Ownable_init();
+        __Pausable_init();
+        __ReentrancyGuard_init();
         __ERC20_init("Goober", "GBR");
-        __ReentrancyGuard_init(); // @dev as there is no constructor, we need to initialise the ReentrancyGuard explicitly
-        __Pausable_init(); // @dev as there is no constructor, we need to initialise the Pausable explicitly
-        __Ownable_init(); // @dev as there is no constructor, we need to initialise the Ownable explicitly
     }
 
     // @dev required by the UUPS module
@@ -61,6 +63,7 @@ contract Goober is
 
     // G can be derived from Goo.totalSupply, plus the issuance rate
     // M we can track internally
+    // B
     // Q must be tracked via an off chain oracle
 
     // When our GOO balance exceeds M/Q * G at time t where M is the total multiple of our GOBBLER and Q is the
@@ -136,7 +139,7 @@ contract Goober is
     function totalAssets() public view returns (uint256 gobberBal, uint256 gobblerMult, uint256 gooTokens) {
         return (
             artGobblers.balanceOf(address(this)),
-            fm,
+            m,
             goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this))
         );
     }
