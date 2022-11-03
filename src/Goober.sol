@@ -13,7 +13,6 @@ import "art-gobblers/ArtGobblers.sol";
 import "art-gobblers/Pages.sol";
 
 contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, ReentrancyGuard, ERC20Upgradable {
-
     // Constant/Immutable storage
 
     // TODO(Add casing for gorli deploy)
@@ -25,11 +24,7 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
     event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
 
     event Withdraw(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
+        address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
 
     // Constructor/init
@@ -67,12 +62,14 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
 
     // TODO(Views for goo and gobbler exchange rates to GBR)
 
+    // TODO(Use safetransfers)
+
     function deposit(uint256 assets, address receiver) public virtual returns (uint256 shares) {
         // Check for rounding error since we round down in previewDeposit.
         require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
 
         // Need to transfer before minting or ERC777s could reenter.
-        goo.safeTransferFrom(msg.sender, address(this), assets);
+        goo.transferFrom(msg.sender, address(this), assets);
 
         _mint(receiver, shares);
 
@@ -85,7 +82,7 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
         assets = previewMint(shares); // No need to check for rounding error, previewMint rounds up.
 
         // Need to transfer before minting or ERC777s could reenter.
-        goo.safeTransferFrom(msg.sender, address(this), assets);
+        goo.transferFrom(msg.sender, address(this), assets);
 
         _mint(receiver, shares);
 
@@ -94,11 +91,7 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
         afterDeposit(assets, shares);
     }
 
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public virtual returns (uint256 shares) {
+    function withdraw(uint256 assets, address receiver, address owner) public virtual returns (uint256 shares) {
         shares = previewWithdraw(assets); // No need to check for rounding error, previewWithdraw rounds up.
 
         if (msg.sender != owner) {
@@ -113,14 +106,10 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
 
         emit Withdraw(msg.sender, receiver, owner, assets, shares);
 
-        goo.safeTransfer(receiver, assets);
+        goo.transfer(receiver, assets);
     }
 
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public virtual returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address owner) public virtual returns (uint256 assets) {
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
@@ -192,9 +181,6 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
     function beforeWithdraw(uint256 assets, uint256 shares) internal virtual {}
 
     function afterDeposit(uint256 assets, uint256 shares) internal virtual {}
-
-
-
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
