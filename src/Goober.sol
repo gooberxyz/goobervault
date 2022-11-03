@@ -135,7 +135,9 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
         goo.safeTransfer(receiver, assets);
     }
 
-    function totalAssets() public view virtual returns (uint256);
+    function totalAssets() public pure returns (uint256) {
+        return 0;
+    }
 
     function convertToShares(uint256 assets) public view virtual returns (uint256) {
         uint256 supply = totalSupply; // Saves an extra SLOAD if totalSupply is non-zero.
@@ -185,9 +187,13 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
         return balanceOf[owner];
     }
 
-    function beforeWithdraw(uint256 assets, uint256 shares) internal virtual {}
+    function beforeWithdraw(uint256 assets, uint256 shares) internal {
 
-    function afterDeposit(uint256 assets, uint256 shares) internal virtual {}
+    }
+
+    function afterDeposit(uint256 assets, uint256 shares) internal {
+
+    }
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
