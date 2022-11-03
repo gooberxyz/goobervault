@@ -28,12 +28,19 @@ contract Goober is
     Goo public constant goo = Goo(0x600000000a36F3cD48407e35eB7C5c910dc1f7a8);
     ArtGobblers public constant artGobblers = ArtGobblers(0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769);
 
+    // Mutable storage
+
     // EVENTS
 
-    event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
+    event Deposit(address indexed caller, address indexed owner, uint256[] gobblers, uint256 gooTokens, uint256 shares);
 
     event Withdraw(
-        address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
+        address indexed caller,
+        address indexed receiver,
+        address indexed owner,
+        uint256[] gobblers,
+        uint256 gooTokens,
+        uint256 shares
     );
 
     // Constructor/init
@@ -76,20 +83,36 @@ contract Goober is
     // Users need to be able to deposit and withdraw goo or gobblers
     // Gobblers are valued by mult
 
-    function deposit(uint256 assets, address receiver) public returns (uint256 shares) {
+    function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
+        public
+        returns (uint256 shares)
+    {
+        shares = previewDeposit(gobblers, gooTokens);
         // Check for rounding error since we round down in previewDeposit.
-        require((shares = previewDeposit(assets)) != 0, "ZERO_SHARES");
+        require(shares != 0, "ZERO_SHARES");
 
         // Need to transfer before minting or ERC777s could reenter.
-        goo.safeTransferFrom(msg.sender, address(this), assets);
+        // Transfer goo if any
+        if (gooTokens >= 0) {
+            goo.safeTransferFrom(msg.sender, address(this), gooTokens);
+        }
+
+        // Transfer gobblers if any
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            artGobblers.safeTransferFrom(msg.sender, address(this), gobblers[i]);
+        }
 
         _mint(receiver, shares);
 
-        emit Deposit(msg.sender, receiver, assets, shares);
+        emit Deposit(msg.sender, receiver, gobblers, gooTokens, shares);
     }
 
-    function withdraw(uint256 assets, address receiver, address owner) public virtual returns (uint256 shares) {
-        shares = previewWithdraw(assets); // No need to check for rounding error, previewWithdraw rounds up.
+    function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
+        public
+        virtual
+        returns (uint256 shares)
+    {
+        shares = previewWithdraw(gobblers, gooTokens); // No need to check for rounding error, previewWithdraw rounds up.
 
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
@@ -99,21 +122,29 @@ contract Goober is
 
         _burn(owner, shares);
 
-        emit Withdraw(msg.sender, receiver, owner, assets, shares);
+        emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
 
-        goo.safeTransfer(receiver, assets);
+        // Transfer goo if any
+        if (gooTokens >= 0) {
+            goo.safeTransfer(receiver, gooTokens);
+        }
+
+        // Transfer gobblers if any
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
+        }
     }
 
     function totalAssets() public pure returns (uint256) {
         return 0;
     }
 
-    function previewDeposit(uint256 assets) public view returns (uint256) {
-        return 0;
+    function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 shares) {
+        return 1;
     }
 
-    function previewWithdraw(uint256 assets) public view returns (uint256) {
-        return 0;
+    function previewWithdraw(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 shares) {
+        return 1;
     }
 
     function maxDeposit(address) public pure returns (uint256) {
