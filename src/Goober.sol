@@ -30,6 +30,8 @@ contract Goober is
 
     // Mutable storage
 
+    uint256 m = 0;
+
     // EVENTS
 
     event Deposit(address indexed caller, address indexed owner, uint256[] gobblers, uint256 gooTokens, uint256 shares);
@@ -75,10 +77,6 @@ contract Goober is
 
     // TODO(Pages)
     // TODO(Legendary gobblers)
-
-    // TODO(Views for goo and gobbler exchange rates to GBR)
-
-    // TODO(Use safetransfers)
 
     // Users need to be able to deposit and withdraw goo or gobblers
     // Gobblers are valued by mult
@@ -135,9 +133,15 @@ contract Goober is
         }
     }
 
-    function totalAssets() public pure returns (uint256) {
-        return 0;
+    function totalAssets() public view returns (uint256 gobberBal, uint256 gobblerMult, uint256 gooTokens) {
+        return (
+            artGobblers.balanceOf(address(this)),
+            fm,
+            goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this))
+        );
     }
+
+    // TODO(Views for goo and gobbler exchange rates to GBR)
 
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 shares) {
         return 1;
