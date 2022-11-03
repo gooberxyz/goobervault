@@ -10,6 +10,18 @@ import "./security/Pausable.sol";
 import "./security/ReentrancyGuard.sol";
 
 contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, ReentrancyGuard, ERC20 {
+
+    // Events
+
+    event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
+
+    event Withdraw(
+        address indexed caller,
+        address indexed receiver,
+        address indexed owner,
+        uint256 assets,
+        uint256 shares
+    );
     constructor() initializer {}
 
     function initialize() public initializer {
@@ -20,7 +32,7 @@ contract Goober is Initializable, UUPSUpgradeable, Ownable, Pausable, Reentrancy
     }
 
     // @dev required by the UUPS module
-    function _authorizeUpgrade(address) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
