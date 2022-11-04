@@ -38,7 +38,7 @@ contract Goober is
     // Mutable storage
 
     uint256 m = 0;
-    uint256 public FLASHLOAN_FEE = 20000; //  1 == 0.0001 %
+    uint256 public FLASHLOAN_FEE; //  1000 = 10%
 
     // EVENTS
 
@@ -202,25 +202,16 @@ contract Goober is
         uint256 amount,
         bytes calldata data
     ) external override returns(bool) {
-        require(
-            token == address(goo),
-            "FlashLender: Unsupported currency"
-        );
         uint256 _fee = flashFee(token, amount);
+        uint256 _finalAmount = amount + _fee;
         artGobblers.removeGoo(amount);
-        require(
-            goo.transfer(address(receiver), amount),
-            "FlashLender: Transfer failed"
-        );
+        goo.transfer(address(receiver), amount);
         require(
             receiver.onFlashLoan(msg.sender, token, amount, _fee, data) == FLASHLOAN_CALLBACK_SUCCESS,
             "FlashLender: Callback failed"
         );
-        require(
-            goo.transferFrom(address(receiver), address(this), amount + _fee),
-            "FlashLender: Repay failed"
-        );
-        artGobblers.addGoo(amount + _fee);
+        goo.transferFrom(address(receiver), address(this), _finalAmount);
+        artGobblers.addGoo(_finalAmount);
         return true;
     }
 
