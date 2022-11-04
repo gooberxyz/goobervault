@@ -15,14 +15,13 @@ contract TestUERC20Functionality is Test, IERC3156FlashBorrower {
     // Test Contracts
     Goober public goober_implementation;
     TransparentUpgradeableProxy public goober_proxy;
-    
+
     // Art gobbler stuff
     Goo public constant goo = Goo(0x600000000a36F3cD48407e35eB7C5c910dc1f7a8);
     ArtGobblers public constant artGobblers = ArtGobblers(0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769);
 
     address public constant GOBBLER_WHALE = 0x0c1a3E4E1C3DA4c89582dfA1AFA87A1853D7f78f;
     address public constant GOO_WHALE = 0x52c7bDbE5093d4EdB47C917Bf6d148FF41B72EE9;
-    
 
     function setUp() public {
         goober_implementation = new Goober();
@@ -55,14 +54,14 @@ contract TestUERC20Functionality is Test, IERC3156FlashBorrower {
             artGobblers.transferFrom(GOBBLER_WHALE, address(goober_proxy), GOBBLER_IDS[i]);
         }
         vm.stopPrank();
-        
+
         vm.startPrank(GOO_WHALE);
-        
+
         // put some goo here to pay flashloan fee
         goo.transfer(address(this), 1 ether);
         //put some goo in the Goober contract
         goo.transfer(address(goober_proxy), 10 ether);
-        
+
         vm.stopPrank();
 
         // add goo from goober into tank
@@ -71,18 +70,15 @@ contract TestUERC20Functionality is Test, IERC3156FlashBorrower {
 
         // execute flashloan
         Goober(address(goober_proxy)).flashLoan(IERC3156FlashBorrower(address(this)), address(goo), 10 ether, "");
-        
+
         // Assertions
         assertEq(goo.balanceOf(address(this)), 0);
     }
 
-    function onFlashLoan(
-        address initiator,
-        address token,
-        uint256 amount,
-        uint256 fee,
-        bytes calldata data
-    ) external returns (bytes32) {
+    function onFlashLoan(address initiator, address token, uint256 amount, uint256 fee, bytes calldata data)
+        external
+        returns (bytes32)
+    {
         return keccak256("ERC3156FlashBorrower.onFlashLoan");
     }
 }

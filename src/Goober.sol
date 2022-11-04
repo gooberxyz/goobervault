@@ -14,7 +14,6 @@ import "./ERC20Upgradable.sol";
 import "./interfaces/IERC3156FlashBorrower.sol";
 import "./interfaces/IERC3156FlashLender.sol";
 
-
 contract Goober is
     UUPSUpgradeable,
     OwnableUpgradeable,
@@ -172,16 +171,11 @@ contract Goober is
         return type(uint256).max;
     }
 
-    function maxFlashLoan(
-        address token
-    ) external view returns (uint256) {
+    function maxFlashLoan(address token) external view returns (uint256) {
         return token == address(goo) ? artGobblers.gooBalance(address(this)) : 0;
     }
 
-    function flashFee(
-        address token,
-        uint256 amount
-    ) public view returns (uint256) {
+    function flashFee(address token, uint256 amount) public view returns (uint256) {
         return amount * FLASHLOAN_FEE / 10000;
     }
 
@@ -196,12 +190,11 @@ contract Goober is
      * @param amount The amount of tokens lent.
      * @param data A data parameter to be passed on to the `receiver` for any custom use.
      */
-    function flashLoan(
-        IERC3156FlashBorrower receiver,
-        address token,
-        uint256 amount,
-        bytes calldata data
-    ) external override returns(bool) {
+    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes calldata data)
+        external
+        override
+        returns (bool)
+    {
         uint256 _fee = flashFee(token, amount);
         uint256 _finalAmount = amount + _fee;
         artGobblers.removeGoo(amount);
