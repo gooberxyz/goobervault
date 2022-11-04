@@ -33,16 +33,19 @@ python-versions = "*"
 
 [[package]]
 name = "slither-analyzer"
-version = "0.8.3"
+version = "0.9.0"
 description = "Slither is a Solidity static analysis framework written in Python 3."
 category = "main"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 
 [package.dependencies]
-crytic-compile = ">=0.2.3"
+crytic-compile = ">=0.2.4"
 prettytable = ">=0.7.2"
 pysha3 = ">=1.0.2"
+
+[package.extras]
+dev = ["black (==22.3.0)", "deepdiff", "numpy", "pylint (==2.13.4)", "pytest", "pytest-cov", "solc-select (>=v1.0.0b1)"]
 
 [[package]]
 name = "wcwidth"
@@ -55,7 +58,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "d0ec0fcccd9da1a5a8929ed257e88488d546bab27a0f133b5baf7a2cf50195de"
+content-hash = "c8b26b0f1729a346bf1875106a65d7124d5ffb9f5bf9fd22204745b4b275f236"
 
 [metadata.files]
 crytic-compile = [
@@ -89,7 +92,8 @@ pysha3 = [
     {file = "pysha3-1.0.2.tar.gz", hash = "sha256:fe988e73f2ce6d947220624f04d467faf05f1bbdbc64b0a201296bb3af92739e"},
 ]
 slither-analyzer = [
-    {file = "slither_analyzer-0.8.3-py3-none-any.whl", hash = "sha256:6216a934e45a85d2d1a8831b14e5f36a98d56dec7ee4eaf9e59194133d346697"},
+    {file = "slither-analyzer-0.9.0.tar.gz", hash = "sha256:bb37ebde30b24ed6c933d575fe34d2d92581ab748eb8c9030ce60543cbc2e132"},
+    {file = "slither_analyzer-0.9.0-py3-none-any.whl", hash = "sha256:92f16f7f75f87c00e702c163090d25d4dfb53e3f6f758d9f2885aefd77a3a3d5"},
 ]
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},

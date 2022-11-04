@@ -6,7 +6,7 @@ authors = ["Alcibiades <you@example.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-slither-analyzer = "^0.8.2"
+slither-analyzer = "^0.9.0"
 
 [tool.poetry.dev-dependencies]
 
