@@ -29,8 +29,6 @@ contract TestUERC20Functionality is Test, IERC3156FlashBorrower {
         goober_proxy =
         new TransparentUpgradeableProxy(address(goober_implementation), address(msg.sender), abi.encodeWithSignature("initialize()"));
         goo.approve(address(goober_proxy), type(uint256).max);
-        // set 5% fee
-        Goober(address(goober_proxy)).changeFee(500);
     }
 
     function test_proxy() public {
@@ -41,7 +39,10 @@ contract TestUERC20Functionality is Test, IERC3156FlashBorrower {
     }
 
     function test_flashloan() public {
-        // put some gobblers and goo into the Goober contract
+        // set 10% flashloan fee
+        Goober(address(goober_proxy)).changeFee(1000);
+
+        // put some gobblers into the Goober contract
         uint256[] memory GOBBLER_IDS = new uint256[](6);
         GOBBLER_IDS[0] = 1271;
         GOBBLER_IDS[1] = 116;
@@ -56,16 +57,23 @@ contract TestUERC20Functionality is Test, IERC3156FlashBorrower {
         vm.stopPrank();
         
         vm.startPrank(GOO_WHALE);
+        
+        // put some goo here to pay flashloan fee
         goo.transfer(address(this), 1 ether);
-        goo.transfer(address(goober_proxy), 16 ether);
+        //put some goo in the Goober contract
+        goo.transfer(address(goober_proxy), 10 ether);
+        
         vm.stopPrank();
+
+        // add goo from goober into tank
         vm.prank(address(goober_proxy));
-        artGobblers.addGoo(16 ether);
+        artGobblers.addGoo(10 ether);
 
         // execute flashloan
         Goober(address(goober_proxy)).flashLoan(IERC3156FlashBorrower(address(this)), address(goo), 10 ether, "");
-
-        // TODO make sure the accounting adds up
+        
+        // Assertions
+        assertEq(goo.balanceOf(address(this)), 0);
     }
 
     function onFlashLoan(

@@ -8,4 +8,4 @@ update:; forge update
 # Build & test
 build  :; forge build --sizes
 
-t   :; forge test -vvvvv --rpc-url=${ETH_RPC_URL} --fork-block-number 15895231
+t   :; forge test -vvv --rpc-url=${ETH_RPC_URL} --fork-block-number 15895231
