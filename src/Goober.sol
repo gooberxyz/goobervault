@@ -11,13 +11,17 @@ import "art-gobblers/ArtGobblers.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import "./ERC20Upgradable.sol";
+import "./interfaces/IERC3156FlashBorrower.sol";
+import "./interfaces/IERC3156FlashLender.sol";
+
 
 contract Goober is
     UUPSUpgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    ERC20Upgradable
+    ERC20Upgradable,
+    IERC3156FlashLender
 {
     using SafeTransferLib for Goo;
     using FixedPointMathLib for uint256;
@@ -28,9 +32,13 @@ contract Goober is
     Goo public constant goo = Goo(0x600000000a36F3cD48407e35eB7C5c910dc1f7a8);
     ArtGobblers public constant artGobblers = ArtGobblers(0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769);
 
+    // Flash loan stuffs
+    bytes32 public constant FLASHLOAN_CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
+
     // Mutable storage
 
     uint256 m = 0;
+    uint256 public FLASHLOAN_FEE = 20000; //  1 == 0.0001 %
 
     // EVENTS
 
@@ -160,6 +168,54 @@ contract Goober is
 
     function maxWithdraw(address owner) public view returns (uint256) {
         return type(uint256).max;
+    }
+
+    function maxFlashLoan(
+        address token
+    ) external view returns (uint256) {
+        return artGobblers.gooBalance(address(this));
+    }
+
+    function flashFee(
+        address token,
+        uint256 amount
+    ) public view returns (uint256) {
+        return amount * FLASHLOAN_FEE / 10000;
+    }
+
+    /**
+     * @dev Loan `amount` tokens to `receiver`, and takes it back plus a `flashFee` after the callback.
+     * @param receiver The contract receiving the tokens, needs to implement the `onFlashLoan(address user, uint256 amount, uint256 fee, bytes calldata)` interface.
+     * @param token The loan currency.
+     * @param amount The amount of tokens lent.
+     * @param data A data parameter to be passed on to the `receiver` for any custom use.
+     */
+    function flashLoan(
+        IERC3156FlashBorrower receiver,
+        address token,
+        uint256 amount,
+        bytes calldata data
+    ) external override returns(bool) {
+        require(
+            token == address(goo),
+            "FlashLender: Unsupported currency"
+        );
+        uint256 _fee = flashFee(token, amount);
+        artGobblers.removeGoo(amount);
+        require(
+            goo.transfer(address(receiver), amount),
+            "FlashLender: Transfer failed"
+        );
+        require(
+            receiver.onFlashLoan(msg.sender, token, amount, _fee, data) == FLASHLOAN_CALLBACK_SUCCESS,
+            "FlashLender: Callback failed"
+        );
+        require(
+            goo.transferFrom(address(receiver), address(this), amount + _fee),
+            "FlashLender: Repay failed"
+        );
+        artGobblers.addGoo(amount);
+        return true;
     }
 
     /**
