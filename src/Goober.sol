@@ -104,7 +104,7 @@ contract Goober is
         // Transfer goo if any
         if (gooTokens >= 0) {
             goo.safeTransferFrom(msg.sender, address(this), gooTokens);
-            goo.addGoo(gooTokens);
+            artGobblers.addGoo(gooTokens);
         }
 
         // Transfer gobblers if any
@@ -220,7 +220,7 @@ contract Goober is
             goo.transferFrom(address(receiver), address(this), amount + _fee),
             "FlashLender: Repay failed"
         );
-        artGobblers.addGoo(amount);
+        artGobblers.addGoo(amount + _fee);
         return true;
     }
 
