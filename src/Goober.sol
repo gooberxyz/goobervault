@@ -104,6 +104,7 @@ contract Goober is
         // Transfer goo if any
         if (gooTokens >= 0) {
             goo.safeTransferFrom(msg.sender, address(this), gooTokens);
+            goo.addGoo(gooTokens);
         }
 
         // Transfer gobblers if any
@@ -135,6 +136,7 @@ contract Goober is
 
         // Transfer goo if any
         if (gooTokens >= 0) {
+            artGobblers.removeGoo(gooTokens);
             goo.safeTransfer(receiver, gooTokens);
         }
 
@@ -173,7 +175,7 @@ contract Goober is
     function maxFlashLoan(
         address token
     ) external view returns (uint256) {
-        return artGobblers.gooBalance(address(this));
+        return token == address(goo) ? artGobblers.gooBalance(address(this)) : 0;
     }
 
     function flashFee(
