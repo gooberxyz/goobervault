@@ -185,6 +185,10 @@ contract Goober is
         return amount * FLASHLOAN_FEE / 10000;
     }
 
+    function changeFee(uint256 newFee) public onlyOwner {
+        FLASHLOAN_FEE = newFee;
+    }
+
     /**
      * @dev Loan `amount` tokens to `receiver`, and takes it back plus a `flashFee` after the callback.
      * @param receiver The contract receiving the tokens, needs to implement the `onFlashLoan(address user, uint256 amount, uint256 fee, bytes calldata)` interface.
