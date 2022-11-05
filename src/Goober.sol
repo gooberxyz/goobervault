@@ -15,6 +15,7 @@ import "./interfaces/IERC3156FlashLender.sol";
 
 error zeroShares();
 error FlashLenderCallbackUnequal();
+error gobblerInvalidMultiplier();
 
 contract Goober is
     UUPSUpgradeable,
@@ -159,7 +160,19 @@ contract Goober is
     // TODO(Views for goo and gobbler exchange rates to GBR)
 
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 shares) {
-        return 1;
+        uint gobblerInvalidMultiplierSum;
+        for(uint i = 0; i <= gobblers.length ;i++){
+
+          // uint tokenIdTestValue = 1; //Should return M = 8.
+          // uint currentGobblerMultiplier = artGobblers.getGobblerEmissionMultiple(tokenIdTestValue); //Test value for multicall.
+
+          uint tokenIdGobblerArrayIndex = gobblers[i]; //Should return M = 8.
+          uint currentGobblerMultiplier = artGobblers.getGobblerEmissionMultiple(tokenIdGobblerArrayIndex); //Test value for multicall.
+
+          if(currentGobblerMultiplier < 6 || 9 < currentGobblerMultiplier){ revert gobblerInvalidMultiplier(); }
+          gobblerInvalidMultiplierSum = gobblerInvalidMultiplierSum + currentGobblerMultiplier; //Test value for multicall.
+        }
+        return gooTokens + gobblerInvalidMultiplierSum;
     }
 
     function previewWithdraw(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 shares) {
