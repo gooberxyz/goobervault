@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.17; //Maybe change to 0.8.17 to lock in Solidity version to make easier to verify?
 
 import "openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -13,6 +12,9 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import "./ERC20Upgradable.sol";
 import "./interfaces/IERC3156FlashBorrower.sol";
 import "./interfaces/IERC3156FlashLender.sol";
+
+error zeroShares();
+error FlashLenderCallbackUnequal();
 
 contract Goober is
     UUPSUpgradeable,
@@ -97,7 +99,8 @@ contract Goober is
     {
         shares = previewDeposit(gobblers, gooTokens);
         // Check for rounding error since we round down in previewDeposit.
-        require(shares != 0, "ZERO_SHARES");
+        // require(shares != 0, "ZERO_SHARES");
+        if(shares == 0) {revert zeroShares(); }
 
         // Need to transfer before minting or ERC777s could reenter.
         // Transfer goo if any
@@ -199,10 +202,12 @@ contract Goober is
         uint256 _finalAmount = amount + _fee;
         artGobblers.removeGoo(amount);
         goo.transfer(address(receiver), amount);
-        require(
-            receiver.onFlashLoan(msg.sender, token, amount, _fee, data) == FLASHLOAN_CALLBACK_SUCCESS,
-            "FlashLender: Callback failed"
-        );
+        // require(
+        //     receiver.onFlashLoan(msg.sender, token, amount, _fee, data) == FLASHLOAN_CALLBACK_SUCCESS,
+        //     "FlashLender: Callback failed"
+        // );
+        if(receiver.onFlashLoan(msg.sender, token, amount, _fee, data) != FLASHLOAN_CALLBACK_SUCCESS) { revert FlashLenderCallbackUnequal();}
+
         goo.transferFrom(address(receiver), address(this), _finalAmount);
         artGobblers.addGoo(_finalAmount);
         return true;
