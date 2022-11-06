@@ -32,5 +32,4 @@ contract TestUERC20Functionality is Test {
         assertEq(IERC20Metadata(address(goober_proxy)).symbol(), "GBR");
         assertEq(IERC20Metadata(address(goober_proxy)).decimals(), 18);
     }
-
 }
