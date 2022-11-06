@@ -177,7 +177,6 @@ contract Goober is
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, shares);
     }
 
-
     /// @notice Withdraws the requested gobblers and goo tokens from the vault.
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
@@ -204,10 +203,8 @@ contract Goober is
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
         }
 
-
         // Transfer shares from the owner to the receiver.
         transferFrom(owner, receiver, shares);
-
 
         // Burn the shares
         _burn(owner, shares);
@@ -245,7 +242,6 @@ contract Goober is
         gobblerBal = artGobblers.balanceOf(address(this));
         gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
         gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
-
     }
 
     // TODO(Views for goo and gobbler exchange rates to GBR)
