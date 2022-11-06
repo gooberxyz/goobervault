@@ -7,7 +7,7 @@ import "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol
 import "art-gobblers/Goo.sol";
 import "../src/Goober.sol";
 import "art-gobblers/../test/utils/mocks/LinkToken.sol";
-import "art-gobblers/../test/utils/Utilities.sol";
+import {Utilities} from "art-gobblers/../test/utils/Utilities.sol";
 import "art-gobblers/../lib/chainlink/contracts/src/v0.8/mocks/VRFCoordinatorMock.sol";
 import {ChainlinkV1RandProvider} from "art-gobblers/utils/rand/ChainlinkV1RandProvider.sol";
 import "art-gobblers/utils/GobblerReserve.sol";

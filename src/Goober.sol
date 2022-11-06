@@ -203,8 +203,16 @@ contract Goober is
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
         }
 
+        // We are not allowing legendary withdraws
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            if (artGobblers.getGobblerEmissionMultiple(gobblers[i]) > 9) revert();
+        }
+
         // Transfer shares from the owner to the receiver.
-        transferFrom(owner, receiver, shares);
+        require(transferFrom(owner, address(this), shares), "GOOBER ALLOWANCE");
+
+        // Must be requesting some assets to withdraw
+        require(gobblers.length > 0 || gooTokens > 0, "Goober: INVALID WITHDRAW");
 
         // Burn the shares
         _burn(owner, shares);
@@ -217,7 +225,7 @@ contract Goober is
 
         // Transfer gobblers if any
         for (uint256 i = 0; i < gobblers.length; i++) {
-            artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
+            artGobblers.safeTransfer(receiver, gobblers[i]);
         }
 
         uint256 gobblerMultBalance = artGobblers.getUserEmissionMultiple(address(this));
