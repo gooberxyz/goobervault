@@ -11,6 +11,7 @@ import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import "./math/UQ112x112.sol";
 import "./interfaces/IGooberCallee.sol";
 import "./ERC20Upgradable.sol";
 
@@ -24,6 +25,7 @@ contract Goober is
 {
     using SafeTransferLib for Goo;
     using FixedPointMathLib for uint256;
+    using UQ112x112 for uint224;
 
     error InvalidNFT();
     error InvalidMultiplier(uint256 gobblerId);
@@ -68,6 +70,8 @@ contract Goober is
         address indexed to
     );
 
+    event Sync(uint112 gooBalance, uint112 multBalance);
+
     // Constructor/init
 
     constructor() initializer {}
@@ -83,6 +87,23 @@ contract Goober is
 
     // @dev required by the UUPS module
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    // update reserves and, on the first call per block, price accumulators
+    function _update(uint256 gooBalance, uint256 gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve) private {
+        require(gooBalance <= type(uint112).max && gobblerBalance <= type(uint112).max , 'Goober: OVERFLOW');
+        uint40 blockTimestamp = uint40(block.timestamp % 2**40);
+        uint40 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        if (timeElapsed > 0 && _gooReserve != 0 && _gobblerReserve != 0) {
+            // * never overflows, and + overflow is desired
+            priceGooCumulativeLast += uint(UQ112x112.encode(_gobblerReserve).uqdiv(_gooReserve)) * timeElapsed;
+            priceGobblerCumulativeLast += uint(UQ112x112.encode(_gooReserve).uqdiv(_gobblerReserve)) * timeElapsed;
+        }
+        // TODO(Do we need any special magic here)
+        //reserve0 = uint112(gooBalance);
+        //reserve1 = uint112(gobblerBalance);
+        blockTimestampLast = blockTimestamp;
+        emit Sync(uint112(gooBalance), uint112(gobblerBalance));
+    }
 
     function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
         external
@@ -278,7 +299,7 @@ contract Goober is
                 (balance0Adjusted * gobblerBalance) >= (uint256(_gooReserve) * _gobblerReserve * 1000 ** 2), "Goober: K"
             );
         }
-        //_update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
+        _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
         emit Swap(msg.sender, amount0In, amount1In, gooTokens, multOut, to);
     }
 
