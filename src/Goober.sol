@@ -30,18 +30,15 @@ contract Goober is
 
     // Mutable storage
 
-    // Multiple of gobbers
-    uint256 m = 0;
-    //artGobblers.gooBalance(address(this))
-    // Last block timestamp
-    uint40  private blockTimestampLast; // uses single storage slot, accessible via getReserves
     // Accumulators
     uint256 public priceGooCumulativeLast;
     uint256 public priceGobblerCumulativeLast;
 
-    uint112 private reserve0; // uses single storage slot, accessible via getReserves
-    uint112 private reserve1; // uses single storage slot, accessible via getReserves
-    uint256 private kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+    // reserve0 (gooBalance) * reserve1 (totalGobblerMultiplier), as of immediately after the most recent liquidity event
+    uint256 private kLast; 
+
+    // Last block timestamp
+    uint40  private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     // EVENTS
 
@@ -69,7 +66,7 @@ contract Goober is
         __ERC20_init("Goober", "GBR");
     }
 
-    // @dev required by the UUPS module
+    /// @dev required by the UUPS module
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // G can be derived from Goo.totalSupply, plus the issuance rate
@@ -138,11 +135,6 @@ contract Goober is
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
         }
 
-        // Update the global multiplier based on each gobbler we are withdrawing
-        for (uint256 i = 0; i < gobblers.length; i++) {
-            m -= artGobblers.getGobblerEmissionMultiple(gobblers[i]);
-        }
-
         // Determine how many shares to withdraw
         shares = previewWithdraw(gobblers, gooTokens); // No need to check for rounding error, previewWithdraw rounds up.
 
@@ -169,7 +161,7 @@ contract Goober is
     function totalAssets() public view returns (uint256 gobberBal, uint256 gobblerMult, uint256 gooTokens) {
         return (
             artGobblers.balanceOf(address(this)),
-            m,
+            artGobblers.getUserEmissionMultiple(address(this)),
             goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this))
         );
     }
@@ -192,9 +184,13 @@ contract Goober is
         return type(uint256).max;
     }
 
-    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint40 _blockTimestampLast) {
-        _reserve0 = reserve0;
-        _reserve1 = reserve1;
+    /// @notice Returns the vaults reserves of goo, gobbler cumulative multipliers, and last updated timestamp
+    /// @return _gooReserve - amount of goo in the vault
+    /// @return _gobblerReserve - amount of gobblers in the vault
+    /// @return _blockTimestampLast - last updated timestamp
+    function getReserves() public view returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast) {
+        _gooReserve = uint112(artGobblers.gooBalance(address(this)));
+        _gobblerReserve = uint112(totalGobblerMultiplier) * 1000;
         _blockTimestampLast = blockTimestampLast;
     }
 
