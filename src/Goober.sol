@@ -281,7 +281,6 @@ contract Goober is
         emit Swap(msg.sender, amount0In, amount1In, gooTokens, multOut, receiver);
     }
 
-
     // this low-level function should be called from a contract which performs important safety checks
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
         external
