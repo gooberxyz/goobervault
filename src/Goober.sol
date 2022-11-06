@@ -299,6 +299,54 @@ contract Goober is
         emit Swap(msg.sender, amount0In, amount1In, gooTokens, multOut, to);
     }
 
+    // this low-level function should be called from a contract which performs important safety checks
+    function mint(uint depositGoo, uint256[] calldata gobblerTokenIdBatch) external nonReentrant returns (uint liquidity) {
+        goo.transferFrom(msg.sender, address(this), depositGoo);
+        getGobblerTokensWithSumMultiplier(gobblerTokenIdBatch);
+        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        uint balance0 = artGobblers.getUserEmissionMultiple(address(this));
+        uint balance1 = IERC20(token1).balanceOf(address(this));
+        uint amount0 = balance0.sub(_reserve0);
+        uint amount1 = balance1.sub(_reserve1);
+
+        bool feeOn = _mintFee(_reserve0, _reserve1);
+        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        if (_totalSupply == 0) {
+            liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+           _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+        } else {
+            liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
+        }
+        require(liquidity > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED');
+        _mint(msg.sender, liquidity);
+
+        _update(balance0, balance1, _reserve0, _reserve1);
+        if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
+        emit Mint(msg.sender, amount0, amount1);
+    }
+
+    function getGobblerTokensWithSumMultiplier(uint256[] calldata gobblerTokenIdBatch) public returns (uint gobblerBatchMultiplierSum) {
+        for(uint i = 0; i <= gobblerTokenIdBatch.length ;i++){
+          uint currentGobblerMultiplier = artGobblers.getGobblerEmissionMultiple(gobblerTokenIdBatch[i]);
+          if(currentGobblerMultiplier < 6 || 9 < currentGobblerMultiplier){ revert gobblerInvalidMultiplier(); }
+            artGobblers.safeTransferFrom(msg.sender,address(this),gobblerTokenIdBatch[i]);
+            gobblerBatchMultiplierSum = gobblerBatchMultiplierSum + currentGobblerMultiplier;
+        }
+        return gobblerBatchMultiplierSum;
+    }
+
+    // force balances to match reserves and move tokens sent to contract by accident to owner.
+    function skimGoo() external onlyOwner {
+        address _token1 = token1; // gas savings
+        goo.transfer(msg.sender, IERC20(_token1).balanceOf(address(this)).sub(reserve1));
+    }
+
+    function skimGobbler(uint tokenIdToRecover) external onlyOwner {
+        if(artGobblers.getUserEmissionMultiple(address(this)).sub(reserve0) == 0) { revert contractMultiplierCorrect(); }
+        artGobblers.transferFrom(address(this),msg.sender,tokenIdToRecover); //We do not need to check for receiver being safeTransferFrom for owner address.
+    }
+
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.

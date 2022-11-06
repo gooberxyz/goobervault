@@ -32,4 +32,48 @@ contract TestUERC20Functionality is Test {
         assertEq(IERC20Metadata(address(goober_proxy)).symbol(), "GBR");
         assertEq(IERC20Metadata(address(goober_proxy)).decimals(), 18);
     }
+
+    function testSkimGoo() public {
+      // vm.prank(GOO_WHALE); //WALLET HAS MULTIPLE GOBBLERS
+      vm.startPrank(GOO_WHALE); //Last check has 281348557198281598718
+      // assertGt( (GOO_WHALE).balance,0); //WALLET NOW HAS 1 WEI
+      assertGt(goo.balanceOf(GOO_WHALE), 0);
+      goo.transfer(address(this),1);
+      assertEq(goo.balanceOf(address(this)), 1);
+      // goo.transfer(address(this),0);
+
+      vm.stopPrank();
+
+      // assertEq(address(goo), address(goo));
+      // fail("FAIL");
+      // emit log("here");
+
+      deal(msg.sender, 1); //1 WEI ETH
+      assertGt( (msg.sender).balance,0); //WALLET NOW HAS 1 WEI
+      // assertEq( (msg.sender).balance,1); //WALLET NOW HAS 1 WEI
+
+
+      // deal(address(goo), msg.sender, 1); //1 WEI
+      // assertEq(goo.balanceOf(msg.sender, 1));
+
+      // assertEq(goo.balanceOf(msg.sender, 1));
+      // assertEq(goo.balanceOf(address(this)), 770227215730798173166);
+      // goo.approve(address(goober_implementation), type(uint256).max);
+      // goo.transferFrom(GOO_WHALE,address(this),1);
+      // assertEq(goo.balanceOf(address(this)), 1);
+      // vm.prank(msg.sender); //WALLET HAS MULTIPLE GOBBLERS
+      // // uint ownerBalanceBeforeSkim = goo.balanceOf(msg.sender)
+      // goober_implementation.skimGoo();
+      // assertEq(goo.balanceOf(msg.sender), 1);
+    }
+
+    function testSkimGobblerTest() public {
+      vm.prank(GOBBLER_WHALE); //WALLET HAS MULTIPLE GOBBLERS
+      // artGobblers.transferFrom(msg.sender,address(this),1937);
+      // assertEq(artGobblers.ownerOf(1937), address(this));
+      // vm.prank(msg.sender); //WALLET HAS MULTIPLE GOBBLERS
+      // goober_implementation.skimGobbler(1937);
+      // assertEq(artGobblers.ownerOf(1937), msg.sender);
+    }
+
 }
