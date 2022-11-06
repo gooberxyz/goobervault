@@ -116,22 +116,34 @@ contract Goober is
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, shares);
     }
 
+    /// @notice Withdraw shares from the vault
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
+    /// @param receiver - address to receive the goo and gobblers
+    /// @param owner - owner of the shares to be withdrawn
+    /// @return shares - amount of shares that have been withdrawn
     function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
         public
         virtual
         returns (uint256 shares)
     {
-        shares = previewWithdraw(gobblers, gooTokens); // No need to check for rounding error, previewWithdraw rounds up.
-
+        // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
         }
 
-        _burn(owner, shares);
+        // Update the global multiplier based on each gobbler we are withdrawing
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            m -= artGobblers.getGobblerEmissionMultiple(gobblers[i]);
+        }
 
-        emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
+        // Determine how many shares to withdraw
+        shares = previewWithdraw(gobblers, gooTokens); // No need to check for rounding error, previewWithdraw rounds up.
+
+        // Burn the shares
+        _burn(owner, shares);
 
         // Transfer goo if any
         if (gooTokens >= 0) {
@@ -143,6 +155,8 @@ contract Goober is
         for (uint256 i = 0; i < gobblers.length; i++) {
             artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
         }
+
+        emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
     }
 
     function totalAssets() public view returns (uint256 gobberBal, uint256 gobblerMult, uint256 gooTokens) {
