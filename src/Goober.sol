@@ -11,6 +11,7 @@ import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import "./interfaces/IGooberCallee.sol";
 import "./ERC20Upgradable.sol";
 
 contract Goober is
@@ -213,7 +214,7 @@ contract Goober is
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function swap(uint256 gooTokens, uint256[] calldata gobblers, address to, bytes calldata data)
+    function swap(uint256[] calldata gobblers, uint256 gooTokens, address to, bytes calldata data)
         external
         nonReentrant
     {
@@ -253,7 +254,7 @@ contract Goober is
             }
 
             // Flash swap
-            //if (data.length > 0) IGooberCallee(to).gooberCall(msg.sender, gooTokens, gobblers, data);
+            if (data.length > 0) IGooberCallee(to).gooberCall(msg.sender, gobblers, gooTokens, data);
 
             // This goo isn't yet deposited
             gooBalance = goo.balanceOf(address(this));
@@ -272,7 +273,7 @@ contract Goober is
             // TODO(Test and figure this bit out)
             // We can only feasibly charge fees on goo
             uint256 balance0Adjusted = (gooBalance * 1000) - (amount0In * 3);
-            //uint balance1Adjusted = gobblerBalance.mul(1000).sub(amount1In.mul(3));
+            //uint256 balance1Adjusted = (gobblerBalance * 1000) - (amount1In * 3);
             require(
                 (balance0Adjusted * gobblerBalance) >= (uint256(_gooReserve) * _gobblerReserve * 1000 ** 2), "Goober: K"
             );
