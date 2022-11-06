@@ -43,10 +43,10 @@ contract Goober is
     uint256 public priceGobblerCumulativeLast;
 
     // reserve0 (gooBalance) * reserve1 (totalGobblerMultiplier), as of immediately after the most recent liquidity event
-    uint256 private kLast; 
+    uint256 private kLast;
 
     // Last block timestamp
-    uint40  private blockTimestampLast; // uses single storage slot, accessible via getReserves
+    uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     // EVENTS
 
