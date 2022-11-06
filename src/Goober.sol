@@ -335,18 +335,6 @@ contract Goober is
         return gobblerBatchMultiplierSum;
     }
 
-    // force balances to match reserves and move tokens sent to contract by accident to owner.
-    function skimGoo() external onlyOwner {
-        address _token1 = token1; // gas savings
-        goo.transfer(msg.sender, IERC20(_token1).balanceOf(address(this)).sub(reserve1));
-    }
-
-    function skimGobbler(uint tokenIdToRecover) external onlyOwner {
-        if(artGobblers.getUserEmissionMultiple(address(this)).sub(reserve0) == 0) { revert contractMultiplierCorrect(); }
-        artGobblers.transferFrom(address(this),msg.sender,tokenIdToRecover); //We do not need to check for receiver being safeTransferFrom for owner address.
-    }
-
-
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
