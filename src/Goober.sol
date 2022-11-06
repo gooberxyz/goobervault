@@ -89,14 +89,16 @@ contract Goober is
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // update reserves and, on the first call per block, price accumulators
-    function _update(uint256 gooBalance, uint256 gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve) private {
-        require(gooBalance <= type(uint112).max && gobblerBalance <= type(uint112).max , 'Goober: OVERFLOW');
-        uint40 blockTimestamp = uint40(block.timestamp % 2**40);
+    function _update(uint256 gooBalance, uint256 gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve)
+        private
+    {
+        require(gooBalance <= type(uint112).max && gobblerBalance <= type(uint112).max, "Goober: OVERFLOW");
+        uint40 blockTimestamp = uint40(block.timestamp % 2 ** 40);
         uint40 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         if (timeElapsed > 0 && _gooReserve != 0 && _gobblerReserve != 0) {
             // * never overflows, and + overflow is desired
-            priceGooCumulativeLast += uint(UQ112x112.encode(_gobblerReserve).uqdiv(_gooReserve)) * timeElapsed;
-            priceGobblerCumulativeLast += uint(UQ112x112.encode(_gooReserve).uqdiv(_gobblerReserve)) * timeElapsed;
+            priceGooCumulativeLast += uint256(UQ112x112.encode(_gobblerReserve).uqdiv(_gooReserve)) * timeElapsed;
+            priceGobblerCumulativeLast += uint256(UQ112x112.encode(_gooReserve).uqdiv(_gobblerReserve)) * timeElapsed;
         }
         // TODO(Do we need any special magic here)
         //reserve0 = uint112(gooBalance);
