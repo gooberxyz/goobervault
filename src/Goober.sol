@@ -38,13 +38,15 @@ contract Goober is
 
     // Mutable storage
 
-    //artGobblers.gooBalance(address(this))
-    // Last block timestamp
-    uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
     // Accumulators
     uint256 public priceGooCumulativeLast;
     uint256 public priceGobblerCumulativeLast;
-    uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+
+    // reserve0 (gooBalance) * reserve1 (totalGobblerMultiplier), as of immediately after the most recent liquidity event
+    uint256 private kLast;
+
+    // Last block timestamp
+    uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     // EVENTS
 
@@ -83,7 +85,7 @@ contract Goober is
         __ERC20_init("Goober", "GBR");
     }
 
-    // @dev required by the UUPS module
+    /// @dev required by the UUPS module
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // update reserves and, on the first call per block, price accumulators
@@ -167,22 +169,29 @@ contract Goober is
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, shares);
     }
 
+    /// @notice Withdraw shares from the vault
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
+    /// @param receiver - address to receive the goo and gobblers
+    /// @param owner - owner of the shares to be withdrawn
+    /// @return shares - amount of shares that have been withdrawn
     function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
         public
         virtual
         returns (uint256 shares)
     {
-        shares = previewWithdraw(gobblers, gooTokens); // No need to check for rounding error, previewWithdraw rounds up.
-
+        // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
         }
 
-        _burn(owner, shares);
+        // Determine how many shares to withdraw
+        shares = previewWithdraw(gobblers, gooTokens); // No need to check for rounding error, previewWithdraw rounds up.
 
-        emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
+        // Burn the shares
+        _burn(owner, shares);
 
         // Transfer goo if any
         if (gooTokens >= 0) {
@@ -194,12 +203,19 @@ contract Goober is
         for (uint256 i = 0; i < gobblers.length; i++) {
             artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
         }
+
+        // Update latest timestamp
+        blockTimestampLast = uint40(block.timestamp);
+
+        emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
     }
 
-    function totalAssets() public view returns (uint256 gobblerBal, uint256 gobblerMult, uint256 gooTokens) {
-        gobblerBal = artGobblers.balanceOf(address(this));
-        gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
-        gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
+    function totalAssets() public view returns (uint256 gobberBal, uint256 gobblerMult, uint256 gooTokens) {
+        return (
+            artGobblers.balanceOf(address(this)),
+            artGobblers.getUserEmissionMultiple(address(this)),
+            goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this))
+        );
     }
 
     // TODO(Views for goo and gobbler exchange rates to GBR)
