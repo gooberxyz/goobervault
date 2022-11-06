@@ -38,7 +38,10 @@ contract Goober is
     // Accumulators
     uint256 public priceGooCumulativeLast;
     uint256 public priceGobblerCumulativeLast;
-    uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+
+    uint112 private reserve0; // uses single storage slot, accessible via getReserves
+    uint112 private reserve1; // uses single storage slot, accessible via getReserves
+    uint256 private kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // EVENTS
 
@@ -187,6 +190,12 @@ contract Goober is
 
     function maxWithdraw(address owner) public view returns (uint256) {
         return type(uint256).max;
+    }
+
+    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint40 _blockTimestampLast) {
+        _reserve0 = reserve0;
+        _reserve1 = reserve1;
+        _blockTimestampLast = blockTimestampLast;
     }
 
     /**
