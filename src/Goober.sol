@@ -305,27 +305,31 @@ contract Goober is
         for (uint256 i = 0; i < gobblers.length; i++) {
             artGobblers.safeTransferFrom(owner, address(this), gobblers[i]);
         }
-        (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
-        uint256 gooBalance = goo.balanceOf(address(this));
+        // Avoid stack too deep
+        {
+            (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
+            uint256 gooBalance = goo.balanceOf(address(this));
 
-        uint256 gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
-        uint256 amountGoo = gooBalance.sub(_gooReserve);
-        uint256 amountGobbler = gobblerBalance.sub(_gobblerReserve);
+            uint256 gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
+            uint256 amountGoo = gooBalance.sub(_gooReserve);
+            uint256 amountGobbler = gobblerBalance.sub(_gobblerReserve);
 
-        uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-        if (_totalSupply == 0) {
-            shares = FixedPointMathLib.sqrt(amountGoo.mul(amountGobbler)).sub(MINIMUM_LIQUIDITY);
-            _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
-        } else {
-            shares =
-                Math.min(amountGoo.mul(_totalSupply) / _gooReserve, amountGobbler.mul(_totalSupply) / _gobblerReserve);
+            uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+            if (_totalSupply == 0) {
+                shares = FixedPointMathLib.sqrt(amountGoo.mul(amountGobbler)).sub(MINIMUM_LIQUIDITY);
+                _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+            } else {
+                shares = Math.min(
+                    amountGoo.mul(_totalSupply) / _gooReserve, amountGobbler.mul(_totalSupply) / _gobblerReserve
+                );
+            }
+            require(shares > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+            _mint(msg.sender, shares);
+
+            _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
+            // TODO(Fee math)
+            //if (feeOn) kLast = uint(_gooReserve).mul(_gobblerReserve); // reserve0 and reserve1 are up-to-date
         }
-        require(shares > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
-        _mint(msg.sender, shares);
-
-        _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
-        // TODO(Fee math)
-        //if (feeOn) kLast = uint(_gooReserve).mul(_gobblerReserve); // reserve0 and reserve1 are up-to-date
         emit Deposit(msg.sender, owner, receiver, gobblers, gooTokens, shares);
     }
 
