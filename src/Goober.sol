@@ -302,7 +302,7 @@ contract Goober is
     // this low-level function should be called from a contract which performs important safety checks
     function mint(uint depositGoo, uint256[] calldata gobblerTokenIdBatch) external nonReentrant returns (uint liquidity) {
         goo.transferFrom(msg.sender, address(this), depositGoo);
-        getGobblerTokensWithSumMultiplier(gobblerTokenIdBatch);
+        batchTranferValidGobblers(gobblerTokenIdBatch);
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
         uint balance0 = artGobblers.getUserEmissionMultiple(address(this));
         uint balance1 = IERC20(token1).balanceOf(address(this));
@@ -325,14 +325,11 @@ contract Goober is
         emit Mint(msg.sender, amount0, amount1);
     }
 
-    function getGobblerTokensWithSumMultiplier(uint256[] calldata gobblerTokenIdBatch) public returns (uint gobblerBatchMultiplierSum) {
+    function batchTranferValidGobblers(uint256[] calldata gobblerTokenIdBatch) public returns () {
         for(uint i = 0; i <= gobblerTokenIdBatch.length ;i++){
-          uint currentGobblerMultiplier = artGobblers.getGobblerEmissionMultiple(gobblerTokenIdBatch[i]);
           if(currentGobblerMultiplier < 6 || 9 < currentGobblerMultiplier){ revert gobblerInvalidMultiplier(); }
             artGobblers.safeTransferFrom(msg.sender,address(this),gobblerTokenIdBatch[i]);
-            gobblerBatchMultiplierSum = gobblerBatchMultiplierSum + currentGobblerMultiplier;
         }
-        return gobblerBatchMultiplierSum;
     }
 
     /**
