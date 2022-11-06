@@ -69,6 +69,49 @@ contract Goober is
     // @dev required by the UUPS module
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
+    /// @dev update reserves and, on the first call per block, price accumulators
+    /// @param gooBalance the new goo balance
+    /// @param gobblerBalance the new gobblers multiplier
+    /// @param _gooReserve the current goo reserve
+    /// @param _gobblerReserve the current gobblers reserve
+    function _update(uint256 gooBalance, uint256 gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve)
+        private
+    {
+        // Check if the reserves will overflow
+        require(gooBalance <= type(uint112).max && gobblerBalance <= type(uint112).max, "Goober: OVERFLOW");
+
+        uint40 blockTimestamp = uint40(block.timestamp % 2 ** 40);
+
+        uint40 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+
+        if (timeElapsed > 0 && _gooReserve != 0 && _gobblerReserve != 0) {
+            // * never overflows, and + overflow is desired
+            priceGooCumulativeLast += uint256(UQ112x112.encode(_gobblerReserve).uqdiv(_gooReserve)) * timeElapsed;
+            priceGobblerCumulativeLast += uint256(UQ112x112.encode(_gooReserve).uqdiv(_gobblerReserve)) * timeElapsed;
+        }
+
+        // TODO(Do we need any special magic here)
+        //reserve0 = uint112(gooBalance);
+        //reserve1 = uint112(gobblerBalance);
+        blockTimestampLast = blockTimestamp;
+        emit Sync(uint112(gooBalance), uint112(gobblerBalance));
+    }
+
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
+        external
+        returns (bytes4)
+    {
+        if (msg.sender != address(artGobblers)) {
+            revert InvalidNFT();
+        }
+        uint40 gobMult = uint40(artGobblers.getGobblerEmissionMultiple(tokenId));
+        if (gobMult < 6 || gobMult > 9) {
+            revert InvalidMultiplier(tokenId);
+        }
+        totalGobblerMultiplier += gobMult;
+        return IERC721Receiver.onERC721Received.selector;
+    }
+
     // G can be derived from Goo.totalSupply, plus the issuance rate
     // M we can track internally
     // B
@@ -128,6 +171,8 @@ contract Goober is
         virtual
         returns (uint256 shares)
     {
+        (uint112 gooReserves, uint112 gobblerReserves,) = getReserves();
+
         // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
@@ -143,6 +188,11 @@ contract Goober is
         // Determine how many shares to withdraw
         shares = previewWithdraw(gobblers, gooTokens); // No need to check for rounding error, previewWithdraw rounds up.
 
+        // Check that we can withdraw the requested amount of liquidity.
+        require(allowed >= shares, "Goober: INSUFFICIENT_ALLOWANCE");
+
+        transferFrom(owner, receiver, shares);
+
         // Burn the shares
         _burn(owner, shares);
 
@@ -156,6 +206,18 @@ contract Goober is
         for (uint256 i = 0; i < gobblers.length; i++) {
             artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
         }
+
+        uint256 gobblerMultBalance = totalGobblerMultiplier;
+        uint256 gooBalance = artGobblers.gooBalance(address(this));
+
+        // update reserves
+        _update(gooBalance, gobblerMultBalance, gooReserves, gobblerReserves);
+
+        // update kLast
+        kLast = uint112(artGobblers.gooBalance(address(this))) * uint112(artGobblers.getUserEmissionMultiple(address(this)));
+
+        // Update latest timestamp
+        blockTimestampLast = uint40(block.timestamp);
 
         emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
     }
