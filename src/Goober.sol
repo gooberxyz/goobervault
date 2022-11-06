@@ -157,6 +157,9 @@ contract Goober is
             artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
         }
 
+        // Update latest timestamp
+        blockTimestampLast = uint40(block.timestamp);
+
         emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
     }
 
