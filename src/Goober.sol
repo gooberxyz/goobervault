@@ -57,7 +57,14 @@ contract Goober is
 
     // EVENTS
 
-    event Deposit(address indexed caller, address indexed owner, uint256[] gobblers, uint256 gooTokens, uint256 shares);
+    event Deposit(
+        address indexed caller,
+        address indexed owner,
+        address indexed receiver,
+        uint256[] gobblers,
+        uint256 gooTokens,
+        uint256 shares
+    );
 
     event Withdraw(
         address indexed caller,
@@ -74,7 +81,7 @@ contract Goober is
         uint256 gobblersMultIn,
         uint256 gooTokensOut,
         uint256 gobblerMultOut,
-        address indexed to
+        address indexed receiver
     );
 
     event Sync(uint112 gooBalance, uint112 multBalance);
@@ -319,7 +326,7 @@ contract Goober is
         _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
         // TODO(Fee math)
         //if (feeOn) kLast = uint(_gooReserve).mul(_gobblerReserve); // reserve0 and reserve1 are up-to-date
-        emit Deposit(msg.sender, owner, gobblers, gooTokens, shares);
+        emit Deposit(msg.sender, owner, receiver, gobblers, gooTokens, shares);
     }
 
     /**
