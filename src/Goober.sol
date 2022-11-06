@@ -175,7 +175,7 @@ contract Goober is
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, shares);
     }
 
-    /// @notice Withdraw shares from the vault
+    /// @notice Withdraws the requested gobblers and goo tokens from the vault.
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
     /// @param receiver - address to receive the goo and gobblers
@@ -218,14 +218,18 @@ contract Goober is
             artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
         }
 
-        uint256 gobblerMultBalance = totalGobblerMultiplier;
+        uint256 gobblerMultBalance = artGobblers.getUserEmissionMultiple(address(this));
         uint256 gooBalance = artGobblers.gooBalance(address(this));
 
         // update reserves
         _update(gooBalance, gobblerMultBalance, gooReserves, gobblerReserves);
 
+        // User has the option to withdraw only goo or only gobblers
+        // This can cause some interesting behavior with K
+        // But this'll do for now
+
         // update kLast
-        kLast = uint112(artGobblers.gooBalance(address(this))) * uint112(artGobblers.getUserEmissionMultiple(address(this)));
+        kLast = uint112(gooBalance) * uint112(gobblerMultBalance);
 
         // Update latest timestamp
         blockTimestampLast = uint40(block.timestamp);
