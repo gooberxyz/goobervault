@@ -14,6 +14,7 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import "./math/UQ112x112.sol";
 import "./interfaces/IGooberCallee.sol";
 import "./ERC20Upgradable.sol";
+import "openzeppelin-contracts/utils/math/SafeMath.sol";
 
 contract Goober is
     UUPSUpgradeable,
@@ -23,10 +24,12 @@ contract Goober is
     ERC20Upgradable,
     IERC721Receiver
 {
+    using SafeMath for uint256;
     using SafeTransferLib for Goo;
     using FixedPointMathLib for uint256;
     using UQ112x112 for uint224;
 
+    error gobblerInvalidMultiplier();
     error InvalidNFT();
     error InvalidMultiplier(uint256 gobblerId);
 
@@ -47,6 +50,9 @@ contract Goober is
 
     // Last block timestamp
     uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
+
+    //Constant needed for deposit
+    uint public constant MINIMUM_LIQUIDITY = 10**3;
 
     // EVENTS
 
@@ -313,6 +319,61 @@ contract Goober is
         }
         _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
         emit Swap(msg.sender, amount0In, amount1In, gooTokens, multOut, to);
+    }
+
+    // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
+    function _depositFee(uint112 _gooReserve, uint112 _gobblerReserve) private returns (bool feeOn) {
+        address feeTo = IUniswapV2Factory(factory).feeTo();
+        feeOn = feeTo != address(0);
+        uint _kLast = kLast; // gas savings
+        if (feeOn) {
+            if (_kLast != 0) {
+                uint rootK = SafeMath.sqrt(uint(_gooReserve).mul(_gobblerReserve));
+                uint rootKLast = SafeMath.sqrt(_kLast);
+                if (rootK > rootKLast) {
+                    uint numerator = totalSupply.mul(rootK.sub(rootKLast));
+                    uint denominator = rootK.mul(5).add(rootKLast);
+                    uint liquidity = numerator / denominator;
+                    if (liquidity > 0) _mint(feeTo, liquidity);
+                }
+            }
+        } else if (_kLast != 0) {
+            kLast = 0;
+        }
+    }
+
+    // this low-level function should be called from a contract which performs important safety checks
+    function deposit(uint depositGoo, uint256[] calldata gobblerTokenIdBatch) external nonReentrant returns (uint liquidity) {
+        goo.transferFrom(msg.sender, address(this), depositGoo);
+        batchTranferValidGobblers(gobblerTokenIdBatch);
+        (uint112 _gooReserve, uint112 _gobblerReserve) = getReserves(); // gas savings
+        uint gooBalance = goo.balanceOf(address(this));
+        uint gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
+        uint amountGoo = gooBalance.sub(_gooReserve);
+        uint amountGobbler = gobblerBalance.sub(_gobblerReserve);
+
+        bool feeOn = _depositFee(_gooReserve, _gobblerReserve);
+        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        if (_totalSupply == 0) {
+            liquidity = SafeMath.sqrt(amountGoo.mul(amountGobbler)).sub(MINIMUM_LIQUIDITY);
+           _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+        } else {
+            liquidity = SafeMath.min(amountGoo.mul(_totalSupply) / _gooReserve, amountGobbler.mul(_totalSupply) / _gobblerReserve);
+        }
+        require(liquidity > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_MINTED');
+        _mint(msg.sender, liquidity);
+
+        _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
+        if (feeOn) kLast = uint(_gooReserve).mul(_gobblerReserve); // reserve0 and reserve1 are up-to-date
+        emit Deposit(msg.sender, amountGoo, amountGobbler);
+    }
+
+    function batchTranferValidGobblers(uint256[] calldata gobblerTokenIdBatch) public {
+        for(uint i = 0; i <= gobblerTokenIdBatch.length ;i++){
+          uint currentGobblerMultiplier = artGobblers.getGobblerEmissionMultiple(gobblerTokenIdBatch[i]);
+          if(currentGobblerMultiplier < 6 || 9 < currentGobblerMultiplier){ revert gobblerInvalidMultiplier(); }
+            artGobblers.safeTransferFrom(msg.sender,address(this),gobblerTokenIdBatch[i]);
+          }
     }
 
     /**
