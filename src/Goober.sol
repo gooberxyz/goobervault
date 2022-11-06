@@ -196,9 +196,9 @@ contract Goober is
         }
     }
 
-    function totalAssets() public view returns (uint256 gobberBal, uint256 gobblerMult, uint256 gooTokens) {
+    function totalAssets() public view returns (uint256 gobblerBal, uint256 gobblerMult, uint256 gooTokens) {
         gobblerBal = artGobblers.balanceOf(address(this));
-        gobblerMult = artGobblers.getGobblerEmissionMultiple(address(this));
+        gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
         gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
     }
 
@@ -227,7 +227,7 @@ contract Goober is
         returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast)
     {
         _gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        _gobblerReserve = uint112(artGobblers.getGobblerEmissionMultiple(address(this))) * 1000;
+        _gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this))) * 1000;
         _blockTimestampLast = blockTimestampLast;
     }
 
@@ -279,7 +279,7 @@ contract Goober is
             artGobblers.addGoo(gooBalance);
 
             // We have an updated multiplier from safe transfer callbacks
-            gobblerBalance = artGobblers.getGobblerEmissionMultiple(address(this));
+            gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
         }
         uint256 amount0In = gooBalance > _gooReserve - gooTokens ? gooBalance - (_gooReserve - gooTokens) : 0;
         uint256 amount1In =
