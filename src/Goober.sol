@@ -6,13 +6,14 @@ import "openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/security/PausableUpgradeable.sol";
+import "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import "./math/UQ112x112.sol";
+import "./interfaces/IGooberCallee.sol";
 import "./ERC20Upgradable.sol";
-import "./interfaces/IERC3156FlashBorrower.sol";
-import "./interfaces/IERC3156FlashLender.sol";
 
 contract Goober is
     UUPSUpgradeable,
@@ -20,10 +21,14 @@ contract Goober is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC20Upgradable,
-    IERC3156FlashLender
+    IERC721Receiver
 {
     using SafeTransferLib for Goo;
     using FixedPointMathLib for uint256;
+    using UQ112x112 for uint224;
+
+    error InvalidNFT();
+    error InvalidMultiplier(uint256 gobblerId);
 
     // Constant/Immutable storage
 
@@ -31,13 +36,17 @@ contract Goober is
     Goo public constant goo = Goo(0x600000000a36F3cD48407e35eB7C5c910dc1f7a8);
     ArtGobblers public constant artGobblers = ArtGobblers(0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769);
 
-    // Flash loan stuffs
-    bytes32 public constant FLASHLOAN_CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
-
     // Mutable storage
 
-    uint256 m = 0;
-    uint256 public FLASHLOAN_FEE; //  1000 = 10%
+    //artGobblers.gooBalance(address(this))
+    // Multiple of gobbers
+    uint40 totalGobblerMultiplier = 0;
+    // Last block timestamp
+    uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
+    // Accumulators
+    uint256 public priceGooCumulativeLast;
+    uint256 public priceGobblerCumulativeLast;
+    uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
 
     // EVENTS
 
@@ -51,6 +60,17 @@ contract Goober is
         uint256 gooTokens,
         uint256 shares
     );
+
+    event Swap(
+        address indexed sender,
+        uint256 gooTokensIn,
+        uint256 gobblersMultIn,
+        uint256 gooTokensOut,
+        uint256 gobblerMultOut,
+        address indexed to
+    );
+
+    event Sync(uint112 gooBalance, uint112 multBalance);
 
     // Constructor/init
 
@@ -67,6 +87,40 @@ contract Goober is
 
     // @dev required by the UUPS module
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    // update reserves and, on the first call per block, price accumulators
+    function _update(uint256 gooBalance, uint256 gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve)
+        private
+    {
+        require(gooBalance <= type(uint112).max && gobblerBalance <= type(uint112).max, "Goober: OVERFLOW");
+        uint40 blockTimestamp = uint40(block.timestamp % 2 ** 40);
+        uint40 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        if (timeElapsed > 0 && _gooReserve != 0 && _gobblerReserve != 0) {
+            // * never overflows, and + overflow is desired
+            priceGooCumulativeLast += uint256(UQ112x112.encode(_gobblerReserve).uqdiv(_gooReserve)) * timeElapsed;
+            priceGobblerCumulativeLast += uint256(UQ112x112.encode(_gooReserve).uqdiv(_gobblerReserve)) * timeElapsed;
+        }
+        // TODO(Do we need any special magic here)
+        //reserve0 = uint112(gooBalance);
+        //reserve1 = uint112(gobblerBalance);
+        blockTimestampLast = blockTimestamp;
+        emit Sync(uint112(gooBalance), uint112(gobblerBalance));
+    }
+
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
+        external
+        returns (bytes4)
+    {
+        if (msg.sender != address(artGobblers)) {
+            revert InvalidNFT();
+        }
+        uint40 gobMult = uint40(artGobblers.getGobblerEmissionMultiple(tokenId));
+        if (gobMult < 6 || gobMult > 9) {
+            revert InvalidMultiplier(tokenId);
+        }
+        totalGobblerMultiplier += gobMult;
+        return IERC721Receiver.onERC721Received.selector;
+    }
 
     // G can be derived from Goo.totalSupply, plus the issuance rate
     // M we can track internally
@@ -148,7 +202,7 @@ contract Goober is
     function totalAssets() public view returns (uint256 gobberBal, uint256 gobblerMult, uint256 gooTokens) {
         return (
             artGobblers.balanceOf(address(this)),
-            m,
+            totalGobblerMultiplier,
             goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this))
         );
     }
@@ -171,41 +225,84 @@ contract Goober is
         return type(uint256).max;
     }
 
-    function maxFlashLoan(address token) external view returns (uint256) {
-        return token == address(goo) ? artGobblers.gooBalance(address(this)) : 0;
-    }
-
-    function flashFee(address token, uint256 amount) public view returns (uint256) {
-        return amount * FLASHLOAN_FEE / 10000;
-    }
-
-    function changeFee(uint256 newFee) public onlyOwner {
-        FLASHLOAN_FEE = newFee;
-    }
-
-    /**
-     * @dev Loan `amount` tokens to `receiver`, and takes it back plus a `flashFee` after the callback.
-     * @param receiver The contract receiving the tokens, needs to implement the `onFlashLoan(address user, uint256 amount, uint256 fee, bytes calldata)` interface.
-     * @param token The loan currency.
-     * @param amount The amount of tokens lent.
-     * @param data A data parameter to be passed on to the `receiver` for any custom use.
-     */
-    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes calldata data)
-        external
-        override
-        returns (bool)
+    // TODO(u256?)
+    function getReserves()
+        public
+        view
+        returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast)
     {
-        uint256 _fee = flashFee(token, amount);
-        uint256 _finalAmount = amount + _fee;
-        artGobblers.removeGoo(amount);
-        goo.transfer(address(receiver), amount);
-        require(
-            receiver.onFlashLoan(msg.sender, token, amount, _fee, data) == FLASHLOAN_CALLBACK_SUCCESS,
-            "FlashLender: Callback failed"
-        );
-        goo.transferFrom(address(receiver), address(this), _finalAmount);
-        artGobblers.addGoo(_finalAmount);
-        return true;
+        _gooReserve = uint112(artGobblers.gooBalance(address(this)));
+        _gobblerReserve = uint112(totalGobblerMultiplier) * 1000;
+        _blockTimestampLast = blockTimestampLast;
+    }
+
+    // this low-level function should be called from a contract which performs important safety checks
+    function swap(uint256[] calldata gobblers, uint256 gooTokens, address to, bytes calldata data)
+        external
+        nonReentrant
+    {
+        uint40 multOut = 0;
+        // Sum the multipliers of requested gobblers
+        {
+            if (gobblers.length > 0) {
+                uint40 gobMult;
+                for (uint256 i = 0; i < gobblers.length; i++) {
+                    gobMult = uint40(artGobblers.getGobblerEmissionMultiple(i));
+                    if (gobMult < 6 || gobMult > 9) {
+                        revert InvalidMultiplier(i);
+                    }
+                    multOut += gobMult;
+                }
+            }
+            require(gooTokens > 0 || multOut > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
+        }
+        (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
+        require(gooTokens < _gooReserve && multOut < _gobblerReserve, "Goober: INSUFFICIENT_LIQUIDITY");
+        uint256 gooBalance;
+        uint256 gobblerBalance;
+        {
+            require(to != address(goo) && to != address(artGobblers), "Goober: INVALID_TO");
+            // Optimistically transfer goo if any
+            if (gooTokens >= 0) {
+                artGobblers.removeGoo(gooTokens);
+                goo.safeTransfer(to, gooTokens);
+            }
+
+            // Optimistically transfer gobblers if any
+            if (gobblers.length > 0) {
+                for (uint256 i = 0; i < gobblers.length; i++) {
+                    artGobblers.safeTransferFrom(address(this), to, gobblers[i]);
+                }
+                totalGobblerMultiplier -= multOut;
+            }
+
+            // Flash swap
+            if (data.length > 0) IGooberCallee(to).gooberCall(msg.sender, gobblers, gooTokens, data);
+
+            // This goo isn't yet deposited
+            gooBalance = goo.balanceOf(address(this));
+            // Deposit goo to tank
+            artGobblers.addGoo(gooBalance);
+
+            // We have an updated multiplier from safe transfer callbacks
+            gobblerBalance = totalGobblerMultiplier;
+        }
+        uint256 amount0In = gooBalance > _gooReserve - gooTokens ? gooBalance - (_gooReserve - gooTokens) : 0;
+        uint256 amount1In =
+            gobblerBalance > _gobblerReserve - multOut ? gobblerBalance - (_gobblerReserve - multOut) : 0;
+        require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
+        {
+            // scope for reserve{0,1}Adjusted, avoids stack too deep errors
+            // TODO(Test and figure this bit out)
+            // We can only feasibly charge fees on goo
+            uint256 balance0Adjusted = (gooBalance * 1000) - (amount0In * 3);
+            //uint256 balance1Adjusted = (gobblerBalance * 1000) - (amount1In * 3);
+            require(
+                (balance0Adjusted * gobblerBalance) >= (uint256(_gooReserve) * _gobblerReserve * 1000 ** 2), "Goober: K"
+            );
+        }
+        _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
+        emit Swap(msg.sender, amount0In, amount1In, gooTokens, multOut, to);
     }
 
     /**
