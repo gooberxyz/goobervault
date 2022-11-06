@@ -38,13 +38,15 @@ contract Goober is
 
     // Mutable storage
 
-    //artGobblers.gooBalance(address(this))
-    // Last block timestamp
-    uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
     // Accumulators
     uint256 public priceGooCumulativeLast;
     uint256 public priceGobblerCumulativeLast;
-    uint256 public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+
+    // reserve0 (gooBalance) * reserve1 (totalGobblerMultiplier), as of immediately after the most recent liquidity event
+    uint256 private kLast;
+
+    // Last block timestamp
+    uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     // EVENTS
 
@@ -83,7 +85,7 @@ contract Goober is
         __ERC20_init("Goober", "GBR");
     }
 
-    // @dev required by the UUPS module
+    /// @dev required by the UUPS module
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     /// @dev update reserves and, on the first call per block, price accumulators
@@ -175,6 +177,7 @@ contract Goober is
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, shares);
     }
 
+
     /// @notice Withdraws the requested gobblers and goo tokens from the vault.
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
@@ -201,8 +204,10 @@ contract Goober is
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
         }
 
+
         // Transfer shares from the owner to the receiver.
         transferFrom(owner, receiver, shares);
+
 
         // Burn the shares
         _burn(owner, shares);
@@ -230,7 +235,6 @@ contract Goober is
 
         // update kLast
         kLast = uint112(gooBalance) * uint112(gobblerMultBalance);
-
         // Update latest timestamp
         blockTimestampLast = uint40(block.timestamp);
 
@@ -241,6 +245,7 @@ contract Goober is
         gobblerBal = artGobblers.balanceOf(address(this));
         gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
         gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
+
     }
 
     // TODO(Views for goo and gobbler exchange rates to GBR)
