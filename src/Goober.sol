@@ -39,8 +39,6 @@ contract Goober is
     // Mutable storage
 
     //artGobblers.gooBalance(address(this))
-    // Multiple of gobbers
-    uint40 totalGobblerMultiplier = 0;
     // Last block timestamp
     uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
     // Accumulators
@@ -118,7 +116,6 @@ contract Goober is
         if (gobMult < 6 || gobMult > 9) {
             revert InvalidMultiplier(tokenId);
         }
-        totalGobblerMultiplier += gobMult;
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -200,11 +197,9 @@ contract Goober is
     }
 
     function totalAssets() public view returns (uint256 gobberBal, uint256 gobblerMult, uint256 gooTokens) {
-        return (
-            artGobblers.balanceOf(address(this)),
-            totalGobblerMultiplier,
-            goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this))
-        );
+        gobblerBal = artGobblers.balanceOf(address(this));
+        gobblerMult = artGobblers.getGobblerEmissionMultiple(address(this));
+        gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
     }
 
     // TODO(Views for goo and gobbler exchange rates to GBR)
@@ -232,7 +227,7 @@ contract Goober is
         returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast)
     {
         _gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        _gobblerReserve = uint112(totalGobblerMultiplier) * 1000;
+        _gobblerReserve = uint112(artGobblers.getGobblerEmissionMultiple(address(this))) * 1000;
         _blockTimestampLast = blockTimestampLast;
     }
 
@@ -273,7 +268,6 @@ contract Goober is
                 for (uint256 i = 0; i < gobblers.length; i++) {
                     artGobblers.safeTransferFrom(address(this), to, gobblers[i]);
                 }
-                totalGobblerMultiplier -= multOut;
             }
 
             // Flash swap
@@ -285,7 +279,7 @@ contract Goober is
             artGobblers.addGoo(gooBalance);
 
             // We have an updated multiplier from safe transfer callbacks
-            gobblerBalance = totalGobblerMultiplier;
+            gobblerBalance = artGobblers.getGobblerEmissionMultiple(address(this));
         }
         uint256 amount0In = gooBalance > _gooReserve - gooTokens ? gooBalance - (_gooReserve - gooTokens) : 0;
         uint256 amount1In =
