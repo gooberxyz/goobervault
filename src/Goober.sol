@@ -6,6 +6,7 @@ import "openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "openzeppelin-contracts-upgradeable/security/PausableUpgradeable.sol";
+import "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
@@ -17,10 +18,14 @@ contract Goober is
     OwnableUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
-    ERC20Upgradable
+    ERC20Upgradable,
+    IERC721Receiver
 {
     using SafeTransferLib for Goo;
     using FixedPointMathLib for uint256;
+
+    error InvalidNFT();
+    error InvalidMultiplier(uint256 gobblerId);
 
     // Constant/Immutable storage
 
@@ -30,11 +35,11 @@ contract Goober is
 
     // Mutable storage
 
-    // Multiple of gobbers
-    uint256 m = 0;
     //artGobblers.gooBalance(address(this))
+    // Multiple of gobbers
+    uint40 totalGobblerMultiplier = 0;
     // Last block timestamp
-    uint40  private blockTimestampLast; // uses single storage slot, accessible via getReserves
+    uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
     // Accumulators
     uint256 public priceGooCumulativeLast;
     uint256 public priceGobblerCumulativeLast;
@@ -53,6 +58,15 @@ contract Goober is
         uint256 shares
     );
 
+    event Swap(
+        address indexed sender,
+        uint gooTokensIn,
+        uint256 gobblersMultIn,
+        uint256 gooTokensOut,
+        uint256 gobblerMultOut,
+        address indexed to
+    );
+
     // Constructor/init
 
     constructor() initializer {}
@@ -68,6 +82,23 @@ contract Goober is
 
     // @dev required by the UUPS module
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external returns (bytes4) {
+        if (msg.sender != address(artGobblers)) {
+            revert InvalidNFT();
+        }
+        uint40 gobMult = uint40(artGobblers.getGobblerEmissionMultiple(tokenId));
+        if (gobMult < 6 || gobMult > 9) {
+            revert InvalidMultiplier(tokenId);
+        }
+        totalGobblerMultiplier += gobMult;
+        return IERC721Receiver.onERC721Received.selector;
+    }
 
     // G can be derived from Goo.totalSupply, plus the issuance rate
     // M we can track internally
@@ -149,7 +180,7 @@ contract Goober is
     function totalAssets() public view returns (uint256 gobberBal, uint256 gobblerMult, uint256 gooTokens) {
         return (
             artGobblers.balanceOf(address(this)),
-            m,
+        totalGobblerMultiplier,
             goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this))
         );
     }
@@ -170,6 +201,74 @@ contract Goober is
 
     function maxWithdraw(address owner) public view returns (uint256) {
         return type(uint256).max;
+    }
+
+    // TODO(u256?)
+    function getReserves() public view returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast) {
+        _gooReserve = uint112(artGobblers.gooBalance(address(this)));
+        _gobblerReserve = uint112(totalGobblerMultiplier) * 1000;
+        _blockTimestampLast = blockTimestampLast;
+    }
+
+    // this low-level function should be called from a contract which performs important safety checks
+    function swap(uint256 gooTokens, uint256[] calldata gobblers, address to, bytes calldata data) external nonReentrant {
+        // Sum the multipliers of requested gobblers
+        uint40 multOut = 0;
+        if (gobblers.length > 0) {
+            uint40 gobMult;
+            for (uint256 i = 0; i < gobblers.length; i++) {
+                gobMult = uint40(artGobblers.getGobblerEmissionMultiple(i));
+                if (gobMult < 6 || gobMult > 9) {
+                    revert InvalidMultiplier(i);
+                }
+                multOut += gobMult;
+            }
+        }
+        require(gooTokens > 0 || multOut > 0, 'Goober: INSUFFICIENT_OUTPUT_AMOUNT');
+        (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
+        require(gooTokens < _gooReserve && multOut < _gobblerReserve, 'Goober: INSUFFICIENT_LIQUIDITY');
+
+        // Optimistically transfer goo if any
+        if (gooTokens >= 0) {
+            artGobblers.removeGoo(gooTokens);
+            goo.safeTransfer(to, gooTokens);
+        }
+
+        // Optimistically transfer gobblers if any
+        if (gobblers.length > 0) {
+            for (uint256 i = 0; i < gobblers.length; i++) {
+                artGobblers.safeTransferFrom(address(this), to, gobblers[i]);
+            }
+            totalGobblerMultiplier -= multOut;
+        }
+
+        // Flash swap
+        //if (data.length > 0) IGooberCallee(to).gooberCall(msg.sender, gooTokens, gobblers, data);
+
+        uint256 gooBalance;
+        uint256 gobblerBalance;
+
+        // This goo isn't yet deposited
+        gooBalance = goo.balanceOf(address(this));
+        // Deposit goo to tank
+        artGobblers.addGoo(gooBalance);
+
+        // We have an updated multiplier from safe transfer callbacks
+        gobblerBalance = totalGobblerMultiplier;
+
+        uint amount0In = gooBalance > _gooReserve - gooTokens ? gooBalance - (_gooReserve - gooTokens) : 0;
+        uint amount1In = gobblerBalance > _gobblerReserve - multOut ? gobblerBalance - (_gobblerReserve - multOut) : 0;
+        require(amount0In > 0 || amount1In > 0, 'Goober: INSUFFICIENT_INPUT_AMOUNT');
+        { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
+            // TODO(Test and figure this bit out)
+            // We can only feasibly charge fees on goo
+            uint256 balance0Adjusted = (gooBalance * 1000) - (amount0In * 3);
+            //uint balance1Adjusted = gobblerBalance.mul(1000).sub(amount1In.mul(3));
+            require((balance0Adjusted * gobblerBalance) >= (uint256(_gooReserve) * _gobblerReserve * 1000**2), 'Goober: K');
+        }
+
+        //_update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
+        emit Swap(msg.sender, amount0In, amount1In, gooTokens, multOut, to);
     }
 
     /**
