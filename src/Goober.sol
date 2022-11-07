@@ -188,10 +188,19 @@ contract Goober is
         virtual
         returns (uint256 shares)
     {
-        (uint112 gooReserves, uint112 gobblerReserves,) = getReserves();
+        (uint112 gooReserves, uint112 gobblerMultReserves,) = getReserves();
 
-        // Determine how many shares to withdraw
-        shares = previewWithdraw(gobblers, gooTokens); // No need to check for rounding error, previewWithdraw rounds up.
+        uint256 multOut = 0;
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            uint256 mult = artGobblers.getGobblerEmissionMultiple(gobblers[i]);
+
+            // we are not allowing withdraws of legendaries
+            if (mult > 9) revert();
+
+            multOut += artGobblers.getGobblerEmissionMultiple(gobblers[i]); 
+        }
+        require(multOut > 0 && gooTokens > 0, "INSUFFICIENT LIQUIDITY WITHDRAW");
+        shares = FixedPointMathLib.sqrt(multOut * gooTokens);
 
         // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
@@ -201,11 +210,6 @@ contract Goober is
             require(allowed >= shares, "Goober: INSUFFICIENT_ALLOWANCE");
 
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
-        }
-
-        // We are not allowing legendary withdraws
-        for (uint256 i = 0; i < gobblers.length; i++) {
-            if (artGobblers.getGobblerEmissionMultiple(gobblers[i]) > 9) revert();
         }
 
         // Transfer shares from the owner to the receiver.
@@ -225,21 +229,21 @@ contract Goober is
 
         // Transfer gobblers if any
         for (uint256 i = 0; i < gobblers.length; i++) {
-            artGobblers.safeTransfer(receiver, gobblers[i]);
+            artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
         }
 
         uint256 gobblerMultBalance = artGobblers.getUserEmissionMultiple(address(this));
         uint256 gooBalance = artGobblers.gooBalance(address(this));
 
         // update reserves
-        _update(gooBalance, gobblerMultBalance, gooReserves, gobblerReserves);
+        _update(gooBalance, gobblerMultBalance, gooReserves, gobblerMultReserves);
 
         // User has the option to withdraw only goo or only gobblers
         // This can cause some interesting behavior with K
         // But this'll do for now
 
         // update kLast
-        kLast = uint112(gooBalance) * uint112(gobblerMultBalance);
+        // kLast = uint112(gooBalance) * uint112(gobblerMultBalance);
         // Update latest timestamp
         blockTimestampLast = uint40(block.timestamp);
 
