@@ -56,37 +56,6 @@ contract Goober is
     //Constant needed for deposit
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
-    // EVENTS
-
-    event Deposit(
-        address indexed caller,
-        address indexed owner,
-        address indexed receiver,
-        uint256[] gobblers,
-        uint256 gooTokens,
-        uint256 shares
-    );
-
-    event Withdraw(
-        address indexed caller,
-        address indexed receiver,
-        address indexed owner,
-        uint256[] gobblers,
-        uint256 gooTokens,
-        uint256 shares
-    );
-
-    event Swap(
-        address indexed sender,
-        uint256 gooTokensIn,
-        uint256 gobblersMultIn,
-        uint256 gooTokensOut,
-        uint256 gobblerMultOut,
-        address indexed receiver
-    );
-
-    event Sync(uint112 gooBalance, uint112 multBalance);
-
     // Constructor/init
 
     constructor() initializer {}
@@ -296,73 +265,69 @@ contract Goober is
     }
 
     // this low-level function should be called from a contract which performs important safety checks
-    function swap(uint256[] calldata gobblers, uint256 gooTokens, address receiver, bytes calldata data)
-        external
-        nonReentrant
-    {
-        uint40 multOut = 0;
-        // Sum the multipliers of requested gobblers
-        {
-            if (gobblers.length > 0) {
-                uint40 gobMult;
-                for (uint256 i = 0; i < gobblers.length; i++) {
-                    gobMult = uint40(artGobblers.getGobblerEmissionMultiple(i));
-                    if (gobMult < 6 || gobMult > 9) {
-                        revert InvalidMultiplier(i);
-                    }
-                    multOut += gobMult;
-                }
-            }
-            require(gooTokens > 0 || multOut > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
-        }
+    function swap(SwapParams calldata parameters) external nonReentrant {
+        require(parameters.gooOut > 0 || parameters.gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
+        uint112 multOut = 0;
         (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
-        require(gooTokens < _gooReserve && multOut < _gobblerReserve, "Goober: INSUFFICIENT_LIQUIDITY");
-        uint256 gooBalance;
-        uint256 gobblerBalance;
+
         {
-            require(receiver != address(goo) && receiver != address(artGobblers), "Goober: INVALID_TO");
+            require(
+                parameters.receiver != address(goo) && parameters.receiver != address(artGobblers), "Goober: INVALID_TO"
+            );
+
+            // Transfer out
+
             // Optimistically transfer goo if any
-            if (gooTokens >= 0) {
-                artGobblers.removeGoo(gooTokens);
-                goo.safeTransfer(receiver, gooTokens);
+            if (parameters.gooOut >= 0) {
+                artGobblers.removeGoo(parameters.gooOut);
+                goo.safeTransfer(parameters.receiver, parameters.gooOut);
             }
 
             // Optimistically transfer gobblers if any
-            if (gobblers.length > 0) {
-                for (uint256 i = 0; i < gobblers.length; i++) {
-                    artGobblers.transferFrom(address(this), receiver, gobblers[i]);
+            uint112 multOut = 0;
+            if (parameters.gobblersOut.length > 0) {
+                for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
+                    multOut += uint112(artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i])) * 1000;
+                    artGobblers.transferFrom(address(this), parameters.receiver, parameters.gobblersOut[i]);
                 }
             }
-
-            // Flash swap
-            if (data.length > 0) IGooberCallee(receiver).gooberCall(msg.sender, gobblers, gooTokens, data);
-
-            // TODO(Should we be pulling here?)
-
-            // This goo isn't yet deposited
-            gooBalance = goo.balanceOf(address(this));
-            // Deposit goo to tank
-            artGobblers.addGoo(gooBalance);
-
-            // We have an updated multiplier from safe transfer callbacks
-            gobblerBalance = artGobblers.getUserEmissionMultiple(address(this)) * 1000;
         }
-        uint256 amount0In = gooBalance > _gooReserve - gooTokens ? gooBalance - (_gooReserve - gooTokens) : 0;
+
+        // Flash loan call out
+        if (parameters.data.length > 0) IGooberCallee(parameters.receiver).gooberCall(parameters);
+
+        {
+            // Transfer in
+
+            // Transfer goo if any
+            if (parameters.gooIn > 0) {
+                goo.safeTransferFrom(parameters.owner, address(this), parameters.gooIn);
+                artGobblers.addGoo(parameters.gooIn);
+            }
+
+            // Transfer gobblers if any
+            for (uint256 i = 0; i < parameters.gobblersIn.length; i++) {
+                artGobblers.safeTransferFrom(parameters.owner, address(this), parameters.gobblersIn[i]);
+            }
+        }
+
+        (uint112 _gooBalance, uint112 _gobblerBalance,) = getReserves();
+
+        uint256 amount0In =
+            _gooBalance > _gooReserve - parameters.gooOut ? _gooBalance - (_gooReserve - parameters.gooOut) : 0;
         uint256 amount1In =
-            gobblerBalance > _gobblerReserve - multOut ? gobblerBalance - (_gobblerReserve - multOut) : 0;
+            _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
         require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
         {
             // scope for reserve{0,1}Adjusted, avoids stack too deep errors
             // TODO(Test and figure this bit out)
             // We can only feasibly charge fees on goo
-            uint256 balance0Adjusted = (gooBalance * 1000) - (amount0In * 3);
-            //uint256 balance1Adjusted = (gobblerBalance * 1000) - (amount1In * 3);
-            require(
-                (balance0Adjusted * gobblerBalance) >= (uint256(_gooReserve) * _gobblerReserve * 1000 ** 2), "Goober: K"
-            );
+            uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
+            uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
+            require((balance0Adjusted * balance1Adjusted) >= ((_gooReserve * _gobblerReserve) * 1000 ** 2), "Goober: K");
         }
-        _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
-        emit Swap(msg.sender, amount0In, amount1In, gooTokens, multOut, receiver);
+        _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve);
+        emit Swap(msg.sender, amount0In, amount1In, parameters.gooOut, multOut, parameters.receiver);
     }
 
     /**
