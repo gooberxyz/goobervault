@@ -116,7 +116,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
     }
 
     function test_swap() public {
-        _writeTokenBalance(address(this), address(goo), 1000 ether);
+        _writeTokenBalance(address(this), address(goo), 2000 ether);
         gobblers.addGoo(500 ether);
         uint256[] memory artGobblers = new uint256[](2);
         uint256[] memory artGobblersTwo = new uint256[](1);
@@ -130,13 +130,11 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         uint256 gooTokens = 200 ether;
         address me = address(this);
         uint256 shares = goober.deposit(artGobblers, gooTokens, me, me);
-        uint256 totalMult = gobblers.getUserEmissionMultiple(address(goober));
-        uint256 swapInMult = gobblers.getGobblerEmissionMultiple(artGobblersTwo[0]);
-        uint256 swapOutMult = gobblers.getGobblerEmissionMultiple(artGobblersThree[0]);
         bytes memory data;
-        // TODO(This should transfer in the assets to be fixed)
-        //goober.swap(artGobblersThree, 0 ether, me, data);
+        IGoober.SwapParams memory swap =
+            IGoober.SwapParams(artGobblersThree, 0 ether, artGobblersTwo, 103 ether, me, me, data);
+        goober.swap(swap);
         // TODO(Get this working)
-        shares = goober.withdraw(artGobblers, gooTokens, me, me);
+        //shares = goober.withdraw(artGobblers, gooTokens, me, me);
     }
 }
