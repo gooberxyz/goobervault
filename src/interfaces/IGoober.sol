@@ -5,6 +5,7 @@ import "./IERC721Receiver.sol";
 
 // TODO(IERC20 solmate overrides)
 // This should really be IERC20Metadata as well
+// So we can get all the natspec
 interface IGoober is IERC721Receiver {
     // Errors
     error gobblerInvalidMultiplier();
