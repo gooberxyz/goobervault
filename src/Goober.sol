@@ -56,6 +56,8 @@ contract Goober is
     //Constant needed for deposit
     uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
+    uint256 public constant MULT_SCALAR = 10 ** 3;
+
     // Constructor/init
 
     constructor() initializer {}
@@ -230,8 +232,14 @@ contract Goober is
             // bool feeOn = _mintFee(_reserve0, _reserve1);
             uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
             uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
-            uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
-            shares = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
+            // TODO(Fix 0 division error)
+            if (_k == 0) {
+                shares = _totalSupply - MINIMUM_LIQUIDITY;
+                _burn(address(0), MINIMUM_LIQUIDITY);
+            } else {
+                uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _k);
+                shares = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
+            }
         }
         // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
@@ -258,13 +266,21 @@ contract Goober is
         gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
     }
 
+    function _getScaledAccountMultiple() internal view returns (uint112 multiple) {
+        multiple = uint112(artGobblers.getUserEmissionMultiple(address(this)) * MULT_SCALAR);
+    }
+
+    function _getScaledTokenMultiple(uint256 gobblerId) internal view returns (uint112 multiple) {
+        multiple = uint112(artGobblers.getGobblerEmissionMultiple(gobblerId) * MULT_SCALAR);
+    }
+
     function getReserves()
         public
         view
         returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast)
     {
         _gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        _gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this))) * 1e18;
+        _gobblerReserve = _getScaledAccountMultiple();
         _blockTimestampLast = blockTimestampLast;
     }
 
@@ -290,7 +306,7 @@ contract Goober is
             // Optimistically transfer gobblers if any
             if (parameters.gobblersOut.length > 0) {
                 for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
-                    multOut += uint112(artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i])) * 1000;
+                    multOut += _getScaledTokenMultiple(parameters.gobblersOut[i]);
                     artGobblers.transferFrom(address(this), parameters.receiver, parameters.gobblersOut[i]);
                 }
             }
