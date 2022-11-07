@@ -37,9 +37,12 @@ contract Goober is
     ArtGobblers public constant artGobblers = ArtGobblers(0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769);
 
     // Mutable storage
+   
 
-    // Keeps track of count of each mult in vault, updated by _update().
-    uint8[] memory multsCount = new uint8[](5)
+
+    // Array that keeps track of count of each mult in vault
+    // updated by _update(). Useful for later math.
+    uint8[] memory multsCount = new uint8[](5); 
 
     // Accumulators
     uint256 public priceGooCumulativeLast;
@@ -73,13 +76,6 @@ contract Goober is
         address indexed to
     );
 
-    // Emitted by getMoreGobblers(). If minted == false, it means the gobbler was purchased. 
-    event Rebalance(
-          uint256 gobblersMultIn,
-          uint256 gobblerOverflow, 
-          bool minted,
-    );
-
     event Sync(uint112 gooBalance, uint112 multBalance);
 
     // Constructor/init
@@ -94,13 +90,11 @@ contract Goober is
         __ReentrancyGuard_init();
         __ERC20_init("Goober", "GBR");
     }
-
     /// @dev required by the UUPS module
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // update reserves and, on the first call per block, price accumulators
     // TODO: Update the multsCount array. 
-
     function _update(uint256 gooBalance, uint256 gobblerBalance, uint112 _gooReserve, uint112 _multReserve)
         private
     {
@@ -132,6 +126,8 @@ contract Goober is
         }
         return IERC721Receiver.onERC721Received.selector;
     }
+
+    // TODO(MintSwitch)
 
     // G can be derived from Goo.totalSupply, plus the issuance rate
     // M we can track internally
@@ -259,32 +255,41 @@ contract Goober is
         _blockTimestampLast = blockTimestampLast;
     }
 
-    /**
-        @notice Returns all Gobbler IDs held by the pool
-     */
-    function getGobblerIds() external view virtual returns (uint256[] memory);
-
-    /**
-        @notice Returns the quantity of Gobblers of each mult held by the pool. 
-     */
+    // TODO(Return the quantity of each mult number held by the pool)
     function getGobblerCount() external view virtual returns (uint256[] memory);
 
+    // Sells the caller Gobblers in exchange for Goo, slightly
+    // below the current auction price (can be determined by curve)
+    // if the vault is in mint mode and can afford a Gobbler.
+    // TODO(Take into account mint probability as a premium/discount)
+    function gobblerOTC(uint256[] calldata gobblers, uint256 gooTokens, address receiver) external nonReentrant
+    returns (uint256 profit) {
+        // TODO(Add require mintMode == 1)
+        (uint112 _gooReserve, uint112 _multReserve,) = getReserves(); // gas savings
+        uint40 mintPrice = artGobblers.gobblerPrice();
+            require(_gooReserve - 6 >= _multReserve && _gooReserve > mintPrice, 
+            "Goober: INSUFFICENT_GOO");
+             // Transfer gobblers if any
+            for (uint256 i = 0; i < gobblers.length; i++) {
+            artGobblers.safeTransferFrom(msg.sender, address(this), gobblers[i]);
+            }
+            //TODO calculate how much Goo they should get.
+        }
 
-     /**
-        @notice Determines whether to mint or buy based on current floor prices of each mult
-        @notice compared to current mint price determined by the VRGDA, by calling artGobblers.gobblerPrice()
-     */
-    function _mintOrBuy() internal returns (bool) {
-
-    }
 
     // Will need to call _update() to update reserves of Gobblers and Goo (upon success). 
     // Will need to remove the Goo from the Gobblers (virtual), in order to 
     // either mint a Gobbler by burning Goo, or sell the Goo for Eth and buying a Gobbler
     // off secondary. 
-    function getMoreGobblers() public nonReentrant {
-        require _mintOrBuy()
-    }
+    // TODO Require the switch to be turned ON (1 vs. 0 == OFF). 
+
+    function mintGobbler() public nonReentrant {
+        (uint112 _gooReserve, uint112 _multReserve,) = getReserves(); // gas savings
+        uint40 mintPrice = artGobblers.gobblerPrice();
+            require(_gooReserve - 6 >= _multReserve && _gooReserve > mintPrice, 
+            "Goober: INSUFFICENT_GOO");
+        artGobblers.mintFromGoo(mintPrice, true)
+            }
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(uint256[] calldata gobblers, uint256 gooTokens, address to, bytes calldata data)
@@ -359,4 +364,4 @@ contract Goober is
      * variables without shifting down storage in the inheritance chain.
      */
     uint256[50] private __gap;
-}
+
