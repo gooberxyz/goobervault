@@ -24,8 +24,11 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     Goo public immutable goo;
     ArtGobblers public immutable artGobblers;
 
-    uint256 private constant MINIMUM_LIQUIDITY = 10 ** 3;
-    uint256 private constant MULT_SCALAR = 10 ** 3;
+    uint16 private constant MINIMUM_LIQUIDITY = 1e3;
+    uint16 private constant MULT_SCALAR = 1e3;
+    uint16 private constant BPS_SCALAR = 1e4;
+    uint16 public constant MANAGEMENT_FEE_BPS = 200;
+    uint16 public constant PERFORMANCE_FEE_BPS = 1e3;
 
     // Mutable storage
 
@@ -89,15 +92,15 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @dev update reserves and, on the first call per block, price accumulators
-    /// @param gooBalance the new goo balance
-    /// @param gobblerBalance the new gobblers multiplier
+    /// @param _gooBalance the new goo balance
+    /// @param _gobblerBalance the new gobblers multiplier
     /// @param _gooReserve the current goo reserve
     /// @param _gobblerReserve the current gobblers reserve
-    function _update(uint256 gooBalance, uint256 gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve)
+    function _update(uint256 _gooBalance, uint256 _gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve)
         private
     {
         // Check if the reserves will overflow
-        require(gooBalance <= type(uint112).max && gobblerBalance <= type(uint112).max, "Goober: OVERFLOW");
+        require(_gooBalance <= type(uint112).max && _gobblerBalance <= type(uint112).max, "Goober: OVERFLOW");
 
         uint40 blockTimestamp = uint40(block.timestamp % 2 ** 40);
 
@@ -111,11 +114,16 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                     uint256(UQ112x112.encode(_gooReserve).uqdiv(_gobblerReserve)) * timeElapsed;
             }
         }
-        // TODO(Do we need any special magic here)
-        //reserve0 = uint112(gooBalance);
-        //reserve1 = uint112(gobblerBalance);
+
+        // We don't store reserves here as they are already stored in other contracts
+
+        // kLast is used for calculating fees
+        kLast = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
+
+        // This is used for the oracle accumulators
         blockTimestampLast = blockTimestamp;
-        emit Sync(uint112(gooBalance), uint112(gobblerBalance));
+
+        emit Sync(uint112(_gooBalance), uint112(_gobblerBalance));
     }
 
     /// @inheritdoc IERC721Receiver
@@ -175,7 +183,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 shares = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
             }
             require(shares > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
-            _mint(receiver, shares);
+            uint256 _fee = shares * MANAGEMENT_FEE_BPS / BPS_SCALAR;
+            _mint(feeTo, _fee);
+            _mint(receiver, shares - _fee);
         }
 
         _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
