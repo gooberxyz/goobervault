@@ -117,9 +117,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
         // We don't store reserves here as they are already stored in other contracts
 
-        // kLast is used for calculating fees
-        kLast = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
-
         // This is used for the oracle accumulators
         blockTimestampLast = blockTimestamp;
 
@@ -143,6 +140,28 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // TODO(Should we use 256 bit for reserves rather than 112 bit Q maths)
 
+    function _performanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult) internal returns (uint256 fee) {
+        uint112 _kLast = kLast;
+        // No k, no fee
+        if (_kLast > 0) {
+            uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult));
+            // No growth in k, no fee
+            if (_k > _kLast) {
+                uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
+                fee = FixedPointMathLib.mulWadDown(totalSupply, _deltaK) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
+                kLast = uint112(_k);
+                _mint(feeTo, fee);
+                emit FeesAccrued(feeTo, fee, true);
+            }
+        }
+    }
+
+    function _managementFee(uint256 shares) internal returns (uint256 fee) {
+        fee = shares * MANAGEMENT_FEE_BPS / BPS_SCALAR;
+        _mint(feeTo, fee);
+        emit FeesAccrued(feeTo, fee, false);
+    }
+
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
         external
         nonReentrant
@@ -150,6 +169,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     {
         // Get reserve balances before they are updated from deposit transfers
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves(); // gas savings
+
+        // Asses performance fee since last transaction
+        _performanceFee(_gooReserve, _gobblerReserveMult);
 
         // Need to transfer before minting or ERC777s could reenter.
         // Transfer goo if any
@@ -183,15 +205,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 shares = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
             }
             require(shares > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
-            uint256 _fee = shares * MANAGEMENT_FEE_BPS / BPS_SCALAR;
-            _mint(feeTo, _fee);
-            _mint(receiver, shares - _fee);
         }
 
-        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
+        // Mint shares to depositor less management fee
+        _mint(receiver, shares - _managementFee(shares));
 
-        // TODO(Fee math)
-        //if (feeOn) kLast = uint(_gooReserve).mul(_gobblerReserve); // reserve0 and reserve1 are up-to-date
+        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
 
         emit Deposit(msg.sender, owner, receiver, gobblers, gooTokens, shares);
     }
@@ -208,6 +227,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         returns (uint256 shares)
     {
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
+
+        // Asses performance fee since last transaction
+        _performanceFee(_gooReserve, _gobblerReserveMult);
 
         // Optimistically transfer goo if any
         if (gooTokens >= 0) {
@@ -229,8 +251,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
         {
             uint256 _totalSupply = totalSupply;
-            // TODO(Handle fee)
-            // bool feeOn = _mintFee(_reserve0, _reserve1);
+
             uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
             uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
             // We don't want to allow the pool to be looted/decommed, ever
@@ -248,7 +269,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
         }
 
-        // Burn the shares
+        // Burn the shares from owner
         _burn(owner, shares);
 
         // update reserves
@@ -342,6 +363,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
             require((balance0Adjusted * balance1Adjusted) >= ((_gooReserve * _gobblerReserve) * 1000 ** 2), "Goober: K");
         }
+        // Asses performance fee on the growth of k.
+        _performanceFee(_gooBalance, _gobblerBalance);
+        // Update oracle
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve);
         emit Swap(msg.sender, amount0In, amount1In, parameters.gooOut, multOut, parameters.receiver);
     }
