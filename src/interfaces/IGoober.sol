@@ -1,9 +1,10 @@
 pragma solidity >=0.8.0;
 
-import "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
+import "./IERC20Metadata.sol";
+import "./IERC721Receiver.sol";
 
 // TODO(IERC20 solmate overrides)
+// This should really be IERC20Metadata as well
 interface IGoober is IERC721Receiver {
     // Errors
     error gobblerInvalidMultiplier();

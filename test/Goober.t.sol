@@ -2,16 +2,14 @@
 pragma solidity ^0.8.15;
 
 import "forge-std/Test.sol";
-import "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "art-gobblers/Goo.sol";
-import "../src/Goober.sol";
 import "art-gobblers/../test/utils/mocks/LinkToken.sol";
-import {Utilities} from "art-gobblers/../test/utils/Utilities.sol";
 import "art-gobblers/../lib/chainlink/contracts/src/v0.8/mocks/VRFCoordinatorMock.sol";
 import {ChainlinkV1RandProvider} from "art-gobblers/utils/rand/ChainlinkV1RandProvider.sol";
+import {Utilities} from "art-gobblers/../test/utils/Utilities.sol";
 import "art-gobblers/utils/GobblerReserve.sol";
-import "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
+import "../src/Goober.sol";
+import "../src/interfaces/IGoober.sol";
 
 contract TestUERC20Functionality is Test, IERC721Receiver {
     using stdStorage for StdStorage;

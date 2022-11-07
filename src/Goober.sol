@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.17;
 
-import "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
