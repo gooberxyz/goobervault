@@ -286,9 +286,10 @@ contract Goober is
     function mintGobbler() public nonReentrant {
         (uint112 _gooReserve, uint112 _multReserve,) = getReserves(); // gas savings
         uint40 mintPrice = artGobblers.gobblerPrice();
-            require(_gooReserve - 6 >= _multReserve && _gooReserve > mintPrice, 
+            require(FixedPointMathLib.mulWadDown(_gooReserve, 1) - 6 >= _multReserve / 1000 && _gooReserve > mintPrice, 
             "Goober: INSUFFICENT_GOO");
-        artGobblers.mintFromGoo(mintPrice, true)
+            // Mint Gobblers to pool
+            artGobblers.mintFromGoo(mintPrice, true)
             }
 
     // this low-level function should be called from a contract which performs important safety checks
