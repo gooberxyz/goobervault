@@ -1,9 +1,30 @@
 pragma solidity >=0.8.0;
 
-import "openzeppelin-contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
+import "./IERC20Metadata.sol";
+import "./IERC721Receiver.sol";
 
-interface IGoober is IERC20Metadata, IERC721Receiver {
+// TODO(IERC20 solmate overrides)
+// This should really be IERC20Metadata as well
+// So we can get all the natspec
+interface IGoober is IERC721Receiver {
+    // Errors
+    error gobblerInvalidMultiplier();
+    error InvalidNFT();
+    error InvalidMultiplier(uint256 gobblerId);
+
+    /**
+     * @notice The caller doesn't have permission to access that function.
+     * @param accessor The requesting address.
+     * @param permissioned The address which has the requisite permissions.
+     */
+    error AccessControlViolation(address accessor, address permissioned);
+
+    /**
+     * @notice Invalid fee to address.
+     * @param feeTo the feeTo address.
+     */
+    error InvalidAddress(address feeTo);
+
     // Structs
 
     struct SwapParams {
@@ -16,7 +37,7 @@ interface IGoober is IERC20Metadata, IERC721Receiver {
         bytes data;
     }
 
-    // EVENTS
+    // Events
 
     event Deposit(
         address indexed caller,
@@ -46,6 +67,20 @@ interface IGoober is IERC20Metadata, IERC721Receiver {
     );
 
     event Sync(uint112 gooBalance, uint112 multBalance);
+
+    // Functions
+
+    /**
+     * @notice Updates the address fees can be swept to.
+     * @param newFeeTo The new address to which fees will be swept.
+     */
+    function setFeeTo(address newFeeTo) external;
+
+    /**
+     * @notice Updates the address fees can be swept to.
+     * @param newMinter The new address to which fees will be swept.
+     */
+    function setMinter(address newMinter) external;
 
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
         external

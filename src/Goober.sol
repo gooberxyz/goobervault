@@ -2,81 +2,83 @@
 
 pragma solidity ^0.8.17;
 
-import "openzeppelin-contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "openzeppelin-contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "openzeppelin-contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "openzeppelin-contracts-upgradeable/security/PausableUpgradeable.sol";
-import "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 import "./math/UQ112x112.sol";
-import "./interfaces/IGooberCallee.sol";
-import "./ERC20Upgradable.sol";
-import "openzeppelin-contracts/utils/math/Math.sol";
-import "openzeppelin-contracts/utils/math/SafeMath.sol";
 import "./interfaces/IGoober.sol";
+import "./interfaces/IGooberCallee.sol";
 
-contract Goober is
-    UUPSUpgradeable,
-    OwnableUpgradeable,
-    PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    ERC20Upgradable,
-    IGoober
-{
-    using SafeMath for uint256;
+contract Goober is ReentrancyGuard, ERC20, IGoober {
     using SafeTransferLib for Goo;
     using FixedPointMathLib for uint256;
     using UQ112x112 for uint224;
 
-    error gobblerInvalidMultiplier();
-    error InvalidNFT();
-    error InvalidMultiplier(uint256 gobblerId);
-
     // Constant/Immutable storage
 
-    // TODO(Add casing for gorli deploy)
-    Goo public goo;
-    ArtGobblers public artGobblers;
+    // TODO(Optimize storage layout)
+
+    Goo public immutable goo;
+    ArtGobblers public immutable artGobblers;
+
+    uint256 private constant MINIMUM_LIQUIDITY = 10 ** 3;
+    uint256 private constant MULT_SCALAR = 10 ** 3;
 
     // Mutable storage
 
+    // Access control
+    address feeTo;
+    address minter;
+
+    // TODO(Do we need the accumulators for twap?)
+    // TODO(Can these be 112?)
     // Accumulators
     uint256 public priceGooCumulativeLast;
     uint256 public priceGobblerCumulativeLast;
 
-    // reserve0 (gooBalance) * reserve1 (totalGobblerMultiplier), as of immediately after the most recent liquidity event
-    uint256 private kLast;
+    // TODO(Do we have a use case for storing accumulators or kLast anymore?)
+    // Likely for calculating performance fees and providing an oracle
+    // sqrt(gooBalance * totalGobblerMultiplier), as of immediately after the most recent liquidity event
+    uint112 public kLast;
 
     // Last block timestamp
     uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
-    //Constant needed for deposit
-    uint256 public constant MINIMUM_LIQUIDITY = 10 ** 3;
-
-    uint256 public constant MULT_SCALAR = 10 ** 3;
-
     // Constructor/init
 
-    constructor() initializer {}
-
-    // TODO(Test with receivers that can't accept safe transfers)
-
-    function initialize(address gobblersAddress, address gooAddress) public initializer {
-        // @dev as there is no constructor, we need to initialise the these explicitly
-        __UUPSUpgradeable_init();
-        __Ownable_init();
-        __Pausable_init();
-        __ReentrancyGuard_init();
-        __ERC20_init("Goober", "GBR");
-        artGobblers = ArtGobblers(gobblersAddress);
-        goo = Goo(gooAddress);
+    constructor(address _gobblersAddress, address _gooAddress, address _feeTo, address _minter)
+        ERC20("Goober", "GBR", 18)
+    {
+        feeTo = _feeTo;
+        minter = _minter;
+        artGobblers = ArtGobblers(_gobblersAddress);
+        goo = Goo(_gooAddress);
     }
 
-    /// @dev required by the UUPS module
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    /// @inheritdoc IGoober
+    function setFeeTo(address newFeeTo) public {
+        if (msg.sender != feeTo) {
+            revert AccessControlViolation(msg.sender, feeTo);
+        }
+        if (newFeeTo == address(0)) {
+            revert InvalidAddress(newFeeTo);
+        }
+        feeTo = newFeeTo;
+    }
+
+    /// @inheritdoc IGoober
+    function setMinter(address newMinter) public {
+        if (msg.sender != feeTo) {
+            revert AccessControlViolation(msg.sender, feeTo);
+        }
+        if (newMinter == address(0)) {
+            revert InvalidAddress(newMinter);
+        }
+        minter = newMinter;
+    }
 
     /// @dev update reserves and, on the first call per block, price accumulators
     /// @param gooBalance the new goo balance
@@ -108,6 +110,7 @@ contract Goober is
         emit Sync(uint112(gooBalance), uint112(gobblerBalance));
     }
 
+    /// @inheritdoc IERC721Receiver
     function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
         external
         returns (bytes4)
@@ -122,26 +125,6 @@ contract Goober is
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    // G can be derived from Goo.totalSupply, plus the issuance rate
-    // M we can track internally
-    // B
-    // Q must be tracked via an off chain oracle
-
-    // When our GOO balance exceeds M/Q * G at time t where M is the total multiple of our GOBBLER and Q is the
-    // total multiple of all GOBBLER and G is the total supply of GOO we have too much goo in the tank.
-
-    // When our GOO balance is less than M/Q * G at time t where M is the total multiple of our GOBBLER and Q is
-    // the total multiple of all GOBBLER and G is the total supply of GOO we have too little goo in the tank.
-
-    // When our GOO balance equals M/Q * G at time t where M is the total multiple of our GOBBLER and Q is the
-    // total multiple of all GOBBLER and G is the total supply of GOO we have the right amount in the tank.
-
-    // And, the events that can push us out of bounds are the deposit or withdraw of GOO/GOBBLER from
-    // the vault, mint of new GOBBLER (changes Q) or burn of gobblers from minting of legendary
-
-    // TODO(Pages)
-    // TODO(Legendary gobblers)
-    // TODO(Determine/test fees)
     // TODO(Should we use 256 bit for reserves rather than 112 bit Q maths)
 
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
@@ -174,7 +157,7 @@ contract Goober is
 
             if (_totalSupply == 0) {
                 // TODO(Test and optimize locked gobbler)
-                shares = FixedPointMathLib.sqrt(gooTokens.mul(gobblerAmountMult)).sub(MINIMUM_LIQUIDITY);
+                shares = FixedPointMathLib.sqrt(gooTokens * gobblerAmountMult) - MINIMUM_LIQUIDITY;
                 _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
             } else {
                 // k is also the amount of goo produced per day
@@ -344,10 +327,4 @@ contract Goober is
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve);
         emit Swap(msg.sender, amount0In, amount1In, parameters.gooOut, multOut, parameters.receiver);
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     */
-    uint256[50] private __gap;
 }
