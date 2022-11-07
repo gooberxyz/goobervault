@@ -135,6 +135,6 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
             IGoober.SwapParams(artGobblersThree, 0 ether, artGobblersTwo, 103 ether, me, me, data);
         goober.swap(swap);
         // TODO(Get this working)
-        //shares = goober.withdraw(artGobblers, gooTokens, me, me);
+        shares = goober.withdraw(artGobblersTwo, gooTokens, me, me);
     }
 }
