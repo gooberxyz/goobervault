@@ -58,11 +58,22 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         goo = Goo(_gooAddress);
     }
 
-    /// @inheritdoc IGoober
-    function setFeeTo(address newFeeTo) public {
+    modifier onlyFeeTo() {
         if (msg.sender != feeTo) {
             revert AccessControlViolation(msg.sender, feeTo);
         }
+        _;
+    }
+
+    modifier onlyMinter() {
+        if (msg.sender != minter) {
+            revert AccessControlViolation(msg.sender, minter);
+        }
+        _;
+    }
+
+    /// @inheritdoc IGoober
+    function setFeeTo(address newFeeTo) public onlyFeeTo {
         if (newFeeTo == address(0)) {
             revert InvalidAddress(newFeeTo);
         }
@@ -70,10 +81,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IGoober
-    function setMinter(address newMinter) public {
-        if (msg.sender != feeTo) {
-            revert AccessControlViolation(msg.sender, feeTo);
-        }
+    function setMinter(address newMinter) public onlyFeeTo {
         if (newMinter == address(0)) {
             revert InvalidAddress(newMinter);
         }
