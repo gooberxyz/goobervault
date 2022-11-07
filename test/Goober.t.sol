@@ -18,6 +18,7 @@ contract TestUERC20Functionality is Test {
     // Test Contracts
     Goober public goober_implementation;
     TransparentUpgradeableProxy public goober_proxy;
+    IGoober public goober;
 
     Utilities internal utils;
     address payable[] internal users;
@@ -92,15 +93,18 @@ contract TestUERC20Functionality is Test {
         pages = new Pages(block.timestamp, goo, address(0xBEEF), gobblers, "");
         goober_implementation = new Goober();
         goober_proxy =
-        new TransparentUpgradeableProxy(address(goober_implementation), address(msg.sender), abi.encodeWithSignature("initialize()"));
-        goo.approve(address(goober_proxy), type(uint256).max);
+        new TransparentUpgradeableProxy(address(goober_implementation), address(msg.sender), abi.encodeWithSignature("initialize(address,address)", gobblerAddress, address(goo)));
+        goober = IGoober(address(goober_proxy));
+        // Setup approvals
+        goo.approve(address(goober), type(uint256).max);
+        gobblers.setApprovalForAll(address(goober), true);
     }
 
     function test_proxy() public {
         // Assertions
-        assertEq(IERC20Metadata(address(goober_proxy)).name(), "Goober");
-        assertEq(IERC20Metadata(address(goober_proxy)).symbol(), "GBR");
-        assertEq(IERC20Metadata(address(goober_proxy)).decimals(), 18);
+        assertEq(goober.name(), "Goober");
+        assertEq(goober.symbol(), "GBR");
+        assertEq(goober.decimals(), 18);
     }
 
     function test_swap() public {
@@ -111,7 +115,9 @@ contract TestUERC20Functionality is Test {
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
         artGobblers[2] = gobblers.mintFromGoo(100 ether, true);
         vm.warp(block.timestamp + 172800);
-        setRandomnessAndReveal(1, "seed");
-        assert(gobblers.getUserEmissionMultiple(address(this)) > 0);
+        setRandomnessAndReveal(3, "seed");
+        uint256 gooTokens = 300 ether;
+        address me = address(this);
+        uint256 shares = goober.deposit(artGobblers, gooTokens, me, me);
     }
 }

@@ -16,6 +16,7 @@ import "./interfaces/IGooberCallee.sol";
 import "./ERC20Upgradable.sol";
 import "openzeppelin-contracts/utils/math/Math.sol";
 import "openzeppelin-contracts/utils/math/SafeMath.sol";
+import "./interfaces/IGoober.sol";
 
 contract Goober is
     UUPSUpgradeable,
@@ -23,7 +24,7 @@ contract Goober is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable,
     ERC20Upgradable,
-    IERC721Receiver
+    IGoober
 {
     using SafeMath for uint256;
     using SafeTransferLib for Goo;
@@ -37,8 +38,8 @@ contract Goober is
     // Constant/Immutable storage
 
     // TODO(Add casing for gorli deploy)
-    Goo public constant goo = Goo(0x600000000a36F3cD48407e35eB7C5c910dc1f7a8);
-    ArtGobblers public constant artGobblers = ArtGobblers(0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769);
+    Goo public goo;
+    ArtGobblers public artGobblers;
 
     // Mutable storage
 
@@ -90,13 +91,15 @@ contract Goober is
 
     constructor() initializer {}
 
-    function initialize() public initializer {
+    function initialize(address gobblersAddress, address gooAddress) public initializer {
         // @dev as there is no constructor, we need to initialise the these explicitly
         __UUPSUpgradeable_init();
         __Ownable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
         __ERC20_init("Goober", "GBR");
+        artGobblers = ArtGobblers(gobblersAddress);
+        goo = Goo(gooAddress);
     }
 
     /// @dev required by the UUPS module
@@ -156,6 +159,53 @@ contract Goober is
     // TODO(Legendary gobblers)
     // TODO(Determine/test fees)
     // TODO(Should we use 256 bit for reserves rather than 112 bit Q maths)
+
+    function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
+        external
+        nonReentrant
+        returns (uint256 shares)
+    {
+        // Get reserve balances before they are updated from deposit transfers
+        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves(); // gas savings
+
+        // Need to transfer before minting or ERC777s could reenter.
+        // Transfer goo if any
+        if (gooTokens > 0) {
+            goo.safeTransferFrom(owner, address(this), gooTokens);
+            artGobblers.addGoo(gooTokens);
+        }
+
+        // Transfer gobblers if any
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            artGobblers.safeTransferFrom(owner, address(this), gobblers[i]);
+        }
+
+        uint256 gobblerAmountMult = artGobblers.getUserEmissionMultiple(address(this)) - _gobblerReserveMult;
+
+        // TODO(Deal with fees)
+        // bool feeOn = _mintFee(_reserve0, _reserve1);
+        uint256 _totalSupply = totalSupply;
+
+        if (_totalSupply == 0) {
+            // TODO(Test and optimize locked gobbler)
+            shares = FixedPointMathLib.sqrt(gooTokens.mul(gobblerAmountMult)).sub(MINIMUM_LIQUIDITY);
+            _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+        } else {
+            shares = Math.min(
+                gooTokens.mul(_totalSupply).div(_gooReserve),
+                gobblerAmountMult.mul(_totalSupply).div(_gobblerReserveMult)
+            );
+        }
+        require(shares > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+        _mint(receiver, shares);
+
+        _update(gooTokens, gobblerAmountMult, _gooReserve, _gobblerReserveMult);
+
+        // TODO(Fee math)
+        //if (feeOn) kLast = uint(_gooReserve).mul(_gobblerReserve); // reserve0 and reserve1 are up-to-date
+
+        emit Deposit(msg.sender, owner, receiver, gobblers, gooTokens, shares);
+    }
 
     // Users need to be able to deposit and withdraw goo or gobblers
     // Gobblers are valued by mult
@@ -286,51 +336,6 @@ contract Goober is
         }
         _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
         emit Swap(msg.sender, amount0In, amount1In, gooTokens, multOut, receiver);
-    }
-
-    // this low-level function should be called from a contract which performs important safety checks
-    function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
-        external
-        nonReentrant
-        returns (uint256 shares)
-    {
-        // Need to transfer before minting or ERC777s could reenter.f
-        // Transfer goo if any
-        if (gooTokens >= 0) {
-            goo.safeTransferFrom(owner, address(this), gooTokens);
-            artGobblers.addGoo(gooTokens);
-        }
-
-        // Transfer gobblers if any
-        for (uint256 i = 0; i < gobblers.length; i++) {
-            artGobblers.safeTransferFrom(owner, address(this), gobblers[i]);
-        }
-        // Avoid stack too deep
-        {
-            (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
-            uint256 gooBalance = goo.balanceOf(address(this));
-
-            uint256 gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
-            uint256 amountGoo = gooBalance.sub(_gooReserve);
-            uint256 amountGobbler = gobblerBalance.sub(_gobblerReserve);
-
-            uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
-            if (_totalSupply == 0) {
-                shares = FixedPointMathLib.sqrt(amountGoo.mul(amountGobbler)).sub(MINIMUM_LIQUIDITY);
-                _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
-            } else {
-                shares = Math.min(
-                    amountGoo.mul(_totalSupply) / _gooReserve, amountGobbler.mul(_totalSupply) / _gobblerReserve
-                );
-            }
-            require(shares > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
-            _mint(msg.sender, shares);
-
-            _update(gooBalance, gobblerBalance, _gooReserve, _gobblerReserve);
-            // TODO(Fee math)
-            //if (feeOn) kLast = uint(_gooReserve).mul(_gobblerReserve); // reserve0 and reserve1 are up-to-date
-        }
-        emit Deposit(msg.sender, owner, receiver, gobblers, gooTokens, shares);
     }
 
     /**
