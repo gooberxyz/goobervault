@@ -232,14 +232,10 @@ contract Goober is
             // bool feeOn = _mintFee(_reserve0, _reserve1);
             uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
             uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
-            // TODO(Fix 0 division error)
-            if (_k == 0) {
-                shares = _totalSupply - MINIMUM_LIQUIDITY;
-                _burn(address(0), MINIMUM_LIQUIDITY);
-            } else {
-                uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _k);
-                shares = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
-            }
+            // We don't want to allow the pool to be looted/decommed, ever
+            require(_k > 0, "Goober: MUST LEAVE LIQUIDITY");
+            uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _k);
+            shares = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
         }
         // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
