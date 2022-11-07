@@ -92,9 +92,12 @@ contract Goober is
         uint40 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
 
         if (timeElapsed > 0 && _gooReserve != 0 && _gobblerReserve != 0) {
-            // * never overflows, and + overflow is desired
-            priceGooCumulativeLast += uint256(UQ112x112.encode(_gobblerReserve).uqdiv(_gooReserve)) * timeElapsed;
-            priceGobblerCumulativeLast += uint256(UQ112x112.encode(_gooReserve).uqdiv(_gobblerReserve)) * timeElapsed;
+            unchecked {
+                // * never overflows, and + overflow is desired
+                priceGooCumulativeLast += uint256(UQ112x112.encode(_gobblerReserve).uqdiv(_gooReserve)) * timeElapsed;
+                priceGobblerCumulativeLast +=
+                    uint256(UQ112x112.encode(_gooReserve).uqdiv(_gobblerReserve)) * timeElapsed;
+            }
         }
         // TODO(Do we need any special magic here)
         //reserve0 = uint112(gooBalance);
@@ -159,26 +162,30 @@ contract Goober is
             artGobblers.safeTransferFrom(owner, address(this), gobblers[i]);
         }
 
-        uint256 gobblerAmountMult = (artGobblers.getUserEmissionMultiple(address(this)) * 1000) - _gobblerReserveMult;
+        (uint112 _gooBalance, uint112 _gobblerBalanceMult,) = getReserves();
+        {
+            uint256 gobblerAmountMult = _gobblerBalanceMult - _gobblerReserveMult;
 
-        // TODO(Deal with fees)
-        // bool feeOn = _mintFee(_reserve0, _reserve1);
-        uint256 _totalSupply = totalSupply;
+            // TODO(Deal with fees)
+            // bool feeOn = _mintFee(_reserve0, _reserve1);
+            uint256 _totalSupply = totalSupply;
 
-        if (_totalSupply == 0) {
-            // TODO(Test and optimize locked gobbler)
-            shares = FixedPointMathLib.sqrt(gooTokens.mul(gobblerAmountMult)).sub(MINIMUM_LIQUIDITY);
-            _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
-        } else {
-            shares = Math.min(
-                gooTokens.mul(_totalSupply).div(_gooReserve),
-                gobblerAmountMult.mul(_totalSupply).div(_gobblerReserveMult)
-            );
+            if (_totalSupply == 0) {
+                // TODO(Test and optimize locked gobbler)
+                shares = FixedPointMathLib.sqrt(gooTokens.mul(gobblerAmountMult)).sub(MINIMUM_LIQUIDITY);
+                _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+            } else {
+                // k is also the amount of goo produced per day
+                uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
+                uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
+                uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
+                shares = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
+            }
+            require(shares > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+            _mint(receiver, shares);
         }
-        require(shares > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
-        _mint(receiver, shares);
 
-        _update(gooTokens, gobblerAmountMult, _gooReserve, _gobblerReserveMult);
+        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
 
         // TODO(Fee math)
         //if (feeOn) kLast = uint(_gooReserve).mul(_gobblerReserve); // reserve0 and reserve1 are up-to-date
@@ -212,22 +219,19 @@ contract Goober is
             }
         }
 
-        uint256 _gobblerBalanceMult = artGobblers.getUserEmissionMultiple(address(this)) * 1000;
-        uint256 _gooBalance = artGobblers.gooBalance(address(this));
+        (uint112 _gooBalance, uint112 _gobblerBalanceMult,) = getReserves();
         uint256 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
 
         require(_gobblerAmountMult > 0 && gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
 
         {
+            uint256 _totalSupply = totalSupply;
             // TODO(Handle fee)
             // bool feeOn = _mintFee(_reserve0, _reserve1);
-            uint256 _totalSupply = totalSupply;
-
-            // TODO(This is not correct)
-            // We basically need to invert the deposit here.
-            uint256 amount0 = (_gobblerAmountMult / _gobblerReserveMult);
-            uint256 amount1 = (gooTokens / _gooReserve);
-            shares = amount0 * amount1;
+            uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
+            uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
+            uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
+            shares = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
         }
         // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
@@ -260,7 +264,7 @@ contract Goober is
         returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast)
     {
         _gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        _gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this))) * 1000;
+        _gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this))) * 1e18;
         _blockTimestampLast = blockTimestampLast;
     }
 
@@ -284,7 +288,6 @@ contract Goober is
             }
 
             // Optimistically transfer gobblers if any
-            uint112 multOut = 0;
             if (parameters.gobblersOut.length > 0) {
                 for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
                     multOut += uint112(artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i])) * 1000;
