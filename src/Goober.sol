@@ -299,9 +299,8 @@ contract Goober is
 
         // Need to transfer before minting or ERC777s could reenter.f
         // Transfer goo if any
-        if (gooTokens >= 0) {
+        if (gooTokens > 0) {
             goo.safeTransferFrom(owner, address(this), gooTokens);
-            artGobblers.addGoo(gooTokens);
         }
 
         // Transfer gobblers if any
@@ -314,6 +313,11 @@ contract Goober is
             uint256 gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
             uint256 amountGoo = gooBalance.sub(_gooReserve);
             uint256 amountGobbler = gobblerBalance.sub(_gobblerReserve);
+
+            //Stake the deposited tokens if goo deposit amount > 0.
+            if(amountGoo > 0){
+                artGobblers.addGoo(amountGoo);
+            }
 
             uint256 _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
             if (_totalSupply == 0) {
