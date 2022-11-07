@@ -294,6 +294,9 @@ contract Goober is
         nonReentrant
         returns (uint256 shares)
     {
+        //Get reserve balances before they are updated from deposit tranfers
+        (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
+
         // Need to transfer before minting or ERC777s could reenter.f
         // Transfer goo if any
         if (gooTokens >= 0) {
@@ -307,9 +310,7 @@ contract Goober is
         }
         // Avoid stack too deep
         {
-            (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
             uint256 gooBalance = goo.balanceOf(address(this));
-
             uint256 gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
             uint256 amountGoo = gooBalance.sub(_gooReserve);
             uint256 amountGobbler = gobblerBalance.sub(_gobblerReserve);
