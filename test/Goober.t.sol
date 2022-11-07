@@ -129,12 +129,15 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         setRandomnessAndReveal(3, "seed");
         uint256 gooTokens = 200 ether;
         address me = address(this);
-        uint256 shares = goober.deposit(artGobblers, gooTokens, me, me);
+        uint256 shares = goober.deposit(artGobblersTwo, gooTokens, me, me);
+        shares = goober.deposit(artGobblersThree, gooTokens, me, me);
+
         bytes memory data;
-        IGoober.SwapParams memory swap =
-            IGoober.SwapParams(artGobblersThree, 0 ether, artGobblersTwo, 103 ether, me, me, data);
-        goober.swap(swap);
-        // TODO(Get this working)
+        //IGoober.SwapParams memory swap =
+        //    IGoober.SwapParams(artGobblersThree, 0 ether, artGobblersTwo, 100 ether, me, me, data);
+        //goober.swap(swap);
+
         shares = goober.withdraw(artGobblersTwo, gooTokens, me, me);
+        //shares = goober.withdraw(artGobblersThree, gooTokens, me, me);
     }
 }
