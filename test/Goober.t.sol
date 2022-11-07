@@ -17,9 +17,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
     using stdStorage for StdStorage;
 
     // Test Contracts
-    Goober public goober_implementation;
-    TransparentUpgradeableProxy public goober_proxy;
-    IGoober public goober;
+    Goober public goober;
 
     Utilities internal utils;
     address payable[] internal users;
@@ -99,10 +97,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         );
 
         pages = new Pages(block.timestamp, goo, address(0xBEEF), gobblers, "");
-        goober_implementation = new Goober();
-        goober_proxy =
-        new TransparentUpgradeableProxy(address(goober_implementation), address(msg.sender), abi.encodeWithSignature("initialize(address,address)", gobblerAddress, address(goo)));
-        goober = IGoober(address(goober_proxy));
+        goober = new Goober(address(gobblers), address(goo), address(this), address(this));
         // Setup approvals
         goo.approve(address(goober), type(uint256).max);
         gobblers.setApprovalForAll(address(goober), true);
@@ -138,6 +133,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         //goober.swap(swap);
 
         shares = goober.withdraw(artGobblersTwo, gooTokens, me, me);
+        // TODO(Expect revert)
         //shares = goober.withdraw(artGobblersThree, gooTokens, me, me);
     }
 }
