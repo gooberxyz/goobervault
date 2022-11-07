@@ -7,4 +7,10 @@ interface IGoober is IERC20Metadata, IERC721Receiver {
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
         external
         returns (uint256 shares);
+
+    function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
+        external
+        returns (uint256 shares);
+
+    function swap(uint256[] calldata gobblers, uint256 gooTokens, address receiver, bytes calldata data) external;
 }

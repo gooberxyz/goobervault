@@ -11,8 +11,9 @@ import {Utilities} from "art-gobblers/../test/utils/Utilities.sol";
 import "art-gobblers/../lib/chainlink/contracts/src/v0.8/mocks/VRFCoordinatorMock.sol";
 import {ChainlinkV1RandProvider} from "art-gobblers/utils/rand/ChainlinkV1RandProvider.sol";
 import "art-gobblers/utils/GobblerReserve.sol";
+import "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 
-contract TestUERC20Functionality is Test {
+contract TestUERC20Functionality is Test, IERC721Receiver {
     using stdStorage for StdStorage;
 
     // Test Contracts
@@ -36,6 +37,13 @@ contract TestUERC20Functionality is Test {
     uint256 private fee;
 
     uint256[] ids;
+
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
+        external
+        returns (bytes4)
+    {
+        return IERC721Receiver.onERC721Received.selector;
+    }
 
     function _writeTokenBalance(address who, address token, uint256 amt) internal {
         stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
@@ -110,14 +118,25 @@ contract TestUERC20Functionality is Test {
     function test_swap() public {
         _writeTokenBalance(address(this), address(goo), 1000 ether);
         gobblers.addGoo(500 ether);
-        uint256[] memory artGobblers = new uint256[](3);
+        uint256[] memory artGobblers = new uint256[](2);
+        uint256[] memory artGobblersTwo = new uint256[](1);
+        uint256[] memory artGobblersThree = new uint256[](1);
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
-        artGobblers[2] = gobblers.mintFromGoo(100 ether, true);
+        artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
+        artGobblersThree[0] = artGobblers[0];
         vm.warp(block.timestamp + 172800);
         setRandomnessAndReveal(3, "seed");
-        uint256 gooTokens = 300 ether;
+        uint256 gooTokens = 200 ether;
         address me = address(this);
         uint256 shares = goober.deposit(artGobblers, gooTokens, me, me);
+        uint256 totalMult = gobblers.getUserEmissionMultiple(address(goober));
+        uint256 swapInMult = gobblers.getGobblerEmissionMultiple(artGobblersTwo[0]);
+        uint256 swapOutMult = gobblers.getGobblerEmissionMultiple(artGobblersThree[0]);
+        bytes memory data;
+        // TODO(This should transfer in the assets to be fixed)
+        //goober.swap(artGobblersThree, 0 ether, me, data);
+        // TODO(Get this working)
+        shares = goober.withdraw(artGobblers, gooTokens, me, me);
     }
 }

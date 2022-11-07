@@ -91,6 +91,8 @@ contract Goober is
 
     constructor() initializer {}
 
+    // TODO(Test with receivers that can't accept safe transfers)
+
     function initialize(address gobblersAddress, address gooAddress) public initializer {
         // @dev as there is no constructor, we need to initialise the these explicitly
         __UUPSUpgradeable_init();
@@ -188,7 +190,7 @@ contract Goober is
             artGobblers.safeTransferFrom(owner, address(this), gobblers[i]);
         }
 
-        uint256 gobblerAmountMult = artGobblers.getUserEmissionMultiple(address(this)) - _gobblerReserveMult;
+        uint256 gobblerAmountMult = (artGobblers.getUserEmissionMultiple(address(this)) * 1000) - _gobblerReserveMult;
 
         // TODO(Deal with fees)
         // bool feeOn = _mintFee(_reserve0, _reserve1);
@@ -222,24 +224,42 @@ contract Goober is
     /// @param owner - owner of the shares to be withdrawn
     /// @return shares - amount of shares that have been withdrawn
     function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
-        public
-        virtual
+        external
+        nonReentrant
         returns (uint256 shares)
     {
-        (uint112 gooReserves, uint112 gobblerMultReserves,) = getReserves();
+        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
 
-        uint256 multOut = 0;
-        for (uint256 i = 0; i < gobblers.length; i++) {
-            uint256 mult = artGobblers.getGobblerEmissionMultiple(gobblers[i]);
-
-            // we are not allowing withdraws of legendaries
-            if (mult > 9) revert();
-
-            multOut += artGobblers.getGobblerEmissionMultiple(gobblers[i]); 
+        // Optimistically transfer goo if any
+        if (gooTokens >= 0) {
+            artGobblers.removeGoo(gooTokens);
+            goo.safeTransfer(receiver, gooTokens);
         }
-        require(multOut > 0 && gooTokens > 0, "INSUFFICIENT LIQUIDITY WITHDRAW");
-        shares = FixedPointMathLib.sqrt(multOut * gooTokens);
 
+        // Optimistically transfer gobblers if any
+        if (gobblers.length > 0) {
+            for (uint256 i = 0; i < gobblers.length; i++) {
+                artGobblers.transferFrom(address(this), receiver, gobblers[i]);
+            }
+        }
+
+        uint256 _gobblerBalanceMult = artGobblers.getUserEmissionMultiple(address(this)) * 1000;
+        uint256 _gooBalance = artGobblers.gooBalance(address(this));
+        uint256 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
+
+        require(_gobblerAmountMult > 0 && gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+
+        {
+            // TODO(Handle fee)
+            // bool feeOn = _mintFee(_reserve0, _reserve1);
+            uint256 _totalSupply = totalSupply;
+
+            // TODO(This is not correct)
+            // We basically need to invert the deposit here.
+            uint256 amount0 = (_gobblerAmountMult / _gobblerReserveMult);
+            uint256 amount1 = (gooTokens / _gooReserve);
+            shares = amount0 * amount1;
+        }
         // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
@@ -250,40 +270,11 @@ contract Goober is
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
         }
 
-        // Transfer shares from the owner to the receiver.
-        require(transferFrom(owner, address(this), shares), "GOOBER ALLOWANCE");
-
-        // Must be requesting some assets to withdraw
-        require(gobblers.length > 0 || gooTokens > 0, "Goober: INVALID WITHDRAW");
-
         // Burn the shares
         _burn(owner, shares);
 
-        // Transfer goo if any
-        if (gooTokens >= 0) {
-            artGobblers.removeGoo(gooTokens);
-            goo.safeTransfer(receiver, gooTokens);
-        }
-
-        // Transfer gobblers if any
-        for (uint256 i = 0; i < gobblers.length; i++) {
-            artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
-        }
-
-        uint256 gobblerMultBalance = artGobblers.getUserEmissionMultiple(address(this));
-        uint256 gooBalance = artGobblers.gooBalance(address(this));
-
         // update reserves
-        _update(gooBalance, gobblerMultBalance, gooReserves, gobblerMultReserves);
-
-        // User has the option to withdraw only goo or only gobblers
-        // This can cause some interesting behavior with K
-        // But this'll do for now
-
-        // update kLast
-        // kLast = uint112(gooBalance) * uint112(gobblerMultBalance);
-        // Update latest timestamp
-        blockTimestampLast = uint40(block.timestamp);
+        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
 
         emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
     }
@@ -339,7 +330,7 @@ contract Goober is
             // Optimistically transfer gobblers if any
             if (gobblers.length > 0) {
                 for (uint256 i = 0; i < gobblers.length; i++) {
-                    artGobblers.safeTransferFrom(address(this), receiver, gobblers[i]);
+                    artGobblers.transferFrom(address(this), receiver, gobblers[i]);
                 }
             }
 
@@ -354,7 +345,7 @@ contract Goober is
             artGobblers.addGoo(gooBalance);
 
             // We have an updated multiplier from safe transfer callbacks
-            gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
+            gobblerBalance = artGobblers.getUserEmissionMultiple(address(this)) * 1000;
         }
         uint256 amount0In = gooBalance > _gooReserve - gooTokens ? gooBalance - (_gooReserve - gooTokens) : 0;
         uint256 amount1In =
