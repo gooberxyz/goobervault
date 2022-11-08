@@ -29,14 +29,11 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     uint16 private constant BPS_SCALAR = 1e4;
     uint16 public constant MANAGEMENT_FEE_BPS = 200;
     uint16 public constant PERFORMANCE_FEE_BPS = 1e3;
+    // 7.3294 = weighted avg Mult from mint = ((6*3057) + (7*2621) + (8*2293) + (9*2029))/10000.
+    uint32 private constant AVERAGE_MULT_BPS = 73294;
 
     // Mutable storage
-    bool public switchState = true;
-
-    function toggleSwitch() public onlyMinter returns (bool status) {
-    switchState = !switchState;
-    return switchState;
-    }
+    bool private mintEnabled = false;
 
     // Access control
     address feeTo;
@@ -95,6 +92,10 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             revert InvalidAddress(newMinter);
         }
         minter = newMinter;
+    }
+
+    function minting(bool enabled) external onlyMinter {
+        mintEnabled = enabled;
     }
 
     /// @dev update reserves and, on the first call per block, price accumulators
@@ -309,26 +310,36 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     // Mints Gobblers using the vault's virtual reserves of Goo
-    // if the pool's goo per mult is lower than VRGDA goo per mult. 
-    function mintGobbler() public nonReentrant {
-            require(switchState, "Goober: INSUFFICENT_GOO");
-            (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // Gas savings
-            uint256 gooBalance = goo.balanceOf(address(this));
-            uint256 gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
-            uint256 _mintPrice = (FixedPointMathLib.mulWadDown(artGobblers.gobblerPrice(), 1));
-            uint112 _newGooReserve = uint112(FixedPointMathLib.mulWadDown(_gooReserve, 1));
-            uint112 _newGobblerReserve = (_gobblerReserve / 1000);
-            // Mint Gobblers to pool while we can afford it
-            // and when our Goo per Mult < Auction Goo per Mult.
-            // 7.3294 = weighted avg Mult from mint = ((6*3057) + (7*2621) + (8*2293) + (9*2029))/10000.
-            while ((_newGooReserve > _mintPrice) &&
-                   ((_newGooReserve / _newGobblerReserve) <= (_mintPrice * 10000) / 73294)) {
-                    artGobblers.mintFromGoo(_mintPrice, true);
-                    _mintPrice = FixedPointMathLib.mulWadDown(artGobblers.gobblerPrice(), 1);
-                    _update(gooBalance, gobblerBalance, _newGooReserve, _newGobblerReserve);
-                    (_newGooReserve, _newGobblerReserve,) = getReserves();
-                    }
-     }
+    // if the pool's goo per mult is lower than VRGDA goo per mult.
+    function mintGobbler() public onlyMinter {
+        // This function is restricted to onlyMinter because we don't want
+        // the general public to use it to manipulate the goo price.
+
+        // Is minting enabled?
+        if (!mintEnabled) {
+            revert MintingDisabled();
+        }
+
+        // Get the mint price
+        uint256 mintPrice = artGobblers.gobblerPrice();
+
+        uint112 gooReserve = uint112(artGobblers.gooBalance(address(this)));
+        uint256 gooBalance = gooReserve;
+        uint112 gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
+
+        // Should we mint?
+        bool mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS);
+
+        // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
+        while (mint) {
+            gooBalance -= mintPrice;
+            artGobblers.mintFromGoo(mintPrice, true);
+            // TODO(Can we calculate the increase without an sload here?)
+            mintPrice = artGobblers.gobblerPrice();
+            mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS);
+        }
+        _update(uint112(gooBalance), gobblerReserve * MULT_SCALAR, gooReserve, gobblerReserve * MULT_SCALAR);
+    }
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(SwapParams calldata parameters) external nonReentrant {

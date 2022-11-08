@@ -25,6 +25,8 @@ interface IGoober is IERC721Receiver {
      */
     error InvalidAddress(address feeTo);
 
+    error MintingDisabled();
+
     // Structs
 
     struct SwapParams {
