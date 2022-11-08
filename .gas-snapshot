@@ -1,3 +1,3 @@
 TestUERC20Functionality:test_proxy() (gas: 15387)
-TestUERC20Functionality:test_skimGoo() (gas: 183963)
-TestUERC20Functionality:test_swap() (gas: 727985)
+TestUERC20Functionality:test_skimGoo() (gas: 200941)
+TestUERC20Functionality:test_swap() (gas: 728777)

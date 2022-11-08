@@ -150,7 +150,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         assertEq(goo.balanceOf(address(this)), 1);
         assertEq(goo.balanceOf(address(goober)), 0);
         //Revert when no goo in goobler contract.
-        vm.expectRevert(abi.encodePacked("NO_GOO_IN_CONTRACT"));
+        vm.expectRevert(IGoober.NoSkim.selector);
         goober.skimGoo();
     }
 }
