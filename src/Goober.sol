@@ -164,6 +164,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         if (_kLast > 0) {
             // K grew
             if (_kIncrease) {
+                // Let's offset the debt first if it exists
                 if (_kDebt > 0) {
                     if (_kChange <= _kDebt) {
                         kDebt -= _kChange;
@@ -176,7 +177,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 if (_kChange > 0) {
                     // Get the change in K counting towards a performance fee as a ratio of the total
                     uint256 _deltaK = FixedPointMathLib.divWadDown(_kChange, _kLast);
-                    // Let's offset the debt first if it exists
                     fee = FixedPointMathLib.mulWadDown(totalSupply, _deltaK) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
                     _mint(feeTo, fee);
                     emit FeesAccrued(feeTo, fee, true);
