@@ -174,6 +174,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                         _kChange -= _kDebt;
                     }
                 }
+                // And then calculate a fee on any remainder
                 if (_kChange > 0) {
                     // Get the change in K counting towards a performance fee as a ratio of the total
                     uint256 _deltaK = FixedPointMathLib.divWadDown(_kChange, _kLast);
