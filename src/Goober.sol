@@ -51,9 +51,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Access control
     /// @notice This is the "admin" address and also where management and performance fees accrue.
-    address feeTo;
+    address public feeTo;
     /// @notice This is a privileged actor with the ability to mint gobblers when the pool price is low enough.
-    address minter;
+    address public minter;
 
     // TODO(Can these be 112 bit to save a storage slot?)
     /// @notice Price oracle accumulator for goo.
