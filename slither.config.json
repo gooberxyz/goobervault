@@ -1,0 +1,8 @@
+{
+    "solc_args": "optimize",
+    "solc_remaps": [
+        "art-gobblers/=lib/art-gobblers/src/",
+        "forge-std/=lib/forge-std/src/",
+        "solmate/=lib/solmate/src/"
+    ]
+}
