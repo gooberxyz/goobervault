@@ -27,54 +27,57 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Constant/Immutable storage
 
-    // The goo contract.
+    // @notice The goo contract.
     Goo public immutable goo;
-    // The gobbler contract.
+    // @notice The Art Gobblers NFT contract.
     ArtGobblers public immutable artGobblers;
 
     // TODO(Can we engineer this out?)
-    // The liquidity locked forever in the pool.
+    // @notice The liquidity locked forever in the pool.
     uint16 private constant MINIMUM_LIQUIDITY = 1e3;
-    // The scalar we use on the gobbler multiplier to maintain precision.
+    // @notice The scalar we use on the gobbler multiplier to maintain precision.
     uint16 private constant MULT_SCALAR = 1e3;
-    // A scalar for scaling up and down to basis points.
+    // @notice A scalar for scaling up and down to basis points.
     uint16 private constant BPS_SCALAR = 1e4;
-    // The management fee in basis points, charged on deposits.
+    // @notice The management fee in basis points, charged on deposits.
     uint16 public constant MANAGEMENT_FEE_BPS = 200;
-    // The performance fee in basis points, taken in the form of dilution on the growth of K.
+    // @notice The performance fee in basis points, taken in the form of dilution on the growth of K.
     uint16 public constant PERFORMANCE_FEE_BPS = 1e3;
-    // The average multiplier of a newly minted gobbler.
-    // 7.3294 = weighted avg Mult from mint = ((6*3057) + (7*2621) + (8*2293) + (9*2029))/10000.
+    // @notice The average multiplier of a newly minted gobbler.
+    // @notice 7.3294 = weighted avg Mult from mint = ((6*3057) + (7*2621) + (8*2293) + (9*2029))/10000.
     uint32 private constant AVERAGE_MULT_BPS = 73294;
 
     // Mutable storage
 
     // Access control
-    // This is the "admin" and also where fees accrue.
+    // @notice This is the "admin" address and also where management and performance fees accrue.
     address feeTo;
-    // This is a privileged actor with the ability to mint gobblers when
-    // the pool price is low enough.
+    // @notice This is a privileged actor with the ability to mint gobblers when the pool price is low enough.
     address minter;
 
     // TODO(Can these be 112 bit to save a storage slot?)
-    // Price oracle accumulators
+    // @notice Price oracle accumulator for goo.
     uint256 public priceGooCumulativeLast;
+    // @notice Price oracle accumulator for gobbler multipliers scaled by MULT_SCALAR.
     uint256 public priceGobblerCumulativeLast;
 
-    // Likely for calculating performance fees and providing an oracle
-    // sqrt(gooBalance * totalGobblerMultiplier), as of immediately after the most recent liquidity event
+    // @notice sqrt(gooBalance * totalGobblerMultiplier), as of immediately after the most recent liquidity event
     uint112 public kLast;
-    // A counter for debt accrued against performance fees during temporary decreases in K after
-    // mints by the minter, before multipliers are revealed.
+    // @notice A counter for debt accrued against performance fees during temporary decreases in K after
+    // @notice mints by the minter, before multipliers are revealed.
     uint112 public kDebt;
 
-    // Last block timestamp
-    // Yes, the oracle accumulators will reset in 2036.
+    // @notice Last block timestamp
+    // @dev Yes, the oracle accumulators will reset in 2036.
     uint32 private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     // Constructor/init
 
-    // Deploy the goober
+    // @notice Deploy the goober
+    // @param _gobblersAddress The address of the art gobblers contract.
+    // @param _gooAddress The address of the Goo contract/token.
+    // @param _feeTo The admin and address to accrue fees to.
+    // @param _minter The special address which can trigger mints with pool assets under some conditions.
     constructor(address _gobblersAddress, address _gooAddress, address _feeTo, address _minter)
         ERC20("Goober", "GBR", 18)
     {
@@ -86,7 +89,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Modifiers
 
-    // This modifier restricts function access to the feeTo address
+    // @notice This modifier restricts function access to the feeTo address
     modifier onlyFeeTo() {
         if (msg.sender != feeTo) {
             revert AccessControlViolation(msg.sender, feeTo);
@@ -94,7 +97,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _;
     }
 
-    // This modifier restricts function access to the minter address
+    // @notice This modifier restricts function access to the minter address
     modifier onlyMinter() {
         if (msg.sender != minter) {
             revert AccessControlViolation(msg.sender, minter);
@@ -106,22 +109,22 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Internal Views
 
-    /// @return multiple the total gobbler multiple scaled by 10e3
+    // @return multiple the total gobbler multiple scaled by MULT_SCALAR
     function _getScaledAccountMultiple() internal view returns (uint112 multiple) {
         multiple = uint112(artGobblers.getUserEmissionMultiple(address(this)) * MULT_SCALAR);
     }
 
     /// @param gobblerId gobbler to get scaled mult for
-    /// @return multiple scaled multiple of the supplied gobbler
+    /// @return multiple the gobbler multiple for gobblerId scaled by MULT_SCALAR
     function _getScaledTokenMultiple(uint256 gobblerId) internal view returns (uint112 multiple) {
         multiple = uint112(artGobblers.getGobblerEmissionMultiple(gobblerId) * MULT_SCALAR);
     }
 
     /// @dev update reserves and, on the first call per block, price accumulators
     /// @param _gooBalance the new goo balance
-    /// @param _gobblerBalance the new gobblers multiplier
-    /// @param _gooReserve the current goo reserve
-    /// @param _gobblerReserve the current gobblers reserve
+    /// @param _gobblerBalance the new gobbler multiplier scaled by MULT_SCALAR
+    /// @param _gooReserve the previous goo reserve
+    /// @param _gobblerReserve the previous gobbler multiplier scaled by MULT_SCALAR
     function _update(uint256 _gooBalance, uint256 _gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve)
         internal
     {
