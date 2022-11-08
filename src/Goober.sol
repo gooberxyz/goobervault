@@ -37,12 +37,16 @@ contract Goober is
     ArtGobblers public constant artGobblers = ArtGobblers(0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769);
 
     // Mutable storage
-   
+    bool public switchState = true; 
 
+    function toggleSwitch() public onlyOwner returns (bool status) {
+    switchState = !switchState;
+    return switchState;
+    }
 
     // Array that keeps track of count of each mult in vault
     // updated by _update(). Useful for later math.
-    uint8[] memory multsCount = new uint8[](5); 
+    uint8[] multsCount = new uint8[](5); 
 
     // Accumulators
     uint256 public priceGooCumulativeLast;
@@ -126,8 +130,6 @@ contract Goober is
         }
         return IERC721Receiver.onERC721Received.selector;
     }
-
-    // TODO(MintSwitch)
 
     // G can be derived from Goo.totalSupply, plus the issuance rate
     // M we can track internally
@@ -227,12 +229,16 @@ contract Goober is
     }
 
     // TODO(Views for goo and gobbler exchange rates to GBR)
-
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 shares) {
         return 1;
     }
 
     function previewWithdraw(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 shares) {
+        return 1;
+    }
+
+    // Should return the pool's exchange rate between Goo/Mult. 
+    function previewSwap(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 rate) {
         return 1;
     }
 
@@ -256,7 +262,9 @@ contract Goober is
     }
 
     // TODO(Return the quantity of each mult number held by the pool)
-    function getGobblerCount() external view virtual returns (uint256[] memory);
+    function getGobblerCount() external view virtual returns (uint256[] memory) {
+        return 1;
+    }
 
     // Sells the caller Gobblers in exchange for Goo, slightly
     // below the current auction price (can be determined by curve)
@@ -274,7 +282,7 @@ contract Goober is
             artGobblers.safeTransferFrom(msg.sender, address(this), gobblers[i]);
             }
             //TODO calculate how much Goo they should get.
-        }
+    }
 
 
     // Will need to call _update() to update reserves of Gobblers and Goo (upon success). 
@@ -284,13 +292,24 @@ contract Goober is
     // TODO Require the switch to be turned ON (1 vs. 0 == OFF). 
 
     function mintGobbler() public nonReentrant {
-        (uint112 _gooReserve, uint112 _multReserve,) = getReserves(); // gas savings
-        uint40 mintPrice = artGobblers.gobblerPrice();
-            require(FixedPointMathLib.mulWadDown(_gooReserve, 1) - 6 >= _multReserve / 1000 && _gooReserve > mintPrice, 
-            "Goober: INSUFFICENT_GOO");
-            // Mint Gobblers to pool
-            artGobblers.mintFromGoo(mintPrice, true)
-            }
+            require(switchState, "Goober: INSUFFICENT_GOO");
+            (uint112 _gooReserve, uint112 _multReserve,) = getReserves(); // Gas savings
+            uint256 gooBalance = goo.balanceOf(address(this));
+            uint256 gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
+            uint40 _mintPrice = FixedPointMathLib.mulWadDown(artGobblers.gobblerPrice(), 1);
+            uint40 _newGooReserve = FixedPointMathLib.mulWadDown(_gooReserve, 1);
+            uint40 _newMultReserve = _multReserve / 1000;
+            // Mint Gobblers to pool while we can afford it 
+            // and when our Goo per Mult < Auction Goo per Mult.
+            // 7.3294 = weighted avg Mult from mint = ((6*3057) + (7*2621) + (8*2293) + (9*2029))/10000.
+            while ((_newGooReserve > _mintPrice) && 
+                   ((_newGooReserve / _newMultReserve) <= (_mintPrice * 10000) / 73294)) {   
+                    artGobblers.mintFromGoo(_mintPrice, true);
+                    _mintPrice = artGobblers.gobblerPrice();
+                    _update(gooBalance, gobblerBalance, _newGooReserve, _newMultReserve);
+                    (_newGooReserve, _newMultReserve,) = getReserves();
+                    }
+     }
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(uint256[] calldata gobblers, uint256 gooTokens, address to, bytes calldata data)
@@ -366,3 +385,4 @@ contract Goober is
      */
     uint256[50] private __gap;
 
+} 
