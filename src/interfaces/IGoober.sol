@@ -57,6 +57,8 @@ interface IGoober is IERC721Receiver {
         uint256 shares
     );
 
+    event FeesAccrued(address indexed feeTo, uint256 shares, bool performanceFee);
+
     event Swap(
         address indexed sender,
         uint256 gooTokensIn,
