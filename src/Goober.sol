@@ -131,10 +131,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IERC721Receiver
-    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
-        external
-        returns (bytes4)
-    {
+    function onERC721Received(address, address, uint256 tokenId, bytes calldata) external view returns (bytes4) {
         if (msg.sender != address(artGobblers)) {
             revert InvalidNFT();
         }

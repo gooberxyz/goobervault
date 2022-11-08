@@ -34,10 +34,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
 
     uint256[] ids;
 
-    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
-        external
-        returns (bytes4)
-    {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -126,17 +123,14 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         setRandomnessAndReveal(3, "seed");
         uint256 gooTokens = 200 ether;
         address me = address(this);
-        uint256 shares = goober.deposit(artGobblersTwo, gooTokens, me, me);
-        shares = goober.deposit(artGobblersThree, gooTokens, me, me);
+        uint256 shares = goober.deposit(artGobblers, gooTokens, me, me);
 
         bytes memory data;
-        //IGoober.SwapParams memory swap =
-        //    IGoober.SwapParams(artGobblersThree, 0 ether, artGobblersTwo, 100 ether, me, me, data);
-        //goober.swap(swap);
+        IGoober.SwapParams memory swap =
+            IGoober.SwapParams(artGobblersThree, 0 ether, artGobblersTwo, 100 ether, me, me, data);
+        goober.swap(swap);
 
-        shares = goober.withdraw(artGobblersTwo, gooTokens, me, me);
-        // TODO(Expect revert)
-        //shares = goober.withdraw(artGobblersThree, gooTokens, me, me);
+        shares = goober.withdraw(artGobblersTwo, 100 ether, me, me);
     }
 
     function test_skimGoo() public {
