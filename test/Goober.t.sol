@@ -52,9 +52,6 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
     }
 
     function setUp() public {
-        // Fork mainnet
-        vm.createSelectFork(vm.envString("RPC_URL"), 15_895_231);
-
         //
         utils = new Utilities();
         users = utils.createUsers(5);
