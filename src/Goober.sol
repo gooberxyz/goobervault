@@ -376,4 +376,11 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, true);
         emit Swap(msg.sender, amount0In, amount1In, parameters.gooOut, multOut, parameters.receiver);
     }
+
+    function skimGoo() public onlyFeeTo {
+        //Owner function to recover lost Goo sent to contract. Contract should never hold GOO tokens (only virtual GOO).
+        uint256 contractGooBalance = goo.balanceOf(address(this)); //Store multicall to memory.
+        require(contractGooBalance > 0, "NO_GOO_IN_CONTRACT"); //Revert if no Goo in contract.
+        goo.transfer(msg.sender, contractGooBalance); //Transfer all GOO tokens in contract to Owner. Do not check for balance > 0 to save gas with Owner wallet.
+    }
 }

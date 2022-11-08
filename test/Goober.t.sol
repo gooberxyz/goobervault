@@ -138,4 +138,25 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // TODO(Expect revert)
         //shares = goober.withdraw(artGobblersThree, gooTokens, me, me);
     }
+
+    function test_skimGoo() public {
+        _writeTokenBalance(address(goober), address(goo), 1);
+        assertEq(goo.balanceOf(address(this)), 0);
+        assertEq(goo.balanceOf(address(goober)), 1);
+        //Revert if not owner.
+        vm.startPrank(msg.sender);
+        // vm.expectRevert(abi.encodeWithSelector(goober.AccessControlViolation.selector, msg.sender, address(this) ) );
+        vm.expectRevert();
+        goober.skimGoo();
+        assertEq(goo.balanceOf(address(this)), 0);
+        assertEq(goo.balanceOf(address(goober)), 1);
+        vm.stopPrank();
+        //Pass.
+        goober.skimGoo();
+        assertEq(goo.balanceOf(address(this)), 1);
+        assertEq(goo.balanceOf(address(goober)), 0);
+        //Revert when no goo in goobler contract.
+        vm.expectRevert(abi.encodePacked("NO_GOO_IN_CONTRACT"));
+        goober.skimGoo();
+    }
 }
