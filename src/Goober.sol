@@ -94,10 +94,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         minter = newMinter;
     }
 
-    function minting(bool enabled) external onlyMinter {
-        mintEnabled = enabled;
-    }
-
     /// @dev update reserves and, on the first call per block, price accumulators
     /// @param _gooBalance the new goo balance
     /// @param _gobblerBalance the new gobblers multiplier
@@ -314,11 +310,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     function mintGobbler() public onlyMinter {
         // This function is restricted to onlyMinter because we don't want
         // the general public to use it to manipulate the goo price.
-
-        // Is minting enabled?
-        if (!mintEnabled) {
-            revert MintingDisabled();
-        }
 
         // Get the mint price
         uint256 mintPrice = artGobblers.gobblerPrice();
