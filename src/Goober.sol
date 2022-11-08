@@ -4,10 +4,11 @@ pragma solidity ^0.8.17;
 
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
-import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import {Owned} from "solmate/auth/Owned.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
+import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import "./math/UQ112x112.sol";
 import "./interfaces/IGoober.sol";
 import "./interfaces/IGooberCallee.sol";
