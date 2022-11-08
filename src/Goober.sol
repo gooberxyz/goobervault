@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// TODO(Should this be BUSL?)
 
 pragma solidity ^0.8.17;
 
@@ -12,49 +13,68 @@ import "./math/UQ112x112.sol";
 import "./interfaces/IGoober.sol";
 import "./interfaces/IGooberCallee.sol";
 
+// TODO(Prevent multiplier 0 gobblers from being deposited, withdrawn, swapped)
+// TODO(Provide a blacklist for stolen gobblers and don't accept them in deposit or swap)
+
+// Goober is a Uniswap V2 and EIP-4626 flavored yield vault to optimize gobbler/goo production.
 contract Goober is ReentrancyGuard, ERC20, IGoober {
+    // We want to ensure all transfers are safe
     using SafeTransferLib for Goo;
+    // We use this for fixed point WAD scalar math
     using FixedPointMathLib for uint256;
+    // This is the Uniswap V2 112 bit Q math, updated for Solidity 8.
     using UQ112x112 for uint224;
 
     // Constant/Immutable storage
 
-    // TODO(Optimize storage layout)
-
+    // The goo contract.
     Goo public immutable goo;
+    // The gobbler contract.
     ArtGobblers public immutable artGobblers;
 
+    // TODO(Can we engineer this out?)
+    // The liquidity locked forever in the pool.
     uint16 private constant MINIMUM_LIQUIDITY = 1e3;
+    // The scalar we use on the gobbler multiplier to maintain precision.
     uint16 private constant MULT_SCALAR = 1e3;
+    // A scalar for scaling up and down to basis points.
     uint16 private constant BPS_SCALAR = 1e4;
+    // The management fee in basis points, charged on deposits.
     uint16 public constant MANAGEMENT_FEE_BPS = 200;
+    // The performance fee in basis points, taken in the form of dilution on the growth of K.
     uint16 public constant PERFORMANCE_FEE_BPS = 1e3;
+    // The average multiplier of a newly minted gobbler.
     // 7.3294 = weighted avg Mult from mint = ((6*3057) + (7*2621) + (8*2293) + (9*2029))/10000.
     uint32 private constant AVERAGE_MULT_BPS = 73294;
 
     // Mutable storage
 
     // Access control
+    // This is the "admin" and also where fees accrue.
     address feeTo;
+    // This is a privileged actor with the ability to mint gobblers when
+    // the pool price is low enough.
     address minter;
 
-    // TODO(Do we need the accumulators for twap?)
-    // TODO(Can these be 112?)
-    // Accumulators
+    // TODO(Can these be 112 bit to save a storage slot?)
+    // Price oracle accumulators
     uint256 public priceGooCumulativeLast;
     uint256 public priceGobblerCumulativeLast;
 
-    // TODO(Do we have a use case for storing accumulators or kLast anymore?)
     // Likely for calculating performance fees and providing an oracle
     // sqrt(gooBalance * totalGobblerMultiplier), as of immediately after the most recent liquidity event
     uint112 public kLast;
+    // A counter for debt accrued against performance fees during temporary decreases in K after
+    // mints by the minter, before multipliers are revealed.
     uint112 public kDebt;
 
     // Last block timestamp
-    uint40 private blockTimestampLast; // uses single storage slot, accessible via getReserves
+    // Yes, the oracle accumulators will reset in 2036.
+    uint32 private blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     // Constructor/init
 
+    // Deploy the goober
     constructor(address _gobblersAddress, address _gooAddress, address _feeTo, address _minter)
         ERC20("Goober", "GBR", 18)
     {
@@ -64,6 +84,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         goo = Goo(_gooAddress);
     }
 
+    // Modifiers
+
+    // This modifier restricts function access to the feeTo address
     modifier onlyFeeTo() {
         if (msg.sender != feeTo) {
             revert AccessControlViolation(msg.sender, feeTo);
@@ -71,6 +94,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _;
     }
 
+    // This modifier restricts function access to the minter address
     modifier onlyMinter() {
         if (msg.sender != minter) {
             revert AccessControlViolation(msg.sender, minter);
@@ -78,20 +102,19 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _;
     }
 
-    /// @inheritdoc IGoober
-    function setFeeTo(address newFeeTo) public onlyFeeTo {
-        if (newFeeTo == address(0)) {
-            revert InvalidAddress(newFeeTo);
-        }
-        feeTo = newFeeTo;
+    // Internal functions
+
+    // Internal Views
+
+    /// @return multiple the total gobbler multiple scaled by 10e3
+    function _getScaledAccountMultiple() internal view returns (uint112 multiple) {
+        multiple = uint112(artGobblers.getUserEmissionMultiple(address(this)) * MULT_SCALAR);
     }
 
-    /// @inheritdoc IGoober
-    function setMinter(address newMinter) public onlyFeeTo {
-        if (newMinter == address(0)) {
-            revert InvalidAddress(newMinter);
-        }
-        minter = newMinter;
+    /// @param gobblerId gobbler to get scaled mult for
+    /// @return multiple scaled multiple of the supplied gobbler
+    function _getScaledTokenMultiple(uint256 gobblerId) internal view returns (uint112 multiple) {
+        multiple = uint112(artGobblers.getGobblerEmissionMultiple(gobblerId) * MULT_SCALAR);
     }
 
     /// @dev update reserves and, on the first call per block, price accumulators
@@ -100,14 +123,14 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param _gooReserve the current goo reserve
     /// @param _gobblerReserve the current gobblers reserve
     function _update(uint256 _gooBalance, uint256 _gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve)
-        private
+        internal
     {
         // Check if the reserves will overflow
         require(_gooBalance <= type(uint112).max && _gobblerBalance <= type(uint112).max, "Goober: OVERFLOW");
 
-        uint40 blockTimestamp = uint40(block.timestamp % 2 ** 40);
+        uint32 blockTimestamp = uint32(block.timestamp % 2 ** 32);
 
-        uint40 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
 
         if (timeElapsed > 0 && _gooReserve != 0 && _gobblerReserve != 0) {
             unchecked {
@@ -197,6 +220,90 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         emit FeesAccrued(feeTo, fee, false);
     }
 
+    // Access Control
+
+    /// @inheritdoc IGoober
+    function setFeeTo(address newFeeTo) public onlyFeeTo {
+        if (newFeeTo == address(0)) {
+            revert InvalidAddress(newFeeTo);
+        }
+        feeTo = newFeeTo;
+    }
+
+    /// @inheritdoc IGoober
+    function setMinter(address newMinter) public onlyFeeTo {
+        if (newMinter == address(0)) {
+            revert InvalidAddress(newMinter);
+        }
+        minter = newMinter;
+    }
+
+    // Other Privileged Functions
+
+    // Mints Gobblers using the vault's virtual reserves of Goo
+    // if the pool's goo per mult is lower than VRGDA goo per mult.
+    function mintGobbler() public onlyMinter {
+        // This function is restricted to onlyMinter because we don't want
+        // the general public to use it to manipulate the goo price.
+
+        // Get the mint price
+        uint256 mintPrice = artGobblers.gobblerPrice();
+
+        uint112 gooReserve = uint112(artGobblers.gooBalance(address(this)));
+        uint256 gooBalance = gooReserve;
+        uint112 gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
+
+        // Should we mint?
+        bool mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS);
+
+        // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
+        while (mint) {
+            gooBalance -= mintPrice;
+            artGobblers.mintFromGoo(mintPrice, true);
+            // TODO(Can we calculate the increase without an sload here?)
+            mintPrice = artGobblers.gobblerPrice();
+            mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS);
+        }
+        _update(uint112(gooBalance), gobblerReserve * MULT_SCALAR, gooReserve, gobblerReserve * MULT_SCALAR);
+    }
+
+    function skimGoo() public onlyFeeTo {
+        //Owner function to recover lost Goo sent to contract. Contract should never hold GOO tokens (only virtual GOO).
+        uint256 contractGooBalance = goo.balanceOf(address(this)); //Store multicall to memory.
+        require(contractGooBalance > 0, "NO_GOO_IN_CONTRACT"); //Revert if no Goo in contract.
+        goo.transfer(msg.sender, contractGooBalance); //Transfer all GOO tokens in contract to Owner. Do not check for balance > 0 to save gas with Owner wallet.
+    }
+
+    // External/Public views
+
+    // @return gooTokens the total amount of goo owned
+    // @return gobblerMult the total multiple of all gobblers owned
+    function totalAssets() public view returns (uint256 gooTokens, uint256 gobblerMult) {
+        gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
+        gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
+    }
+
+    /// @return _gooReserve the total amount of goo in the tank for all owned gobblers
+    /// @return _gobblerReserve the total multiplier of all gobblers owned scaled by MULT_SCALAR
+    /// @return _blockTimestampLast the last time that the reserves were updated
+    function getReserves()
+        public
+        view
+        returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast)
+    {
+        _gooReserve = uint112(artGobblers.gooBalance(address(this)));
+        _gobblerReserve = _getScaledAccountMultiple();
+        _blockTimestampLast = blockTimestampLast;
+    }
+
+    // Mutating external/public functions
+
+    /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
+    /// @param receiver - address to receive GBR
+    /// @param owner - owner of the goo/gobblers
+    /// @return shares - amount of GBR minted
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
         external
         nonReentrant
@@ -313,58 +420,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
     }
 
-    function totalAssets() public view returns (uint256 gobblerBal, uint256 gobblerMult, uint256 gooTokens) {
-        gobblerBal = artGobblers.balanceOf(address(this));
-        gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
-        gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
-    }
-
-    function _getScaledAccountMultiple() internal view returns (uint112 multiple) {
-        multiple = uint112(artGobblers.getUserEmissionMultiple(address(this)) * MULT_SCALAR);
-    }
-
-    function _getScaledTokenMultiple(uint256 gobblerId) internal view returns (uint112 multiple) {
-        multiple = uint112(artGobblers.getGobblerEmissionMultiple(gobblerId) * MULT_SCALAR);
-    }
-
-    function getReserves()
-        public
-        view
-        returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast)
-    {
-        _gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        _gobblerReserve = _getScaledAccountMultiple();
-        _blockTimestampLast = blockTimestampLast;
-    }
-
-    // Mints Gobblers using the vault's virtual reserves of Goo
-    // if the pool's goo per mult is lower than VRGDA goo per mult.
-    function mintGobbler() public onlyMinter {
-        // This function is restricted to onlyMinter because we don't want
-        // the general public to use it to manipulate the goo price.
-
-        // Get the mint price
-        uint256 mintPrice = artGobblers.gobblerPrice();
-
-        uint112 gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        uint256 gooBalance = gooReserve;
-        uint112 gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
-
-        // Should we mint?
-        bool mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS);
-
-        // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
-        while (mint) {
-            gooBalance -= mintPrice;
-            artGobblers.mintFromGoo(mintPrice, true);
-            // TODO(Can we calculate the increase without an sload here?)
-            mintPrice = artGobblers.gobblerPrice();
-            mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS);
-        }
-        _update(uint112(gooBalance), gobblerReserve * MULT_SCALAR, gooReserve, gobblerReserve * MULT_SCALAR);
-    }
-
-    // this low-level function should be called from a contract which performs important safety checks
+    // TODO(Get rid of the struct here if possible by getting clever with the stack)
+    /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool
     function swap(SwapParams calldata parameters) external nonReentrant {
         require(parameters.gooOut > 0 || parameters.gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
         uint112 multOut = 0;
@@ -430,12 +487,5 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Update oracle
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve);
         emit Swap(msg.sender, amount0In, amount1In, parameters.gooOut, multOut, parameters.receiver);
-    }
-
-    function skimGoo() public onlyFeeTo {
-        //Owner function to recover lost Goo sent to contract. Contract should never hold GOO tokens (only virtual GOO).
-        uint256 contractGooBalance = goo.balanceOf(address(this)); //Store multicall to memory.
-        require(contractGooBalance > 0, "NO_GOO_IN_CONTRACT"); //Revert if no Goo in contract.
-        goo.transfer(msg.sender, contractGooBalance); //Transfer all GOO tokens in contract to Owner. Do not check for balance > 0 to save gas with Owner wallet.
     }
 }
