@@ -96,9 +96,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param _gobblerBalance the new gobblers multiplier
     /// @param _gooReserve the current goo reserve
     /// @param _gobblerReserve the current gobblers reserve
-    function _update(uint256 _gooBalance, uint256 _gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve, bool updateKLast)
-        private
-    {
+    function _update(
+        uint256 _gooBalance,
+        uint256 _gobblerBalance,
+        uint112 _gooReserve,
+        uint112 _gobblerReserve,
+        bool updateKLast
+    ) private {
         // Check if the reserves will overflow
         require(_gooBalance <= type(uint112).max && _gobblerBalance <= type(uint112).max, "Goober: OVERFLOW");
 
