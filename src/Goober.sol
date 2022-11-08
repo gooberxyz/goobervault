@@ -33,7 +33,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     uint32 private constant AVERAGE_MULT_BPS = 73294;
 
     // Mutable storage
-    bool private mintEnabled = false;
 
     // Access control
     address feeTo;
