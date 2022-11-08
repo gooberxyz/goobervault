@@ -31,42 +31,36 @@ jobs:
 
       - name: Check gas snapshots
         run: forge snapshot --check
-        env:
-          RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - name: Run tests
         run: forge test --optimize
-        env:
-          RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - name: Coverage
         run: |
           forge coverage --report lcov
         id: coverage
-        env:
-          RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - uses: codecov/codecov-action@v3
 
-  static-analysis:
-    name: Slither static analysis
-    runs-on: ubuntu-latest
-    steps:
+  # static-analysis:
+  #   name: Slither static analysis
+  #   runs-on: ubuntu-latest
+  #   steps:
 
-      - uses: actions/checkout@v3
+  #     - uses: actions/checkout@v3
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
+  #     - name: Install Foundry
+  #       uses: foundry-rs/foundry-toolchain@v1
+  #       with:
+  #         version: nightly
       
-      - name: Install submodules
-        run: forge install
+  #     - name: Install submodules
+  #       run: forge install
 
-      - name: Run Slither
-        uses: crytic/slither-action@v0.2.0
-        with:
-          target: "src/"
-          slither-config: slither.config.json
-          sarif: results.sarif
-          fail-on: high
+  #     - name: Run Slither
+  #       uses: crytic/slither-action@v0.2.0
+  #       with:
+  #         target: "src/"
+  #         slither-config: slither.config.json
+  #         sarif: results.sarif
+  #         fail-on: high
