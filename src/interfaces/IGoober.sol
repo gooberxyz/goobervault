@@ -11,6 +11,7 @@ interface IGoober is IERC721Receiver {
     error gobblerInvalidMultiplier();
     error InvalidNFT();
     error InvalidMultiplier(uint256 gobblerId);
+    error NoSkim();
 
     /**
      * @notice The caller doesn't have permission to access that function.
@@ -57,7 +58,7 @@ interface IGoober is IERC721Receiver {
         uint256 shares
     );
 
-    event FeesAccrued(address indexed feeTo, uint256 shares, bool performanceFee);
+    event FeesAccrued(address indexed feeTo, uint256 shares, bool performanceFee, uint256 _deltaK);
 
     event Swap(
         address indexed sender,
