@@ -178,6 +178,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             _mint(receiver, shares);
         }
 
+        validGobblerMultipliers(gobblers);
+
         _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
 
         // TODO(Fee math)
@@ -238,6 +240,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
         }
 
+        validGobblerMultipliers(gobblers);
+
         // Burn the shares
         _burn(owner, shares);
 
@@ -259,6 +263,18 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     function _getScaledTokenMultiple(uint256 gobblerId) internal view returns (uint112 multiple) {
         multiple = uint112(artGobblers.getGobblerEmissionMultiple(gobblerId) * MULT_SCALAR);
+    }
+
+    /// @dev reverts if the mulitplier is invalid
+    function validGobblerMultiplier(uint256 gobblerId) internal view {
+        uint256 mult = artGobblers.getGobblerEmissionMultiple(gobblerId);
+        if (mult > 9 || mult < 6) revert InvalidMultiplier(gobblerId);
+    }
+
+    function validGobblerMultipliers(uint256[] memory gobblerIds) internal view {
+        for (uint256 i = 0; i < gobblerIds.length; i++) {
+            validGobblerMultiplier(gobblerIds[i]);
+        }
     }
 
     function getReserves()
