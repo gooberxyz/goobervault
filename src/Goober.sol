@@ -142,36 +142,43 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // TODO(Should we use 256 bit for reserves rather than 112 bit Q maths)
 
     function _performanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult) internal returns (uint256 fee) {
+        // Read the last K value
         uint112 _kLast = kLast;
-        uint112 _kDebt = kDebt;
+        // Calculate the present K
         uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult));
-        uint112 _kIncrease = 0;
+        // Check if we have any debt
+        uint112 _kDebt = kDebt;
+        // Did K increase?
+        bool _kIncrease = _k > kLast;
+        // Get the gross change in K as a numeric
+        uint112 _kChange = _kIncrease ? _k - _kLast : _kLast - _k;
         // No k, no fee
         fee = 0;
         if (_kLast > 0) {
-            // No growth in k, no fee
-            if (_k > _kLast) {
+            // K grew
+            if (_kIncrease) {
                 if (_kDebt > 0) {
-                    _kIncrease = _k - _kLast;
-                    if (_kIncrease <= _kDebt) {
-                        kDebt -= _kIncrease;
-                        _k -= _kIncrease;
+                    if (_kChange <= _kDebt) {
+                        kDebt -= _kChange;
+                        _kChange = 0;
                     } else {
                         kDebt = 0;
-                        _kIncrease -= _kDebt;
+                        _kChange -= _kDebt;
                     }
                 }
-                if (_kIncrease > 0) {
-                    uint256 _deltaK = FixedPointMathLib.divWadDown(_kIncrease, _kLast);
+                if (_kChange > 0) {
+                    // Get the change in K counting towards a performance fee as a ratio of the total
+                    uint256 _deltaK = FixedPointMathLib.divWadDown(_kChange, _kLast);
                     // Let's offset the debt first if it exists
                     fee = FixedPointMathLib.mulWadDown(totalSupply, _deltaK) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
                     _mint(feeTo, fee);
                     emit FeesAccrued(feeTo, fee, true);
                 }
-            } else if (_kLast > _k) {
-                // We minted and k decreased
-                // Let's record the debt here so we can later offset the growth
-                kDebt += _kLast - _k;
+            }
+            // Otherwise, if we have a decrease or no change, and if the decrease was more
+            // Than 0, we should increment the debt
+            else if (_kChange > 0) {
+                kDebt += _kChange;
             }
         }
     }
