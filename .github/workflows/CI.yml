@@ -35,7 +35,7 @@ jobs:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
       - name: Run tests
-        run: forge test --optimize --fork-block-number 15895231
+        run: forge test --optimize
         env:
           RPC_URL: https://eth-mainnet.alchemyapi.io/v2/SzNcOCE77s6nmGIal7MxtuzF--q2HZgx
 
