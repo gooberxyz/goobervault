@@ -119,10 +119,10 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         }
 
         // We don't store reserves here as they are already stored in other contracts
-        _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
-        _kLast = kLast;
+        uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
+        uint112 _kLast = kLast;
         // K decreased, record the debt
-        if (_k > _kLast) {
+        if (_k < _kLast) {
             kDebt += _kLast - _k;
         }
         // Update historic k.
