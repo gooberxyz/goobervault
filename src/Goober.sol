@@ -73,6 +73,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IGoober
+    /// @notice sets the fee receiver to the supplied address
     function setFeeTo(address newFeeTo) public onlyFeeTo {
         if (newFeeTo == address(0)) {
             revert InvalidAddress(newFeeTo);
@@ -81,6 +82,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IGoober
+    /// @notice sets the minting address to supplied address
     function setMinter(address newMinter) public onlyFeeTo {
         if (newMinter == address(0)) {
             revert InvalidAddress(newMinter);
@@ -135,6 +137,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // TODO(Should we use 256 bit for reserves rather than 112 bit Q maths)
 
+    /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
+    /// @param receiver - address to receive GBR
+    /// @param owner - owner of the goo/gobblers
+    /// @return shares - amount of GBR minted
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
         external
         nonReentrant
@@ -247,20 +255,29 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
     }
 
+    /// @return gobblerBal the total amount of gobblers owned
+    /// @return gobblerMult the total multiple of all gobblers owned
+    /// @return gooTokens the total amount of goo owned
     function totalAssets() public view returns (uint256 gobblerBal, uint256 gobblerMult, uint256 gooTokens) {
         gobblerBal = artGobblers.balanceOf(address(this));
         gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
         gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
     }
 
+    /// @return multiple the total gobbler multiple scaled by 10e3
     function _getScaledAccountMultiple() internal view returns (uint112 multiple) {
         multiple = uint112(artGobblers.getUserEmissionMultiple(address(this)) * MULT_SCALAR);
     }
 
+    /// @param gobblerId gobbler to get scaled mult for
+    /// @return mulitple scaled multiple of the supplied gobbler
     function _getScaledTokenMultiple(uint256 gobblerId) internal view returns (uint112 multiple) {
         multiple = uint112(artGobblers.getGobblerEmissionMultiple(gobblerId) * MULT_SCALAR);
     }
 
+    /// @return _gooReserve the total amount of goo in the tank for all owned gobblers
+    /// @return _gobblerReserve the total multiplier of all gobblers owned scaled by 10e3
+    /// @return _blockTimestampLast the last time that the reserves were updated
     function getReserves()
         public
         view
@@ -272,6 +289,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     // this low-level function should be called from a contract which performs important safety checks
+    /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool
     function swap(SwapParams calldata parameters) external nonReentrant {
         require(parameters.gooOut > 0 || parameters.gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
         uint112 multOut = 0;
