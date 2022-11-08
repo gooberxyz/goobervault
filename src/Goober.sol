@@ -31,6 +31,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     uint16 public constant PERFORMANCE_FEE_BPS = 1e3;
 
     // Mutable storage
+    bool public switchState = true;
+
+    function toggleSwitch() public onlyOwner returns (bool status) {
+    switchState = !switchState;
+    return switchState;
+    }
 
     // Access control
     address feeTo;
@@ -301,6 +307,28 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _gobblerReserve = _getScaledAccountMultiple();
         _blockTimestampLast = blockTimestampLast;
     }
+
+    // Mints Gobblers using the vault's virtual reserves of Goo
+    // if the pool's goo per mult is lower than VRGDA goo per mult. 
+    function mintGobbler() public nonReentrant {
+            require(switchState, "Goober: INSUFFICENT_GOO");
+            (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // Gas savings
+            uint256 gooBalance = goo.balanceOf(address(this));
+            uint256 gobblerBalance = artGobblers.getUserEmissionMultiple(address(this));
+            uint256 _mintPrice = (FixedPointMathLib.mulWadDown(artGobblers.gobblerPrice(), 1));
+            uint112 _newGooReserve = uint112(FixedPointMathLib.mulWadDown(_gooReserve, 1));
+            uint112 _newGobblerReserve = (_gobblerReserve / 1000);
+            // Mint Gobblers to pool while we can afford it
+            // and when our Goo per Mult < Auction Goo per Mult.
+            // 7.3294 = weighted avg Mult from mint = ((6*3057) + (7*2621) + (8*2293) + (9*2029))/10000.
+            while ((_newGooReserve > _mintPrice) &&
+                   ((_newGooReserve / _newGobblerReserve) <= (_mintPrice * 10000) / 73294)) {
+                    artGobblers.mintFromGoo(_mintPrice, true);
+                    _mintPrice = FixedPointMathLib.mulWadDown(artGobblers.gobblerPrice(), 1);
+                    _update(gooBalance, gobblerBalance, _newGooReserve, _newGobblerReserve);
+                    (_newGooReserve, _newGobblerReserve,) = getReserves();
+                    }
+     }
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(SwapParams calldata parameters) external nonReentrant {
