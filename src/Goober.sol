@@ -119,7 +119,14 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         }
 
         // We don't store reserves here as they are already stored in other contracts
-        kLast = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
+        _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
+        _kLast = kLast;
+        // K decreased, record the debt
+        if (_k > _kLast) {
+            kDebt += _kLast - _k;
+        }
+        // Update historic k.
+        kLast = _k;
 
         // This is used for the oracle accumulators
         blockTimestampLast = blockTimestamp;
