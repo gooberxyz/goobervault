@@ -285,12 +285,8 @@ contract Goober is
     }
 
 
-    // Will need to call _update() to update reserves of Gobblers and Goo (upon success).
-    // Will need to remove the Goo from the Gobblers (virtual), in order to
-    // either mint a Gobbler by burning Goo, or sell the Goo for Eth and buying a Gobbler
-    // off secondary.
-    // TODO Require the switch to be turned ON (1 vs. 0 == OFF).
-
+    // Mints Gobblers using the vault's virtual reserves of Goo
+    // if the pool's goo per mult is lower than VRGDA goo per mult. 
     function mintGobbler() public nonReentrant {
             require(switchState, "Goober: INSUFFICENT_GOO");
             (uint112 _gooReserve, uint112 _multReserve,) = getReserves(); // Gas savings
