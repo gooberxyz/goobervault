@@ -4,7 +4,6 @@ pragma solidity ^0.8.17;
 
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
-import {Owned} from "solmate/auth/Owned.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
@@ -34,7 +33,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // Mutable storage
     bool public switchState = true;
 
-    function toggleSwitch() public onlyOwner returns (bool status) {
+    function toggleSwitch() public onlyMinter returns (bool status) {
     switchState = !switchState;
     return switchState;
     }
