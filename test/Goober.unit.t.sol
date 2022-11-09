@@ -20,10 +20,10 @@ import "../src/interfaces/IGoober.sol";
 // TODO write tests for single/multiple deposit, withdraw, swap happy paths
 // TODO write tests to cover all require cases, then refactor into custom errors
 // TODO write fuzz tests that use actors, with various assets and actions
+// TODO write modifier for test fixture setup
 // TODO refactor out K calculations into internal methods
 // DONE refactor actor setup text fixture
 // DONE clean up all ether, replace with scaling constant
-// TODO write modifier for test fixture setup
 
 contract GooberTest is Test {
     using stdStorage for StdStorage;
