@@ -145,26 +145,21 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     function _previewPerformanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult)
         internal
         view
-        returns (uint256 fee, uint112 kDebtChange, uint256 deltaK)
+        returns (uint256 fee, uint112 kDebtChange, uint256 kDelta)
     {
-        // Read the last K value
         uint112 _kLast = kLast;
         // Check if we have any kDebt outstanding from mints
         uint112 _kDebt = kDebt;
-        // Calculate the present K
-        uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult));
-        // Did K increase?
-        bool _kIncrease = _k > kLast;
-        // Get the gross change in K as a numeric
-        uint112 _kChange = _kIncrease ? _k - _kLast : _kLast - _k;
         // No k, no fee
         fee = 0;
         kDebtChange = 0;
-        deltaK = 0;
+        kDelta = 0;
         // If kLast was at 0, then we won't accrue a fee yet, as the pool is brand new.
         if (_kLast > 0) {
+            (, uint112 _kChange, bool _kChangeSign, uint256 _kDelta) =
+                _kCalculations(_gooBalance, _gobblerBalanceMult, kLast, false);
             // K grew
-            if (_kIncrease) {
+            if (_kChangeSign) {
                 // Let's offset the debt first if it exists
                 if (_kDebt > 0) {
                     if (_kChange <= _kDebt) {
@@ -177,12 +172,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 }
                 // And then calculate a fee on any remainder
                 if (_kChange > 0) {
-                    // Get the change in K counting towards a performance fee as a ratio of the total
-                    deltaK = FixedPointMathLib.divWadDown(_kChange, _kLast);
                     // Calculate the fee as a portion of the total supply at the ration of the _deltaK
-                    fee = FixedPointMathLib.mulWadDown(totalSupply, deltaK) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
+                    fee = FixedPointMathLib.mulWadDown(totalSupply, _kDelta) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
                 }
             }
+            // update kDelta return value
+            kDelta = _kDelta;
         }
     }
 
