@@ -170,7 +170,7 @@ contract GooberTest is Test {
         _setRandomnessAndReveal(3, "seed");
 
         vm.expectEmit(true, true, true, false);
-        emit Deposit(users[1], users[1], users[1], artGobblers, gooToDeposit, 999);
+        emit Deposit(users[1], users[1], artGobblers, gooToDeposit, 999);
 
         /*uint256 fractions = */
         goober.deposit(artGobblers, gooToDeposit, users[1]);
@@ -279,7 +279,7 @@ contract GooberTest is Test {
 
         goober.deposit(artGobblers, 500 * 10 ** 18, users[1]);
 
-        vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+        vm.expectRevert("Goober: MUST LEAVE LIQUIDITY");
 
         goober.withdraw(new uint256[](0), 500 * 10 ** 18, users[1], users[1]);
     }
@@ -426,7 +426,7 @@ contract GooberTest is Test {
     }
 
     function testRevertSkimGooWhenNoGooInContract() public {
-        vm.expectRevert("NO_GOO_IN_CONTRACT");
+        vm.expectRevert(IGoober.NoSkim.selector);
 
         vm.prank(FEE_TO);
         goober.skimGoo();
@@ -501,13 +501,10 @@ contract GooberTest is Test {
                         Events
     //////////////////////////////////////////////////////////////*/
 
+    // TODO(Duplicating these is sub optimal, we should use the interface)
+
     event Deposit(
-        address indexed caller,
-        address indexed owner,
-        address indexed receiver,
-        uint256[] gobblers,
-        uint256 gooTokens,
-        uint256 shares
+        address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 shares
     );
 
     event Withdraw(
@@ -523,11 +520,11 @@ contract GooberTest is Test {
 
     event Swap(
         address indexed sender,
+        address indexed receiver,
         uint256 gooTokensIn,
         uint256 gobblersMultIn,
         uint256 gooTokensOut,
-        uint256 gobblerMultOut,
-        address indexed receiver
+        uint256 gobblerMultOut
     );
 
     event Sync(uint112 gooBalance, uint112 multBalance);
