@@ -519,7 +519,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             } else {
                 uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
                 uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
-                uint256 _deltaK = FixedPointMathLib.divWadUp(_k - _kLast, _kLast);
+                uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
                 fractions = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
             }
             require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
