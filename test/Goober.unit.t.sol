@@ -378,13 +378,22 @@ contract GooberTest is Test {
     function testPreviewDeposit() public {
         vm.startPrank(users[1]);
         gobblers.addGoo(500 * 10 ** 18);
+        // Test first deposit
         uint256[] memory artGobblers = new uint256[](1);
         artGobblers[0] = gobblers.mintFromGoo(100 * 10 ** 18, true);
         vm.warp(block.timestamp + 1 days);
         _setRandomnessAndReveal(1, "seed");
-        uint256 expect = goober.previewDeposit(artGobblers, 100 ether);
+        uint256 expected = goober.previewDeposit(artGobblers, 100 ether);
         uint256 actual = goober.deposit(artGobblers, 100 ether, users[1]);
-        assertEq(expect, actual);
+        assertEq(expected, actual);
+        // Test second deposit
+        uint256[] memory artGobblersTwo = new uint256[](1);
+        artGobblersTwo[0] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(1, "seed");
+        expected = goober.previewDeposit(artGobblersTwo, 100 ether);
+        actual = goober.deposit(artGobblersTwo, 100 ether, users[1]);
+        assertEq(expected, actual);
     }
     // previewWithdraw / previewFractionsToBurnOnWithdraw
     // previewSwap
