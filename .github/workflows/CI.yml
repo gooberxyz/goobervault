@@ -63,3 +63,4 @@ jobs:
           slither-config: slither.config.json
           sarif: results.sarif
           fail-on: high
+          solc-version: 0.8.17
