@@ -57,6 +57,8 @@ interface IGoober is IERC721Receiver {
         uint256 shares
     );
 
+    event Mint(uint256 gobblerId);
+
     event FeesAccrued(address indexed feeTo, uint256 shares, bool performanceFee);
 
     event Swap(

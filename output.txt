@@ -1,0 +1,492 @@
+Compiling 1 files with 0.8.17
+Solc 0.8.17 finished in 2.99s
+Compiler run successful (with warnings)
+[33mwarning[2462]: [0m[33mWarning: Visibility for constructor is ignored. If you want the contract to be non-deployable, making it "abstract" is sufficient.
+  --> lib/art-gobblers/src/../lib/chainlink/contracts/src/v0.8/mocks/VRFCoordinatorMock.sol:12:3:
+   |
+12 |   constructor(address linkAddress) public {
+   |   ^ (Relevant source part starts here and spans across multiple lines).
+
+[0m
+
+[33mwarning[5667]: [0m[33mWarning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> lib/art-gobblers/src/../lib/chainlink/contracts/src/v0.8/mocks/VRFCoordinatorMock.sol:18:5:
+   |
+18 |     uint256 fee,
+   |     ^^^^^^^^^^^
+
+[0m
+
+[33mwarning[2072]: [0m[33mWarning: Unused local variable.
+  --> lib/art-gobblers/src/../lib/chainlink/contracts/src/v0.8/mocks/VRFCoordinatorMock.sol:34:6:
+   |
+34 |     (bool success, ) = consumerContract.call(resp);
+   |      ^^^^^^^^^^^^
+
+[0m
+
+[33mwarning[2072]: [0m[33mWarning: Unused local variable.
+   --> test/Goober.t.sol:152:9:
+    |
+152 |         uint256 expectedId = artGobbler[0] + 1;
+    |         ^^^^^^^^^^^^^^^^^^
+
+[0m
+
+[33mwarning[2072]: [0m[33mWarning: Unused local variable.
+   --> test/Goober.t.sol:159:10:
+    |
+159 |         (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
+    |          ^^^^^^^^^^^^^^^^^^^^^^
+
+[0m
+
+[33mwarning[2072]: [0m[33mWarning: Unused local variable.
+   --> test/Goober.t.sol:159:34:
+    |
+159 |         (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
+    |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+[0m
+
+
+Running 5 tests for test/Goober.t.sol:TestUERC20Functionality
+[32m[PASS][0m testMintRevertCaller() (gas: 11386)
+Traces:
+  [11386] [32mTestUERC20Functionality[0m::[32mtestMintRevertCaller[0m() [33m[0m
+    ├─ [0] [34mVM[0m::[34mstartPrank[0m(0x00a329c0648769A73afAc7F9381E08FB43dBEA72) [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [0] [34mVM[0m::[34mexpectRevert[0m() [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [2553] [31mGoober[0m::[31mmintGobbler[0m() [33m[0m
+    │   └─ [31m← [0m"AccessControlViolation(0x00a329c0648769A73afAc7F9381E08FB43dBEA72, 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84)"
+    ├─ [0] [34mVM[0m::[34mstopPrank[0m() [33m[0m
+    │   └─ [34m← [0m()
+    └─ [32m← [0m()
+
+[31m[FAIL. Reason: Arithmetic over/underflow][0m test_mint() (gas: 657585)
+Traces:
+  [11074498] [32mTestUERC20Functionality[0m::[32msetUp[0m() [33m[0m
+    ├─ [525038] [33m→ [0m[33mnew[0m Utilities@0xCe71065D4017F316EC606Fe4422e11eB2c47c246
+    │   └─ [32m← [0m2401 bytes of code
+    ├─ [11442] [32mUtilities[0m::[32mcreateUsers[0m(5) [33m[0m
+    │   ├─ [540] [32mUtilities[0m::[32mgetNextUserAddress[0m() [33m[0m
+    │   │   └─ [32m← [0m0x9aF2E2B7e57c1CD7C68C5C3796d8ea67e0018dB7
+    │   ├─ [0] [34mVM[0m::[34mdeal[0m(0x9aF2E2B7e57c1CD7C68C5C3796d8ea67e0018dB7, 100000000000000000000) [33m[0m
+    │   │   └─ [34m← [0m()
+    │   ├─ [540] [32mUtilities[0m::[32mgetNextUserAddress[0m() [33m[0m
+    │   │   └─ [32m← [0m0x2f66c75A001Ba71ccb135934F48d844b46454543
+    │   ├─ [0] [34mVM[0m::[34mdeal[0m(0x2f66c75A001Ba71ccb135934F48d844b46454543, 100000000000000000000) [33m[0m
+    │   │   └─ [34m← [0m()
+    │   ├─ [540] [32mUtilities[0m::[32mgetNextUserAddress[0m() [33m[0m
+    │   │   └─ [32m← [0m0x8CE502537D13f249834eAa02DDe4781EBFe0d40f
+    │   ├─ [0] [34mVM[0m::[34mdeal[0m(0x8CE502537D13f249834eAa02DDe4781EBFe0d40f, 100000000000000000000) [33m[0m
+    │   │   └─ [34m← [0m()
+    │   ├─ [540] [32mUtilities[0m::[32mgetNextUserAddress[0m() [33m[0m
+    │   │   └─ [32m← [0m0x075edF3ae919FBef9933f666bb0A95C6b80b04ed
+    │   ├─ [0] [34mVM[0m::[34mdeal[0m(0x075edF3ae919FBef9933f666bb0A95C6b80b04ed, 100000000000000000000) [33m[0m
+    │   │   └─ [34m← [0m()
+    │   ├─ [540] [32mUtilities[0m::[32mgetNextUserAddress[0m() [33m[0m
+    │   │   └─ [32m← [0m0x974D20930c6Be64Fa09d53FaE28ef7256A39B47F
+    │   ├─ [0] [34mVM[0m::[34mdeal[0m(0x974D20930c6Be64Fa09d53FaE28ef7256A39B47F, 100000000000000000000) [33m[0m
+    │   │   └─ [34m← [0m()
+    │   └─ [32m← [0m[0x9aF2E2B7e57c1CD7C68C5C3796d8ea67e0018dB7, 0x2f66c75A001Ba71ccb135934F48d844b46454543, 0x8CE502537D13f249834eAa02DDe4781EBFe0d40f, 0x075edF3ae919FBef9933f666bb0A95C6b80b04ed, 0x974D20930c6Be64Fa09d53FaE28ef7256A39B47F]
+    ├─ [768447] [33m→ [0m[33mnew[0m LinkToken@0x185a4dc360CE69bDCceE33b3784B0282f7961aea
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], amount: 1000000000000000000000000)
+    │   └─ [32m← [0m3267 bytes of code
+    ├─ [228400] [33m→ [0m[33mnew[0m VRFCoordinatorMock@0xEFc56627233b02eA95bAE7e19F648d7DcD5Bb132
+    │   └─ [32m← [0m1029 bytes of code
+    ├─ [1328] [32mUtilities[0m::[32mpredictContractAddress[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 4) [33m[0m
+    │   ├─ [0] [34mVM[0m::[34mgetNonce[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[0m
+    │   │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000004
+    │   └─ [32m← [0mArtGobblers: [0x3A1148FE01e3c4721D93fe8A36c2b5C29109B6ae]
+    ├─ [1328] [32mUtilities[0m::[32mpredictContractAddress[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 5) [33m[0m
+    │   ├─ [0] [34mVM[0m::[34mgetNonce[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[0m
+    │   │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000004
+    │   └─ [32m← [0mPages: [0xbfFb01bB2DDb4EfA87cB78EeCB8115AFAe6d2032]
+    ├─ [206490] [33m→ [0m[33mnew[0m GobblerReserve@0xf5a2fE45F4f1308502b1C136b9EF8af136141382
+    │   ├─ emit [36mOwnershipTransferred[0m(user: 0x0000000000000000000000000000000000000000, newOwner: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84])
+    │   └─ [32m← [0m911 bytes of code
+    ├─ [206490] [33m→ [0m[33mnew[0m GobblerReserve@0x42997aC9251E5BB0A61F4Ff790E5B991ea07Fd9B
+    │   ├─ emit [36mOwnershipTransferred[0m(user: 0x0000000000000000000000000000000000000000, newOwner: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84])
+    │   └─ [32m← [0m911 bytes of code
+    ├─ [272191] [33m→ [0m[33mnew[0m ChainlinkV1RandProvider@0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC
+    │   └─ [32m← [0m1356 bytes of code
+    ├─ [1328] [32mUtilities[0m::[32mpredictContractAddress[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 1) [33m[0m
+    │   ├─ [0] [34mVM[0m::[34mgetNonce[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[0m
+    │   │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000007
+    │   └─ [32m← [0mArtGobblers: [0x3A1148FE01e3c4721D93fe8A36c2b5C29109B6ae]
+    ├─ [1328] [32mUtilities[0m::[32mpredictContractAddress[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 2) [33m[0m
+    │   ├─ [0] [34mVM[0m::[34mgetNonce[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[0m
+    │   │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000007
+    │   └─ [32m← [0mPages: [0xbfFb01bB2DDb4EfA87cB78EeCB8115AFAe6d2032]
+    ├─ [723243] [33m→ [0m[33mnew[0m Goo@0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84
+    │   └─ [32m← [0m3381 bytes of code
+    ├─ [3065347] [33m→ [0m[33mnew[0m ArtGobblers@0x3A1148FE01e3c4721D93fe8A36c2b5C29109B6ae
+    │   ├─ emit [36mOwnershipTransferred[0m(user: 0x0000000000000000000000000000000000000000, newOwner: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84])
+    │   └─ [32m← [0m14490 bytes of code
+    ├─ [1378691] [33m→ [0m[33mnew[0m Pages@0xbfFb01bB2DDb4EfA87cB78EeCB8115AFAe6d2032
+    │   └─ [32m← [0m6636 bytes of code
+    ├─ [2938419] [33m→ [0m[33mnew[0m Goober@0xdC0505A4c93647CD736E4bE24FBb171472bBFb10
+    │   └─ [32m← [0m14110 bytes of code
+    ├─ [24546] [32mGoo[0m::[32mapprove[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 115792089237316195423570985008687907853269984665640564039457584007913129639935) [33m[0m
+    │   ├─ emit [36mApproval[0m(owner: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], spender: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], amount: 115792089237316195423570985008687907853269984665640564039457584007913129639935)
+    │   └─ [32m← [0mtrue
+    ├─ [24577] [32mArtGobblers[0m::[32msetApprovalForAll[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], true) [33m[0m
+    │   ├─ emit [36mApprovalForAll[0m(owner: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], operator: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], approved: true)
+    │   └─ [32m← [0m()
+    └─ [32m← [0m()
+
+  [555285] [31mTestUERC20Functionality[0m::[31mtest_mint[0m() [33m[0m
+    ├─ [3928] [32mArtGobblers[0m::[32mgobblerPrice[0m() [33m[staticcall][0m
+    │   └─ [32m← [0m73013654753028651285
+    ├─ [0] [34mVM[0m::[34mrecord[0m() [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [2564] [32mGoo[0m::[32mbalanceOf[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[staticcall][0m
+    │   └─ [32m← [0m0
+    ├─ [0] [34mVM[0m::[34maccesses[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84]) [33m[0m
+    │   └─ [34m← [0m[0x44546b6e628978acd39a9a166b9d2da4dee6074b92a2b0445422355e99f2ef9b], []
+    ├─ [0] [34mVM[0m::[34mload[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], 0x44546b6e628978acd39a9a166b9d2da4dee6074b92a2b0445422355e99f2ef9b) [33m[0m
+    │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000000
+    ├─ emit [36mWARNING_UninitedSlot[0m(who: Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], slot: 30906430319933895701988850850478013041952056394997466516039315780505162674075)
+    ├─ emit [36mSlotFound[0m(who: Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], fsig: 0x70a08231, keysHash: 0x187a2ad3b11081a3050671ee16cc42acca7475835edc3ec15a30507fff0991e9, slot: 30906430319933895701988850850478013041952056394997466516039315780505162674075)
+    ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[staticcall][0m
+    │   └─ [32m← [0m0
+    ├─ [0] [34mVM[0m::[34mload[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], 0x44546b6e628978acd39a9a166b9d2da4dee6074b92a2b0445422355e99f2ef9b) [33m[0m
+    │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000000
+    ├─ [0] [34mVM[0m::[34mstore[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], 0x44546b6e628978acd39a9a166b9d2da4dee6074b92a2b0445422355e99f2ef9b, 0x00000000000000000000000000000000000000000000003635c9adc5dea00000) [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [95939] [32mArtGobblers[0m::[32mmintFromGoo[0m(75000000000000000000, false) [33m[0m
+    │   ├─ [24874] [32mGoo[0m::[32mburnForGobblers[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 73013654753028651285) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: 0x0000000000000000000000000000000000000000, amount: 73013654753028651285)
+    │   │   └─ [32m← [0m()
+    │   ├─ emit [36mGobblerPurchased[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], gobblerId: 1, price: 73013654753028651285)
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], id: 1)
+    │   └─ [32m← [0m1
+    ├─ [0] [34mVM[0m::[34mwarp[0m(86401) [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [59044] [32mArtGobblers[0m::[32mrequestRandomSeed[0m() [33m[0m
+    │   ├─ emit [36mRandomnessRequested[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], toBeRevealed: 1)
+    │   ├─ [46429] [32mChainlinkV1RandProvider[0m::[32mrequestRandomBytes[0m() [33m[0m
+    │   │   ├─ [18933] [32mLinkToken[0m::[32mtransferAndCall[0m(VRFCoordinatorMock: [0xEFc56627233b02eA95bAE7e19F648d7DcD5Bb132], 0, 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) [33m[0m
+    │   │   │   ├─ emit [36mTransfer[0m(from: ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC], to: VRFCoordinatorMock: [0xEFc56627233b02eA95bAE7e19F648d7DcD5Bb132], amount: 0)
+    │   │   │   ├─ emit [36mTransfer[0m(from: ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC], to: VRFCoordinatorMock: [0xEFc56627233b02eA95bAE7e19F648d7DcD5Bb132], value: 0, data: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+    │   │   │   ├─ [4902] [32mVRFCoordinatorMock[0m::[32monTokenTransfer[0m(ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC], 0, 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) [33m[0m
+    │   │   │   │   ├─ emit [36mRandomnessRequest[0m(sender: ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC], keyHash: 0x0000000000000000000000000000000000000000000000000000000000000000, seed: 0)
+    │   │   │   │   └─ [32m← [0m()
+    │   │   │   └─ [32m← [0mtrue
+    │   │   ├─ emit [36mRandomBytesRequested[0m(requestId: 0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5)
+    │   │   └─ [32m← [0m0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5
+    │   └─ [32m← [0m0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5
+    ├─ [4945] [32mVRFCoordinatorMock[0m::[32mcallBackWithRandomness[0m(0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5, 46432819415511475902359535870476468787960706350873986081051326452906353604037, ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC]) [33m[0m
+    │   ├─ [3823] [32mChainlinkV1RandProvider[0m::[32mrawFulfillRandomness[0m(0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5, 46432819415511475902359535870476468787960706350873986081051326452906353604037) [33m[0m
+    │   │   ├─ emit [36mRandomBytesReturned[0m(requestId: 0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5, randomness: 46432819415511475902359535870476468787960706350873986081051326452906353604037)
+    │   │   ├─ [1783] [32mArtGobblers[0m::[32macceptRandomSeed[0m(0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5, 46432819415511475902359535870476468787960706350873986081051326452906353604037) [33m[0m
+    │   │   │   ├─ emit [36mRandomnessFulfilled[0m(randomness: 46432819415511475902359535870476468787960706350873986081051326452906353604037)
+    │   │   │   └─ [32m← [0m()
+    │   │   └─ [32m← [0m()
+    │   └─ [32m← [0m()
+    ├─ [27746] [32mArtGobblers[0m::[32mrevealGobblers[0m(1) [33m[0m
+    │   ├─ emit [36mGobblersRevealed[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], numGobblers: 1, lastRevealedId: 1)
+    │   └─ [32m← [0m()
+    ├─ [527] [32mArtGobblers[0m::[32mgetGobblerEmissionMultiple[0m(1) [33m[staticcall][0m
+    │   └─ [32m← [0m9
+    ├─ [190653] [32mGoober[0m::[32mdeposit[0m([1], 53000000000000000000, TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[0m
+    │   ├─ [3583] [32mArtGobblers[0m::[32mgooBalance[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m0
+    │   ├─ [689] [32mArtGobblers[0m::[32mgetUserEmissionMultiple[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m0
+    │   ├─ [27281] [32mGoo[0m::[32mtransferFrom[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 53000000000000000000) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], amount: 53000000000000000000)
+    │   │   └─ [32m← [0mtrue
+    │   ├─ [21421] [32mArtGobblers[0m::[32maddGoo[0m(53000000000000000000) [33m[0m
+    │   │   ├─ [2380] [32mGoo[0m::[32mburnForGobblers[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 53000000000000000000) [33m[0m
+    │   │   │   ├─ emit [36mTransfer[0m(from: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], to: 0x0000000000000000000000000000000000000000, amount: 53000000000000000000)
+    │   │   │   └─ [32m← [0m()
+    │   │   ├─ emit [36mGooBalanceUpdated[0m(user: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], newGooBalance: 53000000000000000000)
+    │   │   └─ [32m← [0m()
+    │   ├─ [13809] [32mArtGobblers[0m::[32msafeTransferFrom[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 1) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], id: 1)
+    │   │   ├─ [1826] [32mGoober[0m::[32monERC721Received[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 1, 0x) [33m[0m
+    │   │   │   ├─ [527] [32mArtGobblers[0m::[32mgetGobblerEmissionMultiple[0m(1) [33m[staticcall][0m
+    │   │   │   │   └─ [32m← [0m9
+    │   │   │   └─ [32m← [0m0x150b7a02
+    │   │   └─ [32m← [0m()
+    │   ├─ [1655] [32mArtGobblers[0m::[32mgooBalance[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m53000000000000000000
+    │   ├─ [689] [32mArtGobblers[0m::[32mgetUserEmissionMultiple[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m9
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000000, amount: 1000)
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], amount: 13813037299)
+    │   ├─ emit [36mFeesAccrued[0m(feeTo: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], shares: 13813037299, performanceFee: false)
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], amount: 676838827694)
+    │   ├─ emit [36mSync[0m(gooBalance: 53000000000000000000, multBalance: 9000)
+    │   ├─ emit [36mDeposit[0m(caller: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], owner: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], receiver: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], gobblers: [1], gooTokens: 53000000000000000000, shares: 690651864993)
+    │   └─ [32m← [0m690651864993
+    ├─ [1928] [32mArtGobblers[0m::[32mgobblerPrice[0m() [33m[staticcall][0m
+    │   └─ [32m← [0m52987405899699731484
+    ├─ [43291] [31mGoober[0m::[31mmintGobbler[0m() [33m[0m
+    │   ├─ [1928] [32mArtGobblers[0m::[32mgobblerPrice[0m() [33m[staticcall][0m
+    │   │   └─ [32m← [0m52987405899699731484
+    │   ├─ [1655] [32mArtGobblers[0m::[32mgooBalance[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m53000000000000000000
+    │   ├─ [689] [32mArtGobblers[0m::[32mgetUserEmissionMultiple[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m9
+    │   ├─ [32153] [32mArtGobblers[0m::[32mmintFromGoo[0m(52987405899699731484, true) [33m[0m
+    │   │   ├─ emit [36mGooBalanceUpdated[0m(user: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], newGooBalance: 12594100300268516)
+    │   │   ├─ emit [36mGobblerPurchased[0m(user: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], gobblerId: 2, price: 52987405899699731484)
+    │   │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], id: 2)
+    │   │   └─ [32m← [0m2
+    │   ├─ [1928] [32mArtGobblers[0m::[32mgobblerPrice[0m() [33m[staticcall][0m
+    │   │   └─ [32m← [0m55730397425599282914
+    │   └─ [31m← [0m"Arithmetic over/underflow"
+    └─ [31m← [0m"Arithmetic over/underflow"
+
+[32m[PASS][0m test_proxy() (gas: 15409)
+Traces:
+  [15409] [32mTestUERC20Functionality[0m::[32mtest_proxy[0m() [33m[0m
+    ├─ [3238] [32mGoober[0m::[32mname[0m() [33m[staticcall][0m
+    │   └─ [32m← [0mGoober
+    ├─ [3214] [32mGoober[0m::[32msymbol[0m() [33m[staticcall][0m
+    │   └─ [32m← [0mGBR
+    ├─ [316] [32mGoober[0m::[32mdecimals[0m() [33m[staticcall][0m
+    │   └─ [32m← [0m18
+    └─ [32m← [0m()
+
+[32m[PASS][0m test_skimGoo() (gas: 184120)
+Traces:
+  [188333] [32mTestUERC20Functionality[0m::[32mtest_skimGoo[0m() [33m[0m
+    ├─ [0] [34mVM[0m::[34mrecord[0m() [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [2564] [32mGoo[0m::[32mbalanceOf[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   └─ [32m← [0m0
+    ├─ [0] [34mVM[0m::[34maccesses[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84]) [33m[0m
+    │   └─ [34m← [0m[0xedf61fe29ca4a1f51309c85f2b939d4113d09df313fc1cdff9f07b625d86679b], []
+    ├─ [0] [34mVM[0m::[34mload[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], 0xedf61fe29ca4a1f51309c85f2b939d4113d09df313fc1cdff9f07b625d86679b) [33m[0m
+    │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000000
+    ├─ emit [36mWARNING_UninitedSlot[0m(who: Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], slot: 107633009555750757315604278303349198527759082776847877255478098924216135346075)
+    ├─ emit [36mSlotFound[0m(who: Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], fsig: 0x70a08231, keysHash: 0x319e6e3b4a1b531fcf2e525c01cfb0ecf3d695cab77c5525f2e23009157040a4, slot: 107633009555750757315604278303349198527759082776847877255478098924216135346075)
+    ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   └─ [32m← [0m0
+    ├─ [0] [34mVM[0m::[34mload[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], 0xedf61fe29ca4a1f51309c85f2b939d4113d09df313fc1cdff9f07b625d86679b) [33m[0m
+    │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000000
+    ├─ [0] [34mVM[0m::[34mstore[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], 0xedf61fe29ca4a1f51309c85f2b939d4113d09df313fc1cdff9f07b625d86679b, 0x0000000000000000000000000000000000000000000000000000000000000001) [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [2564] [32mGoo[0m::[32mbalanceOf[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[staticcall][0m
+    │   └─ [32m← [0m0
+    ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   └─ [32m← [0m1
+    ├─ [0] [34mVM[0m::[34mstartPrank[0m(0x00a329c0648769A73afAc7F9381E08FB43dBEA72) [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [0] [34mVM[0m::[34mexpectRevert[0m() [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [2586] [31mGoober[0m::[31mskimGoo[0m() [33m[0m
+    │   └─ [31m← [0m"AccessControlViolation(0x00a329c0648769A73afAc7F9381E08FB43dBEA72, 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84)"
+    ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[staticcall][0m
+    │   └─ [32m← [0m0
+    ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   └─ [32m← [0m1
+    ├─ [0] [34mVM[0m::[34mstopPrank[0m() [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [21336] [32mGoober[0m::[32mskimGoo[0m() [33m[0m
+    │   ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m1
+    │   ├─ [18326] [32mGoo[0m::[32mtransfer[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 1) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], amount: 1)
+    │   │   └─ [32m← [0mtrue
+    │   └─ [32m← [0m()
+    ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[staticcall][0m
+    │   └─ [32m← [0m1
+    ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   └─ [32m← [0m0
+    ├─ [0] [34mVM[0m::[34mexpectRevert[0m(NO_GOO_IN_CONTRACT) [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [1446] [31mGoober[0m::[31mskimGoo[0m() [33m[0m
+    │   ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m0
+    │   └─ [31m← [0m"NO_GOO_IN_CONTRACT"
+    └─ [32m← [0m()
+
+[32m[PASS][0m test_swap() (gas: 750370)
+Traces:
+  [750370] [32mTestUERC20Functionality[0m::[32mtest_swap[0m() [33m[0m
+    ├─ [0] [34mVM[0m::[34mrecord[0m() [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [2564] [32mGoo[0m::[32mbalanceOf[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[staticcall][0m
+    │   └─ [32m← [0m0
+    ├─ [0] [34mVM[0m::[34maccesses[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84]) [33m[0m
+    │   └─ [34m← [0m[0x44546b6e628978acd39a9a166b9d2da4dee6074b92a2b0445422355e99f2ef9b], []
+    ├─ [0] [34mVM[0m::[34mload[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], 0x44546b6e628978acd39a9a166b9d2da4dee6074b92a2b0445422355e99f2ef9b) [33m[0m
+    │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000000
+    ├─ emit [36mWARNING_UninitedSlot[0m(who: Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], slot: 30906430319933895701988850850478013041952056394997466516039315780505162674075)
+    ├─ emit [36mSlotFound[0m(who: Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], fsig: 0x70a08231, keysHash: 0x187a2ad3b11081a3050671ee16cc42acca7475835edc3ec15a30507fff0991e9, slot: 30906430319933895701988850850478013041952056394997466516039315780505162674075)
+    ├─ [564] [32mGoo[0m::[32mbalanceOf[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[staticcall][0m
+    │   └─ [32m← [0m0
+    ├─ [0] [34mVM[0m::[34mload[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], 0x44546b6e628978acd39a9a166b9d2da4dee6074b92a2b0445422355e99f2ef9b) [33m[0m
+    │   └─ [34m← [0m0x0000000000000000000000000000000000000000000000000000000000000000
+    ├─ [0] [34mVM[0m::[34mstore[0m(Goo: [0x1DD17af470f2CAa13D29c02AC190a3a1EdDc4e84], 0x44546b6e628978acd39a9a166b9d2da4dee6074b92a2b0445422355e99f2ef9b, 0x00000000000000000000000000000000000000000000006c6b935b8bbd400000) [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [50676] [32mArtGobblers[0m::[32maddGoo[0m(500000000000000000000) [33m[0m
+    │   ├─ [24874] [32mGoo[0m::[32mburnForGobblers[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 500000000000000000000) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: 0x0000000000000000000000000000000000000000, amount: 500000000000000000000)
+    │   │   └─ [32m← [0m()
+    │   ├─ emit [36mGooBalanceUpdated[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], newGooBalance: 500000000000000000000)
+    │   └─ [32m← [0m()
+    ├─ [53981] [32mArtGobblers[0m::[32mmintFromGoo[0m(100000000000000000000, true) [33m[0m
+    │   ├─ emit [36mGooBalanceUpdated[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], newGooBalance: 426986345246971348715)
+    │   ├─ emit [36mGobblerPurchased[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], gobblerId: 1, price: 73013654753028651285)
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], id: 1)
+    │   └─ [32m← [0m1
+    ├─ [32081] [32mArtGobblers[0m::[32mmintFromGoo[0m(100000000000000000000, true) [33m[0m
+    │   ├─ emit [36mGooBalanceUpdated[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], newGooBalance: 350193003363348549545)
+    │   ├─ emit [36mGobblerPurchased[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], gobblerId: 2, price: 76793341883622799170)
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], id: 2)
+    │   └─ [32m← [0m2
+    ├─ [32081] [32mArtGobblers[0m::[32mmintFromGoo[0m(100000000000000000000, true) [33m[0m
+    │   ├─ emit [36mGooBalanceUpdated[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], newGooBalance: 269424311442190168621)
+    │   ├─ emit [36mGobblerPurchased[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], gobblerId: 3, price: 80768691921158380924)
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], id: 3)
+    │   └─ [32m← [0m3
+    ├─ [0] [34mVM[0m::[34mwarp[0m(172801) [33m[0m
+    │   └─ [34m← [0m()
+    ├─ [59044] [32mArtGobblers[0m::[32mrequestRandomSeed[0m() [33m[0m
+    │   ├─ emit [36mRandomnessRequested[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], toBeRevealed: 3)
+    │   ├─ [46429] [32mChainlinkV1RandProvider[0m::[32mrequestRandomBytes[0m() [33m[0m
+    │   │   ├─ [18933] [32mLinkToken[0m::[32mtransferAndCall[0m(VRFCoordinatorMock: [0xEFc56627233b02eA95bAE7e19F648d7DcD5Bb132], 0, 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) [33m[0m
+    │   │   │   ├─ emit [36mTransfer[0m(from: ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC], to: VRFCoordinatorMock: [0xEFc56627233b02eA95bAE7e19F648d7DcD5Bb132], amount: 0)
+    │   │   │   ├─ emit [36mTransfer[0m(from: ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC], to: VRFCoordinatorMock: [0xEFc56627233b02eA95bAE7e19F648d7DcD5Bb132], value: 0, data: 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+    │   │   │   ├─ [4902] [32mVRFCoordinatorMock[0m::[32monTokenTransfer[0m(ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC], 0, 0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000) [33m[0m
+    │   │   │   │   ├─ emit [36mRandomnessRequest[0m(sender: ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC], keyHash: 0x0000000000000000000000000000000000000000000000000000000000000000, seed: 0)
+    │   │   │   │   └─ [32m← [0m()
+    │   │   │   └─ [32m← [0mtrue
+    │   │   ├─ emit [36mRandomBytesRequested[0m(requestId: 0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5)
+    │   │   └─ [32m← [0m0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5
+    │   └─ [32m← [0m0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5
+    ├─ [4945] [32mVRFCoordinatorMock[0m::[32mcallBackWithRandomness[0m(0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5, 46432819415511475902359535870476468787960706350873986081051326452906353604037, ChainlinkV1RandProvider: [0x0b7108E278c2E77E4e4f5c93d9E5e9A11AC837FC]) [33m[0m
+    │   ├─ [3823] [32mChainlinkV1RandProvider[0m::[32mrawFulfillRandomness[0m(0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5, 46432819415511475902359535870476468787960706350873986081051326452906353604037) [33m[0m
+    │   │   ├─ emit [36mRandomBytesReturned[0m(requestId: 0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5, randomness: 46432819415511475902359535870476468787960706350873986081051326452906353604037)
+    │   │   ├─ [1783] [32mArtGobblers[0m::[32macceptRandomSeed[0m(0x5c6075dec72524dc40ab4ec793142d95baa4dba90a7be3e83d6246e99189bac5, 46432819415511475902359535870476468787960706350873986081051326452906353604037) [33m[0m
+    │   │   │   ├─ emit [36mRandomnessFulfilled[0m(randomness: 46432819415511475902359535870476468787960706350873986081051326452906353604037)
+    │   │   │   └─ [32m← [0m()
+    │   │   └─ [32m← [0m()
+    │   └─ [32m← [0m()
+    ├─ [78062] [32mArtGobblers[0m::[32mrevealGobblers[0m(3) [33m[0m
+    │   ├─ emit [36mGobblersRevealed[0m(user: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], numGobblers: 3, lastRevealedId: 3)
+    │   └─ [32m← [0m()
+    ├─ [203575] [32mGoober[0m::[32mdeposit[0m([1, 2], 200000000000000000000, TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[0m
+    │   ├─ [3583] [32mArtGobblers[0m::[32mgooBalance[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m0
+    │   ├─ [689] [32mArtGobblers[0m::[32mgetUserEmissionMultiple[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m0
+    │   ├─ [27281] [32mGoo[0m::[32mtransferFrom[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 200000000000000000000) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], amount: 200000000000000000000)
+    │   │   └─ [32m← [0m0x0000000000000000000000000000000000000000000000000000000000000001
+    │   ├─ [21421] [32mArtGobblers[0m::[32maddGoo[0m(200000000000000000000) [33m[0m
+    │   │   ├─ [2380] [32mGoo[0m::[32mburnForGobblers[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 200000000000000000000) [33m[0m
+    │   │   │   ├─ emit [36mTransfer[0m(from: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], to: 0x0000000000000000000000000000000000000000, amount: 200000000000000000000)
+    │   │   │   └─ [32m← [0m()
+    │   │   ├─ emit [36mGooBalanceUpdated[0m(user: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], newGooBalance: 200000000000000000000)
+    │   │   └─ [32m← [0m()
+    │   ├─ [13881] [32mArtGobblers[0m::[32msafeTransferFrom[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 1) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], id: 1)
+    │   │   ├─ [1826] [32mGoober[0m::[32monERC721Received[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 1, 0x) [33m[0m
+    │   │   │   ├─ [527] [32mArtGobblers[0m::[32mgetGobblerEmissionMultiple[0m(1) [33m[staticcall][0m
+    │   │   │   │   └─ [32m← [0m9
+    │   │   │   └─ [32m← [0m0x150b7a02
+    │   │   └─ [32m← [0m()
+    │   ├─ [11953] [32mArtGobblers[0m::[32msafeTransferFrom[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 2) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], id: 2)
+    │   │   ├─ [1826] [32mGoober[0m::[32monERC721Received[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 2, 0x) [33m[0m
+    │   │   │   ├─ [527] [32mArtGobblers[0m::[32mgetGobblerEmissionMultiple[0m(2) [33m[staticcall][0m
+    │   │   │   │   └─ [32m← [0m8
+    │   │   │   └─ [32m← [0m0x150b7a02
+    │   │   └─ [32m← [0m()
+    │   ├─ [1655] [32mArtGobblers[0m::[32mgooBalance[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m200000000000000000000
+    │   ├─ [689] [32mArtGobblers[0m::[32mgetUserEmissionMultiple[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m17
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: 0x0000000000000000000000000000000000000000, amount: 1000)
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], amount: 36878177809)
+    │   ├─ emit [36mFeesAccrued[0m(feeTo: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], shares: 36878177809, performanceFee: false)
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], amount: 1807030712649)
+    │   ├─ emit [36mSync[0m(gooBalance: 200000000000000000000, multBalance: 17000)
+    │   ├─ emit [36mDeposit[0m(caller: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], owner: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], receiver: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], gobblers: [1, 2], gooTokens: 200000000000000000000, shares: 1843908890458)
+    │   └─ [32m← [0m1843908890458
+    ├─ [72279] [32mGoober[0m::[32mswap[0m(([1], 0, [3], 100000000000000000000, 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84, 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84, 0x)) [33m[0m
+    │   ├─ [1655] [32mArtGobblers[0m::[32mgooBalance[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m200000000000000000000
+    │   ├─ [689] [32mArtGobblers[0m::[32mgetUserEmissionMultiple[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m17
+    │   ├─ [6958] [32mArtGobblers[0m::[32mremoveGoo[0m(0) [33m[0m
+    │   │   ├─ emit [36mGooBalanceUpdated[0m(user: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], newGooBalance: 200000000000000000000)
+    │   │   ├─ [2930] [32mGoo[0m::[32mmintForGobblers[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 0) [33m[0m
+    │   │   │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], amount: 0)
+    │   │   │   └─ [32m← [0m()
+    │   │   └─ [32m← [0m()
+    │   ├─ [3007] [32mGoo[0m::[32mtransfer[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 0) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], amount: 0)
+    │   │   └─ [32m← [0mtrue
+    │   ├─ [527] [32mArtGobblers[0m::[32mgetGobblerEmissionMultiple[0m(1) [33m[staticcall][0m
+    │   │   └─ [32m← [0m9
+    │   ├─ [7031] [32mArtGobblers[0m::[32mtransferFrom[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 1) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], id: 1)
+    │   │   └─ [32m← [0m()
+    │   ├─ [23281] [32mGoo[0m::[32mtransferFrom[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 100000000000000000000) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], amount: 100000000000000000000)
+    │   │   └─ [32m← [0m0x0000000000000000000000000000000000000000000000000000000000000001
+    │   ├─ [5559] [32mArtGobblers[0m::[32maddGoo[0m(100000000000000000000) [33m[0m
+    │   │   ├─ [2380] [32mGoo[0m::[32mburnForGobblers[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 100000000000000000000) [33m[0m
+    │   │   │   ├─ emit [36mTransfer[0m(from: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], to: 0x0000000000000000000000000000000000000000, amount: 100000000000000000000)
+    │   │   │   └─ [32m← [0m()
+    │   │   ├─ emit [36mGooBalanceUpdated[0m(user: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], newGooBalance: 300000000000000000000)
+    │   │   └─ [32m← [0m()
+    │   ├─ [11953] [32mArtGobblers[0m::[32msafeTransferFrom[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 3) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], id: 3)
+    │   │   ├─ [1826] [32mGoober[0m::[32monERC721Received[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 3, 0x) [33m[0m
+    │   │   │   ├─ [527] [32mArtGobblers[0m::[32mgetGobblerEmissionMultiple[0m(3) [33m[staticcall][0m
+    │   │   │   │   └─ [32m← [0m6
+    │   │   │   └─ [32m← [0m0x150b7a02
+    │   │   └─ [32m← [0m()
+    │   ├─ [1655] [32mArtGobblers[0m::[32mgooBalance[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m300000000000000000000
+    │   ├─ [689] [32mArtGobblers[0m::[32mgetUserEmissionMultiple[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m14
+    │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], amount: 20548126173)
+    │   ├─ emit [36mFeesAccrued[0m(feeTo: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], shares: 20548126173, performanceFee: true)
+    │   ├─ emit [36mSync[0m(gooBalance: 300000000000000000000, multBalance: 14000)
+    │   ├─ emit [36mSwap[0m(sender: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], gooTokensIn: 100000000000000000000, gobblersMultIn: 6000, gooTokensOut: 0, gobblerMultOut: 9000, receiver: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84])
+    │   └─ [32m← [0m()
+    ├─ [49188] [32mGoober[0m::[32mwithdraw[0m([3], 100000000000000000000, TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84]) [33m[0m
+    │   ├─ [1655] [32mArtGobblers[0m::[32mgooBalance[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m300000000000000000000
+    │   ├─ [689] [32mArtGobblers[0m::[32mgetUserEmissionMultiple[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m14
+    │   ├─ [26858] [32mArtGobblers[0m::[32mremoveGoo[0m(100000000000000000000) [33m[0m
+    │   │   ├─ emit [36mGooBalanceUpdated[0m(user: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], newGooBalance: 200000000000000000000)
+    │   │   ├─ [22830] [32mGoo[0m::[32mmintForGobblers[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], 100000000000000000000) [33m[0m
+    │   │   │   ├─ emit [36mTransfer[0m(from: 0x0000000000000000000000000000000000000000, to: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], amount: 100000000000000000000)
+    │   │   │   └─ [32m← [0m()
+    │   │   └─ [32m← [0m()
+    │   ├─ [2406] [32mGoo[0m::[32mtransfer[0m(TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 100000000000000000000) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], amount: 100000000000000000000)
+    │   │   └─ [32m← [0mtrue
+    │   ├─ [7031] [32mArtGobblers[0m::[32mtransferFrom[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], 3) [33m[0m
+    │   │   ├─ emit [36mTransfer[0m(from: Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10], to: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], id: 3)
+    │   │   └─ [32m← [0m()
+    │   ├─ [1655] [32mArtGobblers[0m::[32mgooBalance[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m200000000000000000000
+    │   ├─ [689] [32mArtGobblers[0m::[32mgetUserEmissionMultiple[0m(Goober: [0xdC0505A4c93647CD736E4bE24FBb171472bBFb10]) [33m[staticcall][0m
+    │   │   └─ [32m← [0m8
+    │   ├─ emit [36mTransfer[0m(from: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], to: 0x0000000000000000000000000000000000000000, amount: 1156308601017)
+    │   ├─ emit [36mSync[0m(gooBalance: 200000000000000000000, multBalance: 8000)
+    │   ├─ emit [36mWithdraw[0m(caller: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], receiver: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], owner: TestUERC20Functionality: [0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84], gobblers: [3], gooTokens: 100000000000000000000, shares: 1156308601017)
+    │   └─ [32m← [0m1156308601017
+    └─ [32m← [0m()
+
+Test result: [31mFAILED[0m. 4 passed; 1 failed; finished in 7.75ms
+
+Failing tests:
+Encountered 1 failing test in test/Goober.t.sol:TestUERC20Functionality
+[31m[FAIL. Reason: Arithmetic over/underflow][0m test_mint() (gas: 657585)
+
+Encountered a total of [31m1[0m failing tests, [32m4[0m tests succeeded

@@ -96,6 +96,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // Setup approvals
         goo.approve(address(goober), type(uint256).max);
         gobblers.setApprovalForAll(address(goober), true);
+
     }
 
     function test_proxy() public {
@@ -103,6 +104,61 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         assertEq(goober.name(), "Goober");
         assertEq(goober.symbol(), "GBR");
         assertEq(goober.decimals(), 18);
+    }
+
+    function testMintRevertCaller() public {
+        vm.startPrank(msg.sender);
+        //Revert if not Minter.
+        vm.expectRevert();
+        goober.mintGobbler();
+        vm.stopPrank();
+    }
+
+    function test_mint() public {
+        // Safety check to verify starting gobblerPrice is correct.
+        assertEq(gobblers.gobblerPrice(), 73013654753028651285);
+
+        // Add enough Goo to vault to mint a single Gobbler.
+        _writeTokenBalance(address(this), address(goo), 1000 ether);
+
+        uint256[] memory artGobbler = new uint256[](1);
+        artGobbler[0] = gobblers.mintFromGoo(75 ether, false);
+
+        // Warp a day ahead until we can reveal.
+        vm.warp(block.timestamp + 86400);
+        setRandomnessAndReveal(1, "seed");
+        uint256 gobblerMult = (gobblers.getGobblerEmissionMultiple(artGobbler[0]));
+        // Based on our seed, we get a mult of 9 here. 
+        assertEq(gobblerMult, 9);
+
+
+        // Pool is setup by depositing 1 gobbler and 53 goo.
+        // We do this after warp to not accrue extra goo.
+        uint256 gooTokens = 53 ether;
+        address me = address(this); 
+        goober.deposit(artGobbler, gooTokens, me, me);
+
+        // Saftey check to verify new mint price after warp.
+        assertEq(gobblers.gobblerPrice(), 52987405899699731484);
+
+        // Now we have pool goo = 53 and pool mult = 9.
+        // The goo/mult of our pool is <= goo/mult of the auction,
+        // since: 53 / 9 = 5 <= 52.987 / 7.3294 ~= 7. 
+        // We also have enough goo to mint a single gobbler. 
+        // NOTE(Getting both to be true is a very delicate balance, will
+        // be especially tricky if you want to test minting
+        // more than 1 gobbler here.)
+        // TODO(Check expectedId matches event emit)
+        uint256 expectedId = 2;
+        vm.expectEmit(true, true, true, false);
+        emit Mint(expectedId);
+        goober.mintGobbler();
+        // Check to see updated pool balance after reveal.
+        //vm.warp(block.timestamp + 86400);
+        // setRandomnessAndReveal(1, "seed");
+        // (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
+        // assertEq(_newGooReserve, 0);
+        // Check k
     }
 
     function test_swap() public {
@@ -149,4 +205,9 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         vm.expectRevert(abi.encodePacked("NO_GOO_IN_CONTRACT"));
         goober.skimGoo();
     }
+
+    // TODO(Duplicating these is sub optimal, we should use the interface)
+
+    event Mint(uint256 gobblerId);
+
 }

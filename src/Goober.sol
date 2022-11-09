@@ -342,27 +342,31 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     function mintGobbler() public onlyMinter {
         // This function is restricted to onlyMinter because we don't want
         // the general public to use it to manipulate the goo price.
-
         // Get the mint price
         uint256 mintPrice = artGobblers.gobblerPrice();
-
+        // We get the reserves directly here to save some gas
         uint112 gooReserve = uint112(artGobblers.gooBalance(address(this)));
         uint256 gooBalance = gooReserve;
         uint112 gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
-
         // Should we mint?
-        bool mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS);
-
-        // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
+        bool mint = true; //((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS && (gooBalance <= mintPrice));
+        //bool mint = ((gooBalance / gobblerReserve) <= (mintPrice * 1) / 7);
+       // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
         while (mint) {
-            gooBalance -= mintPrice;
-            artGobblers.mintFromGoo(mintPrice, true);
-            // TODO(Can we calculate the increase without an sload here?)
-            mintPrice = artGobblers.gobblerPrice();
-            mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS);
+            if (gooBalance <= mintPrice) {
+                gooBalance -= mintPrice;
+                artGobblers.mintFromGoo(mintPrice, true);
+                // TODO(Can we calculate the increase without an sload here?)
+                mintPrice = artGobblers.gobblerPrice();
+                mint = (((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS));
+            }
+            else {
+                mint = false;
+            }
         }
         _update(uint112(gooBalance), gobblerReserve * MULT_SCALAR, gooReserve, gobblerReserve * MULT_SCALAR);
-    }
+        }
+    
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(SwapParams calldata parameters) external nonReentrant {
