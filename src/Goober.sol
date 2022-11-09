@@ -110,14 +110,71 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // Internal Views
 
     /// @return multiple the total gobbler multiple scaled by MULT_SCALAR
-    function _getScaledAccountMultiple() internal view returns (uint112 multiple) {
+    function _scaledAccountMultiple() internal view returns (uint112 multiple) {
         multiple = uint112(artGobblers.getUserEmissionMultiple(address(this)) * MULT_SCALAR);
     }
 
     /// @param gobblerId gobbler to get scaled mult for
     /// @return multiple the gobbler multiple for gobblerId scaled by MULT_SCALAR
-    function _getScaledTokenMultiple(uint256 gobblerId) internal view returns (uint112 multiple) {
+    function _scaledTokenMultiple(uint256 gobblerId) internal view returns (uint112 multiple) {
         multiple = uint112(artGobblers.getGobblerEmissionMultiple(gobblerId) * MULT_SCALAR);
+    }
+
+    /// @notice Returns the management fee given an amount of new fractions created on deposit.
+    /// @param fractions New fractions issued for a deposit.
+    function _previewManagementFee(uint256 fractions) internal pure returns (uint256 fee) {
+        fee = fractions * MANAGEMENT_FEE_BPS / BPS_SCALAR;
+    }
+
+    function _previewPerformanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult)
+        internal
+        view
+        returns (uint256 fee, uint112 kDebtChange, bool kDebtIncrease, uint256 deltaK)
+    {
+        // Read the last K value
+        uint112 _kLast = kLast;
+        // Check if we have any kDebt outstanding from mints
+        uint112 _kDebt = kDebt;
+        // Calculate the present K
+        uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult));
+        // Did K increase?
+        bool _kIncrease = _k > kLast;
+        // Get the gross change in K as a numeric
+        uint112 _kChange = _kIncrease ? _k - _kLast : _kLast - _k;
+        // No k, no fee
+        fee = 0;
+        kDebtIncrease = false;
+        kDebtChange = 0;
+        deltaK = 0;
+        // If kLast was at 0, then we won't accrue a fee yet, as the pool is brand new.
+        if (_kLast > 0) {
+            // K grew
+            if (_kIncrease) {
+                // Let's offset the debt first if it exists
+                if (_kDebt > 0) {
+                    if (_kChange <= _kDebt) {
+                        kDebtChange += _kChange;
+                        _kChange = 0;
+                    } else {
+                        kDebtChange += _kDebt;
+                        _kChange -= _kDebt;
+                    }
+                }
+                // And then calculate a fee on any remainder
+                if (_kChange > 0) {
+                    // Get the change in K counting towards a performance fee as a ratio of the total
+                    deltaK = FixedPointMathLib.divWadDown(_kChange, _kLast);
+                    // Calculate the fee as a portion of the total supply at the ration of the _deltaK
+                    fee = FixedPointMathLib.mulWadDown(totalSupply, deltaK) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
+                }
+            }
+            // Otherwise, if we have a decrease or no change, and if the decrease was more
+            // Than 0, we should increment the debt
+            else if (_kChange > 0) {
+                kDebtIncrease = true;
+                kDebtChange += _kChange;
+            }
+        }
     }
 
     /// @dev update reserves and, on the first call per block, price accumulators
@@ -176,81 +233,29 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         emit Sync(uint112(_gooBalance), uint112(_gobblerBalance));
     }
 
-    /// @inheritdoc IERC721Receiver
-    /// @notice Handle deposits of Art Gobblers with an on receive hook, verifying characteristics.
-    /// @dev We don't accept non art gobbler NFTs, Art Gobblers with invalid multiples.
-    function onERC721Received(address, address, uint256 tokenId, bytes calldata) external view returns (bytes4) {
-        /// @dev We only want Art Gobblers NFTs
-        if (msg.sender != address(artGobblers)) {
-            revert InvalidNFT();
-        }
-        /// @dev revert on flagged NFTs
-        if (flagged[tokenId] == true) {
-            revert InvalidNFT();
-        }
-        /// @dev We want to make sure the gobblers we are getting are revealed.
-        uint256 gobMult = artGobblers.getGobblerEmissionMultiple(tokenId);
-        if (gobMult < 6) {
-            revert InvalidMultiplier(tokenId);
-        }
-        return IERC721Receiver.onERC721Received.selector;
-    }
-
     /// @notice accrues the performance fee on the growth of K if any, offset by kDebt
     /// @param _gooBalance the balance of Goo to use in calculating the growth of K.
     /// @param _gobblerBalanceMult the balance of gobbler mult scaled by MULT_SCALAR to use in calculating the growth of K.
-    function _performanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult) internal returns (uint256 fee) {
-        // Read the last K value
-        uint112 _kLast = kLast;
-        // Calculate the present K
-        uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult));
-        // Check if we have any kDebt outstanding from mints
-        uint112 _kDebt = kDebt;
-        // Did K increase?
-        bool _kIncrease = _k > kLast;
-        // Get the gross change in K as a numeric
-        uint112 _kChange = _kIncrease ? _k - _kLast : _kLast - _k;
-        // No k, no fee
-        fee = 0;
-        // If kLast was at 0, then we won't accrue a fee yet, as the pool is brand new.
-        if (_kLast > 0) {
-            // K grew
-            if (_kIncrease) {
-                // Let's offset the debt first if it exists
-                if (_kDebt > 0) {
-                    if (_kChange <= _kDebt) {
-                        kDebt -= _kChange;
-                        _kChange = 0;
-                    } else {
-                        kDebt = 0;
-                        _kChange -= _kDebt;
-                    }
-                }
-                // And then calculate a fee on any remainder
-                if (_kChange > 0) {
-                    // Get the change in K counting towards a performance fee as a ratio of the total
-                    uint256 _deltaK = FixedPointMathLib.divWadDown(_kChange, _kLast);
-                    // Calculate the fee as a portion of the total supply at the ration of the _deltaK
-                    fee = FixedPointMathLib.mulWadDown(totalSupply, _deltaK) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
-                    // Mint that proportion of the growth, diluting the supply and aligning incentives with
-                    // stakeholders.
-                    _mint(feeTo, fee);
-                    // Emit info about the fees, and the growth in K
-                    emit FeesAccrued(feeTo, fee, true, _deltaK);
-                }
-            }
-            // Otherwise, if we have a decrease or no change, and if the decrease was more
-            // Than 0, we should increment the debt
-            else if (_kChange > 0) {
-                kDebt += _kChange;
-            }
+    function _performanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult) internal returns (uint256) {
+        (uint256 fee, uint112 kDebtChange, bool kDebtIncrease, uint256 deltaK) =
+            _previewPerformanceFee(_gooBalance, _gobblerBalanceMult);
+        if (kDebtIncrease && kDebtChange > 0) {
+            kDebt += kDebtChange;
+        } else if (!kDebtIncrease && kDebtChange > 0) {
+            kDebt -= kDebtChange;
         }
+        if (fee > 0) {
+            _mint(feeTo, fee);
+            // Emit info about the fees, and the growth in K
+            emit FeesAccrued(feeTo, fee, true, deltaK);
+        }
+        return fee;
     }
 
     /// @notice Returns and mints the management fee given an amount of new shares created on deposit.
-    /// @param shares New shares issued for a deposit.
-    function _managementFee(uint256 shares) internal returns (uint256 fee) {
-        fee = shares * MANAGEMENT_FEE_BPS / BPS_SCALAR;
+    /// @param fractions New shares issued for a deposit.
+    function _managementFee(uint256 fractions) internal returns (uint256 fee) {
+        fee = _previewManagementFee(fractions);
         _mint(feeTo, fee);
         // _deltaK is 0 here because there isn't actually growth in k, this is a deposit.
         emit FeesAccrued(feeTo, fee, false, 0);
@@ -327,6 +332,26 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // External/Public views
 
+    /// @inheritdoc IERC721Receiver
+    /// @notice Handle deposits of Art Gobblers with an on receive hook, verifying characteristics.
+    /// @dev We don't accept non art gobbler NFTs, Art Gobblers with invalid multiples.
+    function onERC721Received(address, address, uint256 tokenId, bytes calldata) external view returns (bytes4) {
+        /// @dev We only want Art Gobblers NFTs
+        if (msg.sender != address(artGobblers)) {
+            revert InvalidNFT();
+        }
+        /// @dev revert on flagged NFTs
+        if (flagged[tokenId] == true) {
+            revert InvalidNFT();
+        }
+        /// @dev We want to make sure the gobblers we are getting are revealed.
+        uint256 gobMult = artGobblers.getGobblerEmissionMultiple(tokenId);
+        if (gobMult < 6) {
+            revert InvalidMultiplier(tokenId);
+        }
+        return IERC721Receiver.onERC721Received.selector;
+    }
+
     /// @return gooTokens the total amount of goo owned
     /// @return gobblerMult the total multiple of all gobblers owned
     function totalAssets() public view returns (uint256 gooTokens, uint256 gobblerMult) {
@@ -343,7 +368,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast)
     {
         _gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        _gobblerReserve = _getScaledAccountMultiple();
+        _gobblerReserve = _scaledAccountMultiple();
         _blockTimestampLast = blockTimestampLast;
     }
 
@@ -352,12 +377,47 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
+    /// @return fractions - amount of GBR minted
+    function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 fractions) {
+        fractions = 0;
+        // Collect a virtual performance fee
+        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
+        uint256 _totalSupply = totalSupply;
+        (uint256 pFee,,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
+        // Increment virtual total supply
+        _totalSupply += pFee;
+        // Simulate transfers
+        uint256 _gooBalance = gooTokens + _gooReserve;
+        uint256 _gobblerBalanceMult = _gobblerReserveMult;
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            _gobblerBalanceMult += artGobblers.getGobblerEmissionMultiple(gobblers[i]) * MULT_SCALAR;
+        }
+        uint256 gobblerAmountMult = _gobblerBalanceMult - _gobblerReserveMult;
+        // Calculate issuance
+        if (_totalSupply == 0) {
+            fractions = FixedPointMathLib.sqrt(gooTokens * gobblerAmountMult) - MINIMUM_LIQUIDITY;
+        } else {
+            uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
+            uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
+            uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
+            fractions = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
+        }
+        require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+        // Simulate management fee and return preview
+        fractions -= _previewManagementFee(fractions);
+    }
+
+    // Mutating external/public functions
+
+    /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
     /// @param receiver - address to receive GBR
-    /// @return shares - amount of GBR minted
+    /// @return fractions - amount of GBR minted
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
         external
         nonReentrant
-        returns (uint256 shares)
+        returns (uint256 fractions)
     {
         // Get reserve balances before they are updated from deposit transfers
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves(); // gas savings
@@ -386,24 +446,24 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 _totalSupply = totalSupply;
 
             if (_totalSupply == 0) {
-                shares = FixedPointMathLib.sqrt(gooTokens * gobblerAmountMult) - MINIMUM_LIQUIDITY;
+                fractions = FixedPointMathLib.sqrt(gooTokens * gobblerAmountMult) - MINIMUM_LIQUIDITY;
                 _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
             } else {
                 uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
                 uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
                 uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
-                shares = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
+                fractions = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
             }
-            require(shares > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+            require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
         }
 
         // Mint shares to depositor less management fee
-        _mint(receiver, shares - _managementFee(shares));
+        _mint(receiver, fractions - _managementFee(fractions));
 
         // Update kLast and accumulators
         _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
 
-        emit Deposit(msg.sender, receiver, gobblers, gooTokens, shares);
+        emit Deposit(msg.sender, receiver, gobblers, gooTokens, fractions);
     }
 
     /// @notice Withdraws the requested gobblers and goo tokens from the vault.
@@ -497,7 +557,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             // Optimistically transfer gobblers if any
             if (parameters.gobblersOut.length > 0) {
                 for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
-                    multOut += _getScaledTokenMultiple(parameters.gobblersOut[i]);
+                    multOut += _scaledTokenMultiple(parameters.gobblersOut[i]);
                     artGobblers.transferFrom(address(this), parameters.receiver, parameters.gobblersOut[i]);
                 }
             }
