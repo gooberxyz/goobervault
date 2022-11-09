@@ -9,11 +9,13 @@ import "art-gobblers/../lib/chainlink/contracts/src/v0.8/mocks/VRFCoordinatorMoc
 import {ChainlinkV1RandProvider} from "art-gobblers/utils/rand/ChainlinkV1RandProvider.sol";
 import {Utilities} from "art-gobblers/../test/utils/Utilities.sol";
 import "art-gobblers/utils/GobblerReserve.sol";
+import "./mocks/MockERC721.sol";
 
 import "../src/Goober.sol";
 import "../src/interfaces/IGoober.sol";
 
-// TODO write tests for flagGobbler
+// DONE write tests for flagGobbler
+// DONE write tests for IERC721Receiver
 // TODO write event tests
 // TODO write tests for single/multiple deposit, withdraw, swap happy paths
 // TODO write tests to cover all require cases, then refactor into custom errors
@@ -21,6 +23,7 @@ import "../src/interfaces/IGoober.sol";
 // TODO refactor out K calculations into internal methods
 // DONE refactor actor setup text fixture
 // TODO clean up all * 10 ** 18, replace with scaling constant
+// TODO write modifier for test fixture setup
 
 contract GooberTest is Test {
     using stdStorage for StdStorage;
@@ -487,6 +490,57 @@ contract GooberTest is Test {
 
         vm.prank(OTHER);
         goober.flagGobbler(artGobblersTwo[0], true);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    // IERC721Receiver
+    //////////////////////////////////////////////////////////////*/
+
+    function testRevertOnERC721ReceivedWhenNotGobblerNFT() public {
+        MockERC721 mockNFT = new MockERC721("MockERC721", "MOCK");
+        mockNFT.mint(users[1], 1);
+
+        vm.expectRevert(IGoober.InvalidNFT.selector);
+
+        vm.prank(users[1]);
+        mockNFT.safeTransferFrom(users[1], address(goober), 1);
+    }
+
+    function testRevertOnERC721ReceivedWhenDirectlySendingFlaggedGobbler() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 * 10 ** 18);        
+        uint256[] memory artGobblers = new uint256[](2);
+        uint256[] memory artGobblersTwo = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+        artGobblers[1] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+        artGobblersTwo[0] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(3, "seed");
+        vm.stopPrank();
+
+        vm.prank(FEE_TO);
+        goober.flagGobbler(artGobblersTwo[0], true);
+
+        vm.expectRevert(IGoober.InvalidNFT.selector);
+
+        vm.prank(users[1]);
+        gobblers.safeTransferFrom(users[1], address(goober), artGobblersTwo[0]);
+    }
+
+    function testRevertOnERC721ReceivedWhenDepositingUnrevealedGobbler() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 * 10 ** 18);        
+        uint256[] memory artGobblers = new uint256[](2);
+        uint256[] memory artGobblersTwo = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+        artGobblers[1] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+        artGobblersTwo[0] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, artGobblersTwo[0])
+        );
+
+        goober.deposit(artGobblersTwo, 100 ether, users[1]);
     }
 
     /*//////////////////////////////////////////////////////////////
