@@ -13,9 +13,6 @@ import "./math/UQ112x112.sol";
 import "./interfaces/IGoober.sol";
 import "./interfaces/IGooberCallee.sol";
 
-// TODO(Prevent multiplier 0 gobblers from being deposited, withdrawn, swapped)
-// TODO(Provide a blacklist for stolen gobblers and don't accept them in deposit or swap)
-
 // Goober is a Uniswap V2 and EIP-4626 flavored yield vault to optimize gobbler/goo production.
 contract Goober is ReentrancyGuard, ERC20, IGoober {
     // We want to ensure all transfers are safe
@@ -70,6 +67,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @notice Last block timestamp
     /// @dev Yes, the oracle accumulators will reset in 2036.
     uint32 private blockTimestampLast; // uses single storage slot, accessible via getReserves
+
+    /// @notice Flagged NFTs cannot be deposited or swapped in.
+    mapping(uint256 => bool) public flagged;
 
     // Constructor/init
 
@@ -133,6 +133,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         require(_gooBalance <= type(uint112).max && _gobblerBalance <= type(uint112).max, "Goober: OVERFLOW");
 
         /// @dev the accumulators will reset in 2036 due to modulo.
+        //slither-disable-next-line weak-prng
         uint32 blockTimestamp = uint32(block.timestamp % 2 ** 32);
 
         uint32 timeElapsed;
@@ -181,6 +182,10 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     function onERC721Received(address, address, uint256 tokenId, bytes calldata) external view returns (bytes4) {
         /// @dev We only want Art Gobblers NFTs
         if (msg.sender != address(artGobblers)) {
+            revert InvalidNFT();
+        }
+        /// @dev revert on flagged NFTs
+        if (flagged[tokenId] == true) {
             revert InvalidNFT();
         }
         /// @dev We want to make sure the gobblers we are getting are revealed.
@@ -313,7 +318,11 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             revert NoSkim();
         }
         // Transfer the excess goo to the admin for handling
-        goo.transfer(msg.sender, contractGooBalance);
+        goo.safeTransfer(msg.sender, contractGooBalance);
+    }
+
+    function flagGobbler(uint256 tokenId, bool _flagged) public onlyFeeTo {
+        flagged[tokenId] = _flagged;
     }
 
     // External/Public views
@@ -344,9 +353,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
     /// @param receiver - address to receive GBR
-    /// @param owner - owner of the goo/gobblers
     /// @return shares - amount of GBR minted
-    function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
+    function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
         external
         nonReentrant
         returns (uint256 shares)
@@ -359,13 +367,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
         // Transfer goo if any
         if (gooTokens > 0) {
-            goo.safeTransferFrom(owner, address(this), gooTokens);
+            goo.safeTransferFrom(msg.sender, address(this), gooTokens);
             artGobblers.addGoo(gooTokens);
         }
 
         // Transfer gobblers if any
         for (uint256 i = 0; i < gobblers.length; i++) {
-            artGobblers.safeTransferFrom(owner, address(this), gobblers[i]);
+            artGobblers.safeTransferFrom(msg.sender, address(this), gobblers[i]);
         }
 
         // Get the new reserves after transfers in
@@ -395,7 +403,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Update kLast and accumulators
         _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
 
-        emit Deposit(msg.sender, owner, receiver, gobblers, gooTokens, shares);
+        emit Deposit(msg.sender, receiver, gobblers, gooTokens, shares);
     }
 
     /// @notice Withdraws the requested gobblers and goo tokens from the vault.
@@ -424,6 +432,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Optimistically transfer gobblers if any
         if (gobblers.length > 0) {
             for (uint256 i = 0; i < gobblers.length; i++) {
+                if (artGobblers.getGobblerEmissionMultiple(gobblers[i]) < 6) {
+                    revert InvalidMultiplier(gobblers[i]);
+                }
                 artGobblers.transferFrom(address(this), receiver, gobblers[i]);
             }
         }
@@ -500,13 +511,16 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
             // Transfer goo if any
             if (parameters.gooIn > 0) {
-                goo.safeTransferFrom(parameters.owner, address(this), parameters.gooIn);
+                goo.safeTransferFrom(msg.sender, address(this), parameters.gooIn);
                 artGobblers.addGoo(parameters.gooIn);
             }
 
             // Transfer gobblers if any
             for (uint256 i = 0; i < parameters.gobblersIn.length; i++) {
-                artGobblers.safeTransferFrom(parameters.owner, address(this), parameters.gobblersIn[i]);
+                if (artGobblers.getGobblerEmissionMultiple(parameters.gobblersIn[i]) < 6) {
+                    revert InvalidMultiplier(parameters.gobblersIn[i]);
+                }
+                artGobblers.safeTransferFrom(msg.sender, address(this), parameters.gobblersIn[i]);
             }
         }
 
@@ -526,6 +540,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _performanceFee(_gooBalance, _gobblerBalance);
         // Update oracle
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve);
-        emit Swap(msg.sender, amount0In, amount1In, parameters.gooOut, multOut, parameters.receiver);
+        emit Swap(msg.sender, parameters.receiver, amount0In, amount1In, parameters.gooOut, multOut);
     }
 }
