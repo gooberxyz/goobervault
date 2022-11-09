@@ -369,7 +369,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
             uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
             // We don't want to allow the pool to be looted/decommed, ever
-            require(_k > 0, "Goober: MUST LEAVE LIQUIDITY");
+            if (_k == 0) {
+                revert MustLeaveLiquidity();
+            }
             uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _kLast);
             fractions = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
         }
@@ -561,7 +563,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
             uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
             // We don't want to allow the pool to be looted/decommed, ever
-            require(_k > 0, "Goober: MUST LEAVE LIQUIDITY");
+            if (_k == 0) {
+                revert MustLeaveLiquidity();
+            }
             uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _kLast);
             fractions = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
         }

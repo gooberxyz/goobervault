@@ -272,7 +272,7 @@ contract GooberTest is Test {
 
         goober.deposit(artGobblers, 500 ether, users[1]);
 
-        vm.expectRevert("Goober: MUST LEAVE LIQUIDITY");
+        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
 
         goober.withdraw(new uint256[](0), 500 ether, users[1], users[1]);
     }
@@ -297,7 +297,7 @@ contract GooberTest is Test {
 
         goober.deposit(artGobblers, 500 ether, users[1]);
 
-        vm.expectRevert("Goober: MUST LEAVE LIQUIDITY");
+        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
 
         goober.withdraw(artGobblers, 10 ether, users[1], users[1]);
     }
@@ -568,29 +568,19 @@ contract GooberTest is Test {
     // Protocol Admin
     //////////////////////////////////////////////////////////////*/
 
-    // function testSkimGoo() public {
-    //     _writeTokenBalance(address(goober), address(goo), 1);
-    //     assertEq(goo.balanceOf(address(this)), 0);
-    //     assertEq(goo.balanceOf(address(goober)), 1);
+    function testSkimGoo() public {
+        _writeTokenBalance(address(goober), address(goo), 1 ether);
 
-    //     // Revert if not owner
-    //     vm.startPrank(msg.sender);
-    //     // vm.expectRevert(abi.encodeWithSelector(goober.AccessControlViolation.selector, msg.sender, address(this) ) );
-    //     vm.expectRevert();
-    //     goober.skimGoo();
-    //     assertEq(goo.balanceOf(address(this)), 0);
-    //     assertEq(goo.balanceOf(address(goober)), 1);
-    //     vm.stopPrank();
+        // Precondition checks
+        assertEq(goo.balanceOf(FEE_TO), 0);
+        assertEq(goo.balanceOf(address(goober)), 1 ether);
 
-    //     // Pass
-    //     goober.skimGoo();
-    //     assertEq(goo.balanceOf(address(this)), 1);
-    //     assertEq(goo.balanceOf(address(goober)), 0);
+        vm.prank(FEE_TO);
+        goober.skimGoo();
 
-    //     // Revert when no goo in goobler contract
-    //     vm.expectRevert("NO_GOO_IN_CONTRACT");
-    //     goober.skimGoo();
-    // }
+        assertEq(goo.balanceOf(FEE_TO), 1 ether);
+        assertEq(goo.balanceOf(address(goober)), 0);
+    }
 
     function testRevertSkimGooWhenNotFeeTo() public {
         vm.expectRevert(abi.encodeWithSelector(IGoober.AccessControlViolation.selector, OTHER, FEE_TO));
