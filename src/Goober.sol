@@ -478,7 +478,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         }
 
         // Mint shares to depositor less management fee
-        _mint(receiver, fractions - _managementFee(fractions));
+        fractions -= _managementFee(fractions);
+        _mint(receiver, fractions);
 
         // Update kLast and accumulators
         _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
