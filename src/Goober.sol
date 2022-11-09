@@ -137,7 +137,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     function _previewPerformanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult)
         internal
         view
-        returns (uint256 fee, uint112 kDebtChange, bool kDebtIncrease, uint256 deltaK)
+        returns (uint256 fee, uint112 kDebtChange, uint256 deltaK)
     {
         // Read the last K value
         uint112 _kLast = kLast;
@@ -151,7 +151,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         uint112 _kChange = _kIncrease ? _k - _kLast : _kLast - _k;
         // No k, no fee
         fee = 0;
-        kDebtIncrease = false;
         kDebtChange = 0;
         deltaK = 0;
         // If kLast was at 0, then we won't accrue a fee yet, as the pool is brand new.
@@ -175,12 +174,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                     // Calculate the fee as a portion of the total supply at the ration of the _deltaK
                     fee = FixedPointMathLib.mulWadDown(totalSupply, deltaK) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
                 }
-            }
-            // Otherwise, if we have a decrease or no change, and if the decrease was more
-            // Than 0, we should increment the debt
-            else if (_kChange > 0) {
-                kDebtIncrease = true;
-                kDebtChange += _kChange;
             }
         }
     }
@@ -253,11 +246,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param _gooBalance the balance of Goo to use in calculating the growth of K.
     /// @param _gobblerBalanceMult the balance of gobbler mult scaled by MULT_SCALAR to use in calculating the growth of K.
     function _performanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult) internal returns (uint256) {
-        (uint256 fee, uint112 kDebtChange, bool kDebtIncrease, uint256 deltaK) =
-            _previewPerformanceFee(_gooBalance, _gobblerBalanceMult);
-        if (kDebtIncrease && kDebtChange > 0) {
-            kDebt += kDebtChange;
-        } else if (!kDebtIncrease && kDebtChange > 0) {
+        (uint256 fee, uint112 kDebtChange, uint256 deltaK) = _previewPerformanceFee(_gooBalance, _gobblerBalanceMult);
+        if (kDebtChange > 0) {
             kDebt -= kDebtChange;
         }
         if (fee > 0) {
@@ -332,7 +322,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Collect a virtual performance fee
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
         uint256 _totalSupply = totalSupply;
-        (uint256 pFee,,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
+        (uint256 pFee,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
         // Increment virtual total supply
         _totalSupply += pFee;
         // Simulate transfers
@@ -368,7 +358,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Collect a virtual performance fee
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
         uint256 _totalSupply = totalSupply;
-        (uint256 pFee,,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
+        (uint256 pFee,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
         // Increment virtual total supply
         _totalSupply += pFee;
         // Simulate transfers
