@@ -172,7 +172,8 @@ contract GooberTest is Test {
         vm.expectEmit(true, true, true, false);
         emit Deposit(users[1], users[1], users[1], artGobblers, gooToDeposit, 999);
 
-        /*uint256 fractions = */ goober.deposit(artGobblers, gooToDeposit, users[1], users[1]);
+        /*uint256 fractions = */
+        goober.deposit(artGobblers, gooToDeposit, users[1], users[1]);
 
         // Goo is transferred into vault
         // assertEq(gobblers.gooBalance(users[1]), x); TODO
@@ -240,7 +241,8 @@ contract GooberTest is Test {
 
         _setRandomnessAndReveal(3, "seed");
 
-        /*uint256 fractions = */ goober.deposit(artGobblers, 500 * 10 ** 18, users[1], users[1]);        
+        /*uint256 fractions = */
+        goober.deposit(artGobblers, 500 * 10 ** 18, users[1], users[1]);
 
         // TODO
 
@@ -275,15 +277,15 @@ contract GooberTest is Test {
 
         _setRandomnessAndReveal(3, "seed");
 
-        goober.deposit(artGobblers, 500 * 10 ** 18, users[1], users[1]);   
+        goober.deposit(artGobblers, 500 * 10 ** 18, users[1], users[1]);
 
-        vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");     
+        vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
 
         goober.withdraw(new uint256[](0), 500 * 10 ** 18, users[1], users[1]);
     }
 
     // function testRevertWithdrawWhenWithdrawingLastGoo() public {
-        
+
     // }
 
     function testRevertWithdrawWhenWithdrawingLastGobbler() public {
@@ -300,9 +302,9 @@ contract GooberTest is Test {
 
         _setRandomnessAndReveal(3, "seed");
 
-        goober.deposit(artGobblers, 500 * 10 ** 18, users[1], users[1]);   
+        goober.deposit(artGobblers, 500 * 10 ** 18, users[1], users[1]);
 
-        vm.expectRevert("Goober: MUST LEAVE LIQUIDITY");     
+        vm.expectRevert("Goober: MUST LEAVE LIQUIDITY");
 
         goober.withdraw(artGobblers, 10 * 10 ** 18, users[1], users[1]);
     }
