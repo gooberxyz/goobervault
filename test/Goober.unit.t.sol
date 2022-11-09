@@ -454,7 +454,7 @@ contract GooberTest is Test {
 
     function testFlagGobbler() public {
         vm.startPrank(users[1]);
-        gobblers.addGoo(500 ether);        
+        gobblers.addGoo(500 ether);
         uint256[] memory artGobblers = new uint256[](2);
         uint256[] memory artGobblersTwo = new uint256[](1);
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
@@ -477,7 +477,7 @@ contract GooberTest is Test {
 
     function testUnflagGobbler() public {
         vm.startPrank(users[1]);
-        gobblers.addGoo(500 ether);        
+        gobblers.addGoo(500 ether);
         uint256[] memory artGobblers = new uint256[](2);
         uint256[] memory artGobblersTwo = new uint256[](1);
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
@@ -499,7 +499,7 @@ contract GooberTest is Test {
 
     function testRevertFlagGobblerWhenNotFeeTo() public {
         vm.startPrank(users[1]);
-        gobblers.addGoo(500 ether);        
+        gobblers.addGoo(500 ether);
         uint256[] memory artGobblers = new uint256[](2);
         uint256[] memory artGobblersTwo = new uint256[](1);
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
@@ -531,7 +531,7 @@ contract GooberTest is Test {
 
     function testRevertOnERC721ReceivedWhenDirectlySendingFlaggedGobbler() public {
         vm.startPrank(users[1]);
-        gobblers.addGoo(500 ether);        
+        gobblers.addGoo(500 ether);
         uint256[] memory artGobblers = new uint256[](2);
         uint256[] memory artGobblersTwo = new uint256[](1);
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
@@ -552,16 +552,14 @@ contract GooberTest is Test {
 
     function testRevertOnERC721ReceivedWhenDepositingUnrevealedGobbler() public {
         vm.startPrank(users[1]);
-        gobblers.addGoo(500 ether);        
+        gobblers.addGoo(500 ether);
         uint256[] memory artGobblers = new uint256[](2);
         uint256[] memory artGobblersTwo = new uint256[](1);
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
         artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, artGobblersTwo[0])
-        );
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, artGobblersTwo[0]));
 
         goober.deposit(artGobblersTwo, 100 ether, users[1]);
     }
