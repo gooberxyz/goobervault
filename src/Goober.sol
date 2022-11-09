@@ -115,24 +115,38 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // Internal: Non-Mutating
     //////////////////////////////////////////////////////////////*/
 
-    function _kCalculations(uint112 _gooBalance, uint112 _gobblerBalance, uint112 _kLast, bool _roundUp)
+    function _kCalculations(uint112 _gooBalance, uint112 _gobblerBalance, uint112 _kLast, uint112 _kDebt, bool _roundUp)
         internal
         pure
-        returns (uint112 _k, uint112 _kChange, bool _kChangeSign, uint256 _kDelta)
+        returns (uint112 _k, uint112 _kChange, bool _kChangeSign, uint112 _kDelta, uint112 _kDebtChange)
     {
         _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
+        _kDelta = 0;
+        _kDebtChange = 0;
         _kChangeSign = _k > _kLast;
         // Get the gross change in K as a numeric
         _kChange = _kChangeSign ? _k - _kLast : _kLast - _k;
         _kChange = _k - _kLast;
+        if (_kChangeSign) {
+            // Let's offset the debt first if it exists
+            if (_kDebt > 0) {
+                if (_kChange <= _kDebt) {
+                    _kDebtChange += _kChange;
+                    _kChange = 0;
+                } else {
+                    _kDebtChange += _kDebt;
+                    _kChange -= _kDebt;
+                }
+            }
+        }
         if (_roundUp) {
             _kDelta = _kChangeSign
-                ? FixedPointMathLib.divWadUp(_k - _kLast, _kLast)
-                : FixedPointMathLib.divWadUp(_kLast - _k, _kLast);
+                ? uint112(FixedPointMathLib.divWadUp(_k - _kLast, _kLast))
+                : uint112(FixedPointMathLib.divWadUp(_kLast - _k, _kLast));
         } else {
             _kDelta = _kChangeSign
-                ? FixedPointMathLib.divWadDown(_k - _kLast, _kLast)
-                : FixedPointMathLib.divWadDown(_kLast - _k, _kLast);
+                ? uint112(FixedPointMathLib.divWadDown(_k - _kLast, _kLast))
+                : uint112(FixedPointMathLib.divWadDown(_kLast - _k, _kLast));
         }
     }
 
@@ -145,39 +159,27 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     function _previewPerformanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult)
         internal
         view
-        returns (uint256 fee, uint112 kDebtChange, uint256 kDelta)
+        returns (uint256 fee, uint112 kDebtChange, uint112 kDelta)
     {
-        uint112 _kLast = kLast;
-        // Check if we have any kDebt outstanding from mints
-        uint112 _kDebt = kDebt;
         // No k, no fee
+        uint112 _kLast = kLast;
+        uint112 _kDebt = kDebt;
         fee = 0;
         kDebtChange = 0;
         kDelta = 0;
         // If kLast was at 0, then we won't accrue a fee yet, as the pool is brand new.
         if (_kLast > 0) {
-            (, uint112 _kChange, bool _kChangeSign, uint256 _kDelta) =
-                _kCalculations(_gooBalance, _gobblerBalanceMult, kLast, false);
-            // K grew
-            if (_kChangeSign) {
-                // Let's offset the debt first if it exists
-                if (_kDebt > 0) {
-                    if (_kChange <= _kDebt) {
-                        kDebtChange += _kChange;
-                        _kChange = 0;
-                    } else {
-                        kDebtChange += _kDebt;
-                        _kChange -= _kDebt;
-                    }
-                }
-                // And then calculate a fee on any remainder
-                if (_kChange > 0) {
-                    // Calculate the fee as a portion of the total supply at the ration of the _deltaK
-                    fee = FixedPointMathLib.mulWadDown(totalSupply, _kDelta) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
-                }
+            (, uint112 _kChange, bool _kChangeSign, uint112 _kDelta, uint112 _kDebtChange) =
+                _kCalculations(_gooBalance, _gobblerBalanceMult, _kLast, _kDebt, false);
+            // And then calculate a fee on any remainder
+            if (_kChange > 0) {
+                // Calculate the fee as a portion of the total supply at the ration of the _deltaK
+                fee = FixedPointMathLib.mulWadDown(totalSupply, _kDelta) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
             }
             // update kDelta return value
             kDelta = _kDelta;
+            // update kDebtChange return value
+            kDebtChange = _kDebtChange;
         }
     }
 
