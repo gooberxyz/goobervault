@@ -150,17 +150,23 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // be especially tricky if you want to test minting
         // more than 1 gobbler here.)
         // TODO(Check expectedId matches event emit)
-        //uint256 expectedId = 2;
-        //vm.expectEmit(true, true, true, false);
-        //emit Mint(expectedId);
+        // uint256 expectedId = 2;
+        // vm.expectEmit(true, true, true, true);
+        // emit Mint(expectedId);
         goober.mintGobbler();
-       // assertEq(gobblers.ownerOf(2), address(goober));
+        assertEq(gobblers.ownerOf(2), address(goober));
+
         // Check to see updated pool balance after reveal.
         vm.warp(block.timestamp + 86400);
-        // setRandomnessAndReveal(1, "seed");
+        // Changing the seed string changes the randomness, and thus the rolled mult. 
+        setRandomnessAndReveal(1, "seed2");
+        // _newGobblerReserve is scaled up by 1e3
         (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
-        // assertEq(_newGobblerReserve, 0);
-        // Check k
+        // We mint an 6 mult here, so we have 15 total mult including the previous 9.
+        assertEq(_newGobblerReserve, 15000);
+        // 24.9926 Goo
+        assertEq(_newGooReserve, 2599264417825316518);
+        // TODO(Check k)
     }
 
     function test_swap() public {
