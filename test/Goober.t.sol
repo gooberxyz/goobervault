@@ -123,7 +123,8 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
 
         uint256[] memory artGobbler = new uint256[](1);
         artGobbler[0] = gobblers.mintFromGoo(75 ether, false);
-
+        // Check to see we own the 1st Gobbler. 
+        assertEq(gobblers.ownerOf(1), address(this));
         // Warp a day ahead until we can reveal.
         vm.warp(block.timestamp + 86400);
         setRandomnessAndReveal(1, "seed");
@@ -149,15 +150,16 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // be especially tricky if you want to test minting
         // more than 1 gobbler here.)
         // TODO(Check expectedId matches event emit)
-        uint256 expectedId = 2;
-        vm.expectEmit(true, true, true, false);
-        emit Mint(expectedId);
+        //uint256 expectedId = 2;
+        //vm.expectEmit(true, true, true, false);
+        //emit Mint(expectedId);
         goober.mintGobbler();
+       // assertEq(gobblers.ownerOf(2), address(goober));
         // Check to see updated pool balance after reveal.
-        //vm.warp(block.timestamp + 86400);
+        vm.warp(block.timestamp + 86400);
         // setRandomnessAndReveal(1, "seed");
-        // (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
-        // assertEq(_newGooReserve, 0);
+        (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
+        // assertEq(_newGobblerReserve, 0);
         // Check k
     }
 

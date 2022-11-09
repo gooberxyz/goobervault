@@ -353,7 +353,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         //bool mint = ((gooBalance / gobblerReserve) <= (mintPrice * 1) / 7);
        // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
         while (mint) {
-            if (gooBalance <= mintPrice) {
+            if (gooBalance >= mintPrice) {
                 gooBalance -= mintPrice;
                 artGobblers.mintFromGoo(mintPrice, true);
                 // TODO(Can we calculate the increase without an sload here?)
