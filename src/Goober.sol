@@ -196,22 +196,25 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    /// @notice accrues the performance fee on the growth of K if any, offset by kDebt
-    /// @param _gooBalance the balance of Goo to use in calculating the growth of K.
-    /// @param _gobblerBalanceMult the balance of gobbler mult scaled by MULT_SCALAR to use in calculating the growth of K.
-    function _performanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult) internal returns (uint256 fee) {
+    function previewPerformanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult)
+        internal
+        returns (uint256 fee, uint112 kDebtChange, bool kDebtIncrease, uint256 deltaK)
+    {
         // Read the last K value
         uint112 _kLast = kLast;
-        // Calculate the present K
-        uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult));
         // Check if we have any kDebt outstanding from mints
         uint112 _kDebt = kDebt;
+        // Calculate the present K
+        uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult));
         // Did K increase?
         bool _kIncrease = _k > kLast;
         // Get the gross change in K as a numeric
         uint112 _kChange = _kIncrease ? _k - _kLast : _kLast - _k;
         // No k, no fee
         fee = 0;
+        kDebtIncrease = false;
+        kDebtChange = 0;
+        deltaK = 0;
         // If kLast was at 0, then we won't accrue a fee yet, as the pool is brand new.
         if (_kLast > 0) {
             // K grew
@@ -219,32 +222,47 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 // Let's offset the debt first if it exists
                 if (_kDebt > 0) {
                     if (_kChange <= _kDebt) {
-                        kDebt -= _kChange;
+                        kDebtChange += _kChange;
                         _kChange = 0;
                     } else {
-                        kDebt = 0;
+                        kDebtChange += _kDebt;
                         _kChange -= _kDebt;
                     }
                 }
                 // And then calculate a fee on any remainder
                 if (_kChange > 0) {
                     // Get the change in K counting towards a performance fee as a ratio of the total
-                    uint256 _deltaK = FixedPointMathLib.divWadDown(_kChange, _kLast);
+                    deltaK = FixedPointMathLib.divWadDown(_kChange, _kLast);
                     // Calculate the fee as a portion of the total supply at the ration of the _deltaK
-                    fee = FixedPointMathLib.mulWadDown(totalSupply, _deltaK) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
-                    // Mint that proportion of the growth, diluting the supply and aligning incentives with
-                    // stakeholders.
-                    _mint(feeTo, fee);
-                    // Emit info about the fees, and the growth in K
-                    emit FeesAccrued(feeTo, fee, true, _deltaK);
+                    fee = FixedPointMathLib.mulWadDown(totalSupply, deltaK) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
                 }
             }
             // Otherwise, if we have a decrease or no change, and if the decrease was more
             // Than 0, we should increment the debt
             else if (_kChange > 0) {
-                kDebt += _kChange;
+                kDebtIncrease = true;
+                kDebtChange += _kChange;
             }
         }
+    }
+
+    /// @notice accrues the performance fee on the growth of K if any, offset by kDebt
+    /// @param _gooBalance the balance of Goo to use in calculating the growth of K.
+    /// @param _gobblerBalanceMult the balance of gobbler mult scaled by MULT_SCALAR to use in calculating the growth of K.
+    function _performanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult) internal returns (uint256) {
+        (uint256 fee, uint112 kDebtChange, bool kDebtIncrease, uint256 deltaK) =
+            previewPerformanceFee(_gooBalance, _gobblerBalanceMult);
+        if (kDebtIncrease && kDebtChange > 0) {
+            kDebt += kDebtChange;
+        } else if (!kDebtIncrease && kDebtChange > 0) {
+            kDebt -= kDebtChange;
+        }
+        if (fee > 0) {
+            _mint(feeTo, fee);
+            // Emit info about the fees, and the growth in K
+            emit FeesAccrued(feeTo, fee, true, deltaK);
+        }
+        return fee;
     }
 
     /// @notice Returns and mints the management fee given an amount of new shares created on deposit.
