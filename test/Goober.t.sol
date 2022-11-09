@@ -231,13 +231,13 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
 
         // uint256[] memory artGobblerFromMint = new uint256[](1);
 
-        // // Gobbler with tokenId = 2.
+        //  Gobbler with tokenId = 2.
         // artGobblerFromMint[0] = 2;
         // address me = address(this);
-        // // Withdraw Gobbler minted from Goober based on shares minted from kDebt.
+        //  Withdraw Gobbler minted from Goober based on shares minted from kDebt.
         // goober.withdraw(artGobblerFromMint, 0, me, me);
 
-        // //Check if we own the Gobbler now.
+        // Check if we own the Gobbler now.
         // assertEq(gobblers.ownerOf(2), me);
     // }
 
