@@ -429,14 +429,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
         // Get the mint price
         uint256 mintPrice = artGobblers.gobblerPrice();
-        
         // We get the reserves directly here to save some gas
         uint112 gooReserve = uint112(artGobblers.gooBalance(address(this)));
         uint256 gooBalance = gooReserve;
         uint112 gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
 
         // Should we mint?
-        bool mint = true; 
+        bool mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS)); 
         // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
         while (mint) {
              if (gooBalance >= mintPrice) {
@@ -444,7 +443,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 artGobblers.mintFromGoo(mintPrice, true);
                 // TODO(Can we calculate the increase without an sload here?)
                 mintPrice = artGobblers.gobblerPrice();
-                mint = (((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS));
+                mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS));
             }
             else {
                 mint = false;
