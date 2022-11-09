@@ -132,7 +132,6 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // Based on our seed, we get a mult of 9 here. 
         assertEq(gobblerMult, 9);
 
-
         // Pool is setup by depositing 1 gobbler and 53 goo.
         // We do this after warp to not accrue extra goo.
         uint256 gooTokens = 53 ether;
