@@ -226,19 +226,19 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
     }
 
     // function test_withdraw_minted() public {
-        // Test if we can pull a minted Gobbler out of pool)
-        // TODO(You must deposit and mint shares first before withdrawing). 
+    // Test if we can pull a minted Gobbler out of pool)
+    // TODO(You must deposit and mint shares first before withdrawing).
 
-        // uint256[] memory artGobblerFromMint = new uint256[](1);
+    // uint256[] memory artGobblerFromMint = new uint256[](1);
 
-        //  Gobbler with tokenId = 2.
-        // artGobblerFromMint[0] = 2;
-        // address me = address(this);
-        //  Withdraw Gobbler minted from Goober based on shares minted from kDebt.
-        // goober.withdraw(artGobblerFromMint, 0, me, me);
+    //  Gobbler with tokenId = 2.
+    // artGobblerFromMint[0] = 2;
+    // address me = address(this);
+    //  Withdraw Gobbler minted from Goober based on shares minted from kDebt.
+    // goober.withdraw(artGobblerFromMint, 0, me, me);
 
-        // Check if we own the Gobbler now.
-        // assertEq(gobblers.ownerOf(2), me);
+    // Check if we own the Gobbler now.
+    // assertEq(gobblers.ownerOf(2), me);
     // }
 
     function test_swap() public {
