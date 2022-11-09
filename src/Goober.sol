@@ -126,27 +126,26 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _kChangeSign = _k > _kLast;
         // Get the gross change in K as a numeric
         _kChange = _kChangeSign ? _k - _kLast : _kLast - _k;
-        _kChange = _k - _kLast;
-        if (_kChangeSign) {
-            // Let's offset the debt first if it exists
-            if (_kDebt > 0) {
-                if (_kChange <= _kDebt) {
-                    _kDebtChange += _kChange;
-                    _kChange = 0;
-                } else {
-                    _kDebtChange += _kDebt;
-                    _kChange -= _kDebt;
+        if (_kLast > 0) {
+            if (_kChangeSign) {
+                // Let's offset the debt first if it exists
+                if (_kDebt > 0) {
+                    if (_kChange <= _kDebt) {
+                        _kDebtChange += _kChange;
+                        _kChange = 0;
+                    } else {
+                        _kDebtChange += _kDebt;
+                        _kChange -= _kDebt;
+                    }
                 }
             }
-        }
-        if (_roundUp) {
-            _kDelta = _kChangeSign
-                ? uint112(FixedPointMathLib.divWadUp(_k - _kLast, _kLast))
-                : uint112(FixedPointMathLib.divWadUp(_kLast - _k, _kLast));
+            if (_roundUp) {
+                _kDelta = uint112(FixedPointMathLib.divWadUp(_kChange, _kLast));
+            } else {
+                _kDelta = uint112(FixedPointMathLib.divWadDown(_kChange, _kLast));
+            }
         } else {
-            _kDelta = _kChangeSign
-                ? uint112(FixedPointMathLib.divWadDown(_k - _kLast, _kLast))
-                : uint112(FixedPointMathLib.divWadDown(_kLast - _k, _kLast));
+            _kDelta = uint112(FixedPointMathLib.divWadUp(1, 1));
         }
     }
 
@@ -341,15 +340,15 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         for (uint256 i = 0; i < gobblers.length; i++) {
             _gobblerBalanceMult += artGobblers.getGobblerEmissionMultiple(gobblers[i]);
         }
-        uint256 gobblerAmountMult = _gobblerBalanceMult - _gobblerReserveMult;
         // Calculate issuance
+        uint112 _kLast = uint112(FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult));
+        // Calculate the fractions to burn based on the changes in k.
+        (uint112 _k,,, uint112 _kDelta,) =
+            _kCalculations(uint112(_gooBalance), uint112(_gobblerBalanceMult), _kLast, 0, true);
         if (_totalSupply == 0) {
-            fractions = FixedPointMathLib.sqrt(gooTokens * gobblerAmountMult) - MINIMUM_LIQUIDITY;
+            fractions = _k - MINIMUM_LIQUIDITY;
         } else {
-            uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
-            uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
-            uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
-            fractions = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
+            fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
         }
         require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
         // Simulate management fee and return preview
@@ -389,14 +388,18 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
         {
             // Calculate the fractions to burn based on the changes in k.
-            uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
-            uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
+            (uint112 _k,,, uint112 _kDelta,) = _kCalculations(
+                _gooBalance,
+                _gobblerBalanceMult,
+                uint112(FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult)),
+                0,
+                true
+            );
             // We don't want to allow the pool to be looted/decommed, ever
             if (_k == 0) {
                 revert MustLeaveLiquidity();
             }
-            uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _kLast);
-            fractions = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
+            fractions = FixedPointMathLib.mulWadUp(_totalSupply, _kDelta);
         }
     }
 
