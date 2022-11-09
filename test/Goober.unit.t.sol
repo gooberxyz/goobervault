@@ -13,6 +13,15 @@ import "art-gobblers/utils/GobblerReserve.sol";
 import "../src/Goober.sol";
 import "../src/interfaces/IGoober.sol";
 
+// TODO write previewSwap
+// TODO write tests for flagGobbler
+// TODO refactor out K calculations into internal methods
+// TODO cover require cases, refactor into custom errors
+// DONE refactor actor setup text fixture
+// TODO replace all * 10 ** 18 with ether
+// TODO write event tests
+// TODO write fuzz tests that use actors, with various assets and actions
+
 contract GooberTest is Test {
     using stdStorage for StdStorage;
 
@@ -43,7 +52,7 @@ contract GooberTest is Test {
     function setUp() public {
         //
         utils = new Utilities();
-        users = utils.createUsers(6);
+        users = utils.createUsers(11);
         linkToken = new LinkToken();
         vrfCoordinator = new VRFCoordinatorMock(address(linkToken));
 
@@ -93,34 +102,15 @@ contract GooberTest is Test {
             _minter: MINTER
         });
 
-        // Setup balances
-        _writeTokenBalance(users[1], address(goo), START_BAL);
-        _writeTokenBalance(users[2], address(goo), START_BAL);
-        _writeTokenBalance(users[3], address(goo), START_BAL);
-        _writeTokenBalance(users[4], address(goo), START_BAL);
-        _writeTokenBalance(users[5], address(goo), START_BAL);
+        // Setup balances and approvals
+        for (uint256 i = 1; i < 11; i++) {
+            _writeTokenBalance(users[i], address(goo), START_BAL);
 
-        // Setup approvals
-        vm.startPrank(users[1]);
-        goo.approve(address(goober), type(uint256).max);
-        gobblers.setApprovalForAll(address(goober), true);
-        vm.stopPrank();
-        vm.startPrank(users[2]);
-        goo.approve(address(goober), type(uint256).max);
-        gobblers.setApprovalForAll(address(goober), true);
-        vm.stopPrank();
-        vm.startPrank(users[3]);
-        goo.approve(address(goober), type(uint256).max);
-        gobblers.setApprovalForAll(address(goober), true);
-        vm.stopPrank();
-        vm.startPrank(users[4]);
-        goo.approve(address(goober), type(uint256).max);
-        gobblers.setApprovalForAll(address(goober), true);
-        vm.stopPrank();
-        vm.startPrank(users[5]);
-        goo.approve(address(goober), type(uint256).max);
-        gobblers.setApprovalForAll(address(goober), true);
-        vm.stopPrank();
+            vm.startPrank(users[i]);
+            goo.approve(address(goober), type(uint256).max);
+            gobblers.setApprovalForAll(address(goober), true);
+            vm.stopPrank();
+        }
     }
 
     function testInitial() public {
