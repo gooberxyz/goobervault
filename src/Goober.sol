@@ -412,10 +412,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Other Privileged Functions
 
-    // @notice Mints Gobblers using the vault's virtual reserves of Goo if the pool's goo per mult is lower than VRGDA goo per mult.
-    function mintGobbler() public nonReentrant onlyMinter {
-        // This function is restricted to onlyMinter because we don't want
-        // the general public to use it to manipulate the goo price.
+    /// @notice Mints Gobblers using the vault's virtual reserves of Goo
+    /// @notice if specific curve balancing conditions are met
+    /// TODO(Add a revert return to allow for an initally simple keeper)
+    function mintGobbler() public nonReentrant onlyMinter returns (uint16) {
+        /// @dev Restricted to onlyMinter to prevent Goo price manipulation
+        /// @dev Prevent reentrancy in case onlyMinter address/keeper is compromised.
 
         // Get the mint price
         uint256 mintPrice = artGobblers.gobblerPrice();
@@ -426,20 +428,28 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
         // Should we mint?
         bool mint = (gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
-        // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
-        while (mint) {
-            if (gooBalance >= mintPrice) {
-                gooBalance -= mintPrice;
-                artGobblers.mintFromGoo(mintPrice, true);
-                // TODO(Can we calculate the increase without an sload here?)
-                mintPrice = artGobblers.gobblerPrice();
-                mint = (gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
-            } else {
-                mint = false;
+        // Mint counter
+        uint16 minted = 0;
+        if (mint == false) {
+            revert("Pool Goo per Mult higher than Auction's");
+        } else {
+            // Mint Gobblers to pool when our Goo per Mult < Auction (VRGDA) Goo per Mult
+            while (mint) {
+                if (gooBalance >= mintPrice) {
+                    gooBalance -= mintPrice;
+                    artGobblers.mintFromGoo(mintPrice, true);
+                    // TODO(Can we calculate the increase without an sload here?)
+                    mintPrice = artGobblers.gobblerPrice();
+                    mint = (gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
+                    minted++;
+                } else {
+                    mint = false;
+                }
             }
+            // Update accumulators, kLast, kDebt
+            _update(uint112(gooBalance), gobblerReserve * MULT_SCALAR, gooReserve, gobblerReserve * MULT_SCALAR, true);
         }
-        // Update accumulators, kLast, kDebt
-        _update(uint112(gooBalance), gobblerReserve * MULT_SCALAR, gooReserve, gobblerReserve * MULT_SCALAR, true);
+        return minted;
     }
 
     /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.

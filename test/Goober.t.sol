@@ -114,7 +114,15 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         vm.stopPrank();
     }
 
+    function testMintRevertGoo() public {
+    // Expect the first revert message, implying the pool
+    // is not imbalanced enough to mint. 
+    // vm.expectRevert(bytes("Pool Goo per Mult higher than Auction's"));
+    }
+
     function test_mint() public {
+        // TODO(Test minting 3 or more gobblers at once)
+
         // Safety check to verify starting gobblerPrice is correct.
         assertEq(gobblers.gobblerPrice(), 73013654753028651285);
 
@@ -145,17 +153,24 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // The goo/mult of our pool is <= goo/mult of the auction,
         // since: 53 / 9 = 5 <= 52.987 / 7.3294 ~= 7.
         // We also have enough goo to mint a single gobbler.
-        // NOTE(Getting both of the aboveto be true is a very delicate
+        // NOTE(Getting both of the above to be true is a very delicate
         // balance, especially tricky if you want to test minting
         // more than 1 gobbler here.)
+
+        // Check the amount of gobblers minted should equal 1.
+        assertEq(goober.mintGobbler(), 1);
+        // Mint the gobbler, updating K, reserves, and VRGDA in the process. 
         goober.mintGobbler();
+
+        // Warp ahead to reveal second gobbler.
+        vm.warp(block.timestamp + 86400);
+        // Changing the seed string changes the randomness, and thus the rolled mult.
+        setRandomnessAndReveal(1, "seed2");
+
         // Check contract owns second minted gobbler.
         assertEq(gobblers.ownerOf(2), address(goober));
 
         // Check to see updated pool balance after reveal.
-        vm.warp(block.timestamp + 86400);
-        // Changing the seed string changes the randomness, and thus the rolled mult.
-        setRandomnessAndReveal(1, "seed2");
         // _newGobblerReserve is scaled up by 1e3
         (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
         // We mint an 6 mult here, so we have 15 total mult including the previous 9.
@@ -163,7 +178,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // 24.9926 Goo
         assertEq(_newGooReserve, 2599264417825316518);
 
-        // TODO(Check k)
+        // NOTE(Checking k uneeded since _update() handles all of that
     }
 
     function test_swap() public {
