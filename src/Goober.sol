@@ -402,58 +402,58 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// TODO NatSpec
-    function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
-        external
-        view
-        returns (uint256 additionalGooRequired) {
+    // function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
+    //     external
+    //     view
+    //     returns (uint256 additionalGooRequired) {
 
-        // Collect a virtual performance fee
-        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
-        uint256 _totalSupply = totalSupply;
-        (uint256 pFee,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
+    //     // Collect a virtual performance fee
+    //     (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
+    //     uint256 _totalSupply = totalSupply;
+    //     (uint256 pFee,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
 
-        // Increment virtual total supply
-        _totalSupply += pFee;
+    //     // Increment virtual total supply
+    //     _totalSupply += pFee;
 
-        // Simulate transfers in
-        uint256 _gooBalance = gooIn + _gooReserve;
-        uint256 _gobblerBalanceMult = _gobblerReserveMult;
-        for (uint256 i = 0; i < gobblersIn.length; i++) {
-            _gobblerBalanceMult += artGobblers.getGobblerEmissionMultiple(gobblersIn[i]);
-        }
-        uint256 gobblerAmountMultIn = _gobblerBalanceMult - _gobblerReserveMult;
+    //     // Simulate transfers in
+    //     uint256 _gooBalance = gooIn + _gooReserve;
+    //     uint256 _gobblerBalanceMult = _gobblerReserveMult;
+    //     for (uint256 i = 0; i < gobblersIn.length; i++) {
+    //         _gobblerBalanceMult += artGobblers.getGobblerEmissionMultiple(gobblersIn[i]);
+    //     }
+    //     uint256 gobblerAmountMultIn = _gobblerBalanceMult - _gobblerReserveMult;
 
-        // Simulate transfers out
-        uint256 gobblerAmountMultOut;
-        _gooBalance = _gooReserve - uint112(gooOut);
-        for (uint256 i = 0; i < gobblersOut.length; i++) {
-            gobblerAmountMultOut = artGobblers.getGobblerEmissionMultiple(gobblersOut[i]);
-            if (gobblerAmountMultOut < 6) {
-                revert InvalidMultiplier(gobblersOut[i]);
-            }
-            if (artGobblers.ownerOf(gobblersOut[i]) != address(this)) {
-                revert InvalidNFT();
-            }
-            _gobblerBalanceMult -= gobblerAmountMultOut;
-        }
-        gobblerAmountMultOut = _gobblerReserveMult - _gobblerBalanceMult;
-        require(gobblerAmountMultOut > 0 || gooOut > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+    //     // Simulate transfers out
+    //     uint256 gobblerAmountMultOut;
+    //     _gooBalance = _gooReserve - uint112(gooOut);
+    //     for (uint256 i = 0; i < gobblersOut.length; i++) {
+    //         gobblerAmountMultOut = artGobblers.getGobblerEmissionMultiple(gobblersOut[i]);
+    //         if (gobblerAmountMultOut < 6) {
+    //             revert InvalidMultiplier(gobblersOut[i]);
+    //         }
+    //         if (artGobblers.ownerOf(gobblersOut[i]) != address(this)) {
+    //             revert InvalidNFT();
+    //         }
+    //         _gobblerBalanceMult -= gobblerAmountMultOut;
+    //     }
+    //     gobblerAmountMultOut = _gobblerReserveMult - _gobblerBalanceMult;
+    //     require(gobblerAmountMultOut > 0 || gooOut > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
 
-        // Calculate amounts required // TODO definitely wrong
-        uint256 amount0In =
-            _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
-        uint256 amount1In =
-            _gobblerBalanceMult > _gobblerReserveMult - gobblerAmountMultOut ? _gobblerBalanceMult - (_gobblerReserveMult - gobblerAmountMultOut) : 0;
-        require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
-        {
-            uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
-            uint256 balance1Adjusted = (_gobblerBalanceMult * 1000) - (amount1In * 3);
-            require((balance0Adjusted * balance1Adjusted) >= ((_gooReserve * _gobblerReserveMult) * 1000 ** 2), "Goober: K");
-        }
+    //     // Calculate amounts required // TODO definitely wrong
+    //     uint256 amount0In =
+    //         _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
+    //     uint256 amount1In =
+    //         _gobblerBalanceMult > _gobblerReserveMult - gobblerAmountMultOut ? _gobblerBalanceMult - (_gobblerReserveMult - gobblerAmountMultOut) : 0;
+    //     require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
+    //     {
+    //         uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
+    //         uint256 balance1Adjusted = (_gobblerBalanceMult * 1000) - (amount1In * 3);
+    //         require((balance0Adjusted * balance1Adjusted) >= ((_gooReserve * _gobblerReserveMult) * 1000 ** 2), "Goober: K");
+    //     }
 
-        // Calculate any additional Goo required for the swap (gooRequired - gooIn)
-        additionalGooRequired = 999999999999;
-    }
+    //     // Calculate any additional Goo required for the swap (gooRequired - gooIn)
+    //     additionalGooRequired = 999999999999;
+    // }
 
     /*//////////////////////////////////////////////////////////////
     // External: Mutating, Admin
