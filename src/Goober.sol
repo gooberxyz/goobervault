@@ -121,6 +121,10 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         returns (uint112 _k, uint112 _kChange, bool _kChangeSign, uint112 _kDelta, uint112 _kDebtChange)
     {
         _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
+        // We don't want to allow the pool to be looted/decommed, ever
+        if (_k == 0) {
+            revert MustLeaveLiquidity();
+        }
         _kDelta = 0;
         _kDebtChange = 0;
         _kChangeSign = _k > _kLast;
@@ -145,6 +149,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 _kDelta = uint112(FixedPointMathLib.divWadDown(_kChange, _kLast));
             }
         } else {
+            // If kLast -> k is 0 -> n, the change is 100%
             _kDelta = uint112(FixedPointMathLib.divWadUp(1, 1));
         }
     }
@@ -171,14 +176,14 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             (, uint112 _kChange, bool _kChangeSign, uint112 _kDelta, uint112 _kDebtChange) =
                 _kCalculations(_gooBalance, _gobblerBalanceMult, _kLast, _kDebt, false);
             // And then calculate a fee on any remainder
-            if (_kChange > 0) {
+            if (_kChange > 0 && _kChangeSign) {
                 // Calculate the fee as a portion of the total supply at the ration of the _deltaK
                 fee = FixedPointMathLib.mulWadDown(totalSupply, _kDelta) * PERFORMANCE_FEE_BPS / BPS_SCALAR;
+                // update kDelta return value
+                kDelta = _kDelta;
+                // update kDebtChange return value
+                kDebtChange = _kDebtChange;
             }
-            // update kDelta return value
-            kDelta = _kDelta;
-            // update kDebtChange return value
-            kDebtChange = _kDebtChange;
         }
     }
 
@@ -388,17 +393,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
         {
             // Calculate the fractions to burn based on the changes in k.
-            (uint112 _k,,, uint112 _kDelta,) = _kCalculations(
+            (,,, uint112 _kDelta,) = _kCalculations(
                 _gooBalance,
                 _gobblerBalanceMult,
                 uint112(FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult)),
                 0,
                 true
             );
-            // We don't want to allow the pool to be looted/decommed, ever
-            if (_k == 0) {
-                revert MustLeaveLiquidity();
-            }
             fractions = FixedPointMathLib.mulWadUp(_totalSupply, _kDelta);
         }
     }
@@ -569,20 +570,18 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Get the new reserves after transfers in
         (uint112 _gooBalance, uint112 _gobblerBalanceMult,) = getReserves();
         {
-            // Calculate the increase in multiplier
-            uint256 gobblerAmountMult = _gobblerBalanceMult - _gobblerReserveMult;
-
             // Check the total token supply
             uint256 _totalSupply = totalSupply;
 
+            // Calculate issuance
+            uint112 _kLast = uint112(FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult));
+            // Calculate the fractions to burn based on the changes in k.
+            (uint112 _k,,, uint112 _kDelta,) =
+                _kCalculations(uint112(_gooBalance), uint112(_gobblerBalanceMult), _kLast, 0, true);
             if (_totalSupply == 0) {
-                fractions = FixedPointMathLib.sqrt(gooTokens * gobblerAmountMult) - MINIMUM_LIQUIDITY;
-                _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+                fractions = _k - MINIMUM_LIQUIDITY;
             } else {
-                uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
-                uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
-                uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
-                fractions = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
+                fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
             }
             require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
         }
@@ -640,15 +639,16 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
         {
             // Calculate the shares to burn based on the changes in k.
+            // Calculate the fractions to burn based on the changes in k.
+            (,,, uint112 _kDelta,) = _kCalculations(
+                _gooBalance,
+                _gobblerBalanceMult,
+                uint112(FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult)),
+                0,
+                true
+            );
             uint256 _totalSupply = totalSupply;
-            uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
-            uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
-            // We don't want to allow the pool to be looted/decommed, ever
-            if (_k == 0) {
-                revert MustLeaveLiquidity();
-            }
-            uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _kLast);
-            fractions = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
+            fractions = FixedPointMathLib.mulWadUp(_totalSupply, _kDelta);
         }
         // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
