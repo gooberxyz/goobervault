@@ -374,7 +374,7 @@ contract GooberTest is Test {
     // getReserves
     // convertToFractions
     // convertToAssets
-    // previewDeposit / previewFractionsToMintOnDeposit
+
     function testPreviewDeposit() public {
         vm.startPrank(users[1]);
         gobblers.addGoo(500 * 10 ** 18);
@@ -395,7 +395,29 @@ contract GooberTest is Test {
         actual = goober.deposit(artGobblersTwo, 100 ether, users[1]);
         assertEq(expected, actual);
     }
-    // previewWithdraw / previewFractionsToBurnOnWithdraw
+    // previewWithdraw
+
+    function testPreviewWithdraw() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 * 10 ** 18);
+        // Test first deposit
+        uint256[] memory artGobblers = new uint256[](1);
+        uint256[] memory artGobblersTwo = new uint256[](1);
+        uint256[] memory artGobblersThree = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+        artGobblersTwo[0] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+        artGobblersThree[0] = gobblers.mintFromGoo(100 * 10 ** 18, true);
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(3, "seed");
+        goober.deposit(artGobblers, 100 ether, users[1]);
+        goober.deposit(artGobblersTwo, 100 ether, users[1]);
+        goober.deposit(artGobblersThree, 100 ether, users[1]);
+        uint256 expected = goober.previewWithdraw(artGobblersThree, 100 ether);
+        uint256 actual = goober.withdraw(artGobblersThree, 100 ether, users[1], users[1]);
+        expected = goober.previewWithdraw(artGobblersTwo, 100 ether);
+        actual = goober.withdraw(artGobblersTwo, 100 ether, users[1], users[1]);
+        assertEq(expected, actual);
+    }
     // previewSwap
 
     /*//////////////////////////////////////////////////////////////

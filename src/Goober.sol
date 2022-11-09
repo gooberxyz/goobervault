@@ -194,9 +194,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param _gobblerBalance the new gobbler multiplier scaled by MULT_SCALAR
     /// @param _gooReserve the previous goo reserve
     /// @param _gobblerReserve the previous gobbler multiplier scaled by MULT_SCALAR
-    function _update(uint256 _gooBalance, uint256 _gobblerBalance, uint112 _gooReserve, uint112 _gobblerReserve)
-        internal
-    {
+    function _update(
+        uint256 _gooBalance,
+        uint256 _gobblerBalance,
+        uint112 _gooReserve,
+        uint112 _gobblerReserve,
+        bool recordDebt
+    ) internal {
         // Check if the reserves will overflow
         /// @dev on the off chance they do, the feeTo has an escape valve in skimGoo.
         require(_gooBalance <= type(uint112).max && _gobblerBalance <= type(uint112).max, "Goober: OVERFLOW");
@@ -234,7 +238,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         uint112 _kLast = kLast;
 
         // If K decreased, record the debt
-        if (_k < _kLast) {
+        if ((_k < _kLast) && recordDebt) {
             kDebt += _kLast - _k;
         }
 
@@ -319,7 +323,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Mutating external/public functions
 
-    /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver
+    /// @notice Previews a deposit of the supplied gobblers goo.
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
     /// @return fractions - amount of GBR minted
@@ -350,6 +354,48 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
         // Simulate management fee and return preview
         fractions -= _previewManagementFee(fractions);
+    }
+
+    /// @notice Previews a withdraw of the requested gobblers and goo tokens from the vault.
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
+    /// @return fractions - amount of shares that have been withdrawn
+    function previewWithdraw(uint256[] calldata gobblers, uint256 gooTokens)
+        external
+        view
+        returns (uint256 fractions)
+    {
+        // Collect a virtual performance fee
+        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
+        uint256 _totalSupply = totalSupply;
+        (uint256 pFee,,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
+        // Increment virtual total supply
+        _totalSupply += pFee;
+        // Simulate transfers
+        uint112 _gooBalance = _gooReserve - uint112(gooTokens);
+        uint112 _gobblerBalanceMult = _gobblerReserveMult;
+        uint256 gobblerMult;
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblers[i]);
+            if (gobblerMult < 6) {
+                revert InvalidMultiplier(gobblers[i]);
+            }
+            if (artGobblers.ownerOf(gobblers[i]) != address(this)) {
+                revert InvalidNFT();
+            }
+            _gobblerBalanceMult -= uint112(gobblerMult * MULT_SCALAR);
+        }
+        uint112 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
+        require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+        {
+            // Calculate the fractions to burn based on the changes in k.
+            uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
+            uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
+            // We don't want to allow the pool to be looted/decommed, ever
+            require(_k > 0, "Goober: MUST LEAVE LIQUIDITY");
+            uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _kLast);
+            fractions = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -401,7 +447,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             mint = ((gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS);
         }
         // Update accumulators, kLast, kDebt
-        _update(uint112(gooBalance), gobblerReserve * MULT_SCALAR, gooReserve, gobblerReserve * MULT_SCALAR);
+        _update(uint112(gooBalance), gobblerReserve * MULT_SCALAR, gooReserve, gobblerReserve * MULT_SCALAR, true);
     }
 
     /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.
@@ -419,6 +465,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         }
         // Transfer the excess goo to the admin for handling
         goo.safeTransfer(msg.sender, contractGooBalance);
+        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
+        _update(_gooReserve, _gobblerReserveMult, _gooReserve, _gobblerReserveMult, false);
     }
 
     function flagGobbler(uint256 tokenId, bool _flagged) public onlyFeeTo {
@@ -471,7 +519,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             } else {
                 uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
                 uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
-                uint256 _deltaK = FixedPointMathLib.divWadDown(_k - _kLast, _kLast);
+                uint256 _deltaK = FixedPointMathLib.divWadUp(_k - _kLast, _kLast);
                 fractions = FixedPointMathLib.mulWadDown(_totalSupply, _deltaK);
             }
             require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
@@ -482,7 +530,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _mint(receiver, fractions);
 
         // Update kLast and accumulators
-        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
+        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false);
 
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, fractions);
     }
@@ -492,14 +540,15 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param gooTokens - amount of goo to withdraw
     /// @param receiver - address to receive the goo and gobblers
     /// @param owner - owner of the shares to be withdrawn
-    /// @return shares - amount of shares that have been withdrawn
+    /// @return fractions - amount of shares that have been withdrawn
     function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
         external
         nonReentrant
-        returns (uint256 shares)
+        returns (uint256 fractions)
     {
         // Get starting reserves
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
+        (uint112 _gooBalance, uint112 _gobblerBalanceMult) = (_gooReserve, _gobblerReserveMult);
 
         // Asses performance fee since last transaction
         _performanceFee(_gooReserve, _gobblerReserveMult);
@@ -508,20 +557,21 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         if (gooTokens >= 0) {
             artGobblers.removeGoo(gooTokens);
             goo.safeTransfer(receiver, gooTokens);
+            _gooBalance -= uint112(gooTokens);
         }
 
         // Optimistically transfer gobblers if any
-        if (gobblers.length > 0) {
-            for (uint256 i = 0; i < gobblers.length; i++) {
-                if (artGobblers.getGobblerEmissionMultiple(gobblers[i]) < 6) {
-                    revert InvalidMultiplier(gobblers[i]);
-                }
-                artGobblers.transferFrom(address(this), receiver, gobblers[i]);
+        uint256 gobblerMult;
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblers[i]);
+            if (gobblerMult < 6) {
+                revert InvalidMultiplier(gobblers[i]);
             }
+            artGobblers.transferFrom(address(this), receiver, gobblers[i]);
+            _gobblerBalanceMult -= uint112(gobblerMult * MULT_SCALAR);
         }
 
-        // Update reserve counters to measure change
-        (uint112 _gooBalance, uint112 _gobblerBalanceMult,) = getReserves();
+        // Measure change
         uint256 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
 
         require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
@@ -533,26 +583,26 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalanceMult);
             // We don't want to allow the pool to be looted/decommed, ever
             require(_k > 0, "Goober: MUST LEAVE LIQUIDITY");
-            uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _k);
-            shares = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
+            uint256 _deltaK = FixedPointMathLib.divWadUp(_kLast - _k, _kLast);
+            fractions = FixedPointMathLib.mulWadUp(_totalSupply, _deltaK);
         }
         // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
         if (msg.sender != owner) {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
             // Check that we can withdraw the requested amount of liquidity.
-            require(allowed >= shares, "Goober: INSUFFICIENT_ALLOWANCE");
+            require(allowed >= fractions, "Goober: INSUFFICIENT_ALLOWANCE");
 
-            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - shares;
+            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - fractions;
         }
 
         // Burn the shares from owner
-        _burn(owner, shares);
+        _burn(owner, fractions);
 
         // update reserves
-        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult);
+        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false);
 
-        emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, shares);
+        emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, fractions);
     }
 
     // TODO(Get rid of the struct here if possible by getting clever with the stack)
@@ -620,7 +670,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Asses performance fee on the growth of k.
         _performanceFee(_gooBalance, _gobblerBalance);
         // Update oracle
-        _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve);
+        _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false);
         emit Swap(msg.sender, parameters.receiver, amount0In, amount1In, parameters.gooOut, multOut);
     }
 }
