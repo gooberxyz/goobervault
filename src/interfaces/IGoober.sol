@@ -14,6 +14,7 @@ interface IGoober is IERC721Receiver {
     error InvalidNFT();
     error InvalidMultiplier(uint256 gobblerId);
     error NoSkim();
+    error MustLeaveLiquidity();
 
     /**
      * @notice The caller doesn't have permission to access that function.
