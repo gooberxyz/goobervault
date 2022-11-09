@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity >=0.8.0;
 
 import "./IERC20Metadata.sol";
@@ -33,7 +35,6 @@ interface IGoober is IERC721Receiver {
         uint256 gooOut;
         uint256[] gobblersIn;
         uint256 gooIn;
-        address owner;
         address receiver;
         bytes data;
     }
@@ -41,12 +42,7 @@ interface IGoober is IERC721Receiver {
     // Events
 
     event Deposit(
-        address indexed caller,
-        address indexed owner,
-        address indexed receiver,
-        uint256[] gobblers,
-        uint256 gooTokens,
-        uint256 shares
+        address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 shares
     );
 
     event Withdraw(
@@ -61,12 +57,12 @@ interface IGoober is IERC721Receiver {
     event FeesAccrued(address indexed feeTo, uint256 shares, bool performanceFee, uint256 _deltaK);
 
     event Swap(
-        address indexed sender,
+        address indexed caller,
+        address indexed receiver,
         uint256 gooTokensIn,
         uint256 gobblersMultIn,
         uint256 gooTokensOut,
-        uint256 gobblerMultOut,
-        address indexed receiver
+        uint256 gobblerMultOut
     );
 
     event Sync(uint112 gooBalance, uint112 multBalance);
@@ -85,7 +81,7 @@ interface IGoober is IERC721Receiver {
      */
     function setMinter(address newMinter) external;
 
-    function deposit(uint256[] calldata gobblers, uint256 gooTokens, address owner, address receiver)
+    function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
         external
         returns (uint256 shares);
 
