@@ -41,6 +41,9 @@ jobs:
         id: coverage
 
       - uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          
 
   static-analysis:
     name: Slither static analysis
