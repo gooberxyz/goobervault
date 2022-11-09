@@ -34,8 +34,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // TODO(Can we engineer this out?)
     /// @notice The liquidity locked forever in the pool.
     uint16 private constant MINIMUM_LIQUIDITY = 1e3;
-    /// @notice The scalar we use on the gobbler multiplier to maintain precision.
-    uint16 private constant MULT_SCALAR = 1e3;
     /// @notice A scalar for scaling up and down to basis points.
     uint16 private constant BPS_SCALAR = 1e4;
     /// @notice The management fee in basis points, charged on deposits.
@@ -59,7 +57,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // TODO(Can these be 112 bit to save a storage slot?)
     /// @notice Price oracle accumulator for goo.
     uint256 public priceGooCumulativeLast;
-    /// @notice Price oracle accumulator for gobbler multipliers scaled by MULT_SCALAR.
+    /// @notice Price oracle accumulator for gobbler multipliers.
     uint256 public priceGobblerCumulativeLast;
 
     /// @notice sqrt(gooBalance * totalGobblerMultiplier), as of immediately after the most recent liquidity event
@@ -117,17 +115,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // Internal: Non-Mutating
     //////////////////////////////////////////////////////////////*/
 
-    /// @return multiple the total gobbler multiple scaled by MULT_SCALAR
-    function _scaledAccountMultiple() internal view returns (uint112 multiple) {
-        multiple = uint112(artGobblers.getUserEmissionMultiple(address(this)) * MULT_SCALAR);
-    }
-
-    /// @param gobblerId gobbler to get scaled mult for
-    /// @return multiple the gobbler multiple for gobblerId scaled by MULT_SCALAR
-    function _scaledTokenMultiple(uint256 gobblerId) internal view returns (uint112 multiple) {
-        multiple = uint112(artGobblers.getGobblerEmissionMultiple(gobblerId) * MULT_SCALAR);
-    }
-
     /// @notice Returns the management fee given an amount of new fractions created on deposit.
     /// @param fractions New fractions issued for a deposit.
     function _previewManagementFee(uint256 fractions) internal pure returns (uint256 fee) {
@@ -184,9 +171,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     /// @dev update reserves and, on the first call per block, price accumulators
     /// @param _gooBalance the new goo balance
-    /// @param _gobblerBalance the new gobbler multiplier scaled by MULT_SCALAR
+    /// @param _gobblerBalance the new gobbler multiplier
     /// @param _gooReserve the previous goo reserve
-    /// @param _gobblerReserve the previous gobbler multiplier scaled by MULT_SCALAR
+    /// @param _gobblerReserve the previous gobbler multiplier
     function _update(
         uint256 _gooBalance,
         uint256 _gobblerBalance,
@@ -244,7 +231,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     /// @notice accrues the performance fee on the growth of K if any, offset by kDebt
     /// @param _gooBalance the balance of Goo to use in calculating the growth of K.
-    /// @param _gobblerBalanceMult the balance of gobbler mult scaled by MULT_SCALAR to use in calculating the growth of K.
+    /// @param _gobblerBalanceMult the balance of gobbler mult to use in calculating the growth of K.
     function _performanceFee(uint112 _gooBalance, uint112 _gobblerBalanceMult) internal returns (uint256) {
         (uint256 fee, uint112 kDebtChange, uint256 deltaK) = _previewPerformanceFee(_gooBalance, _gobblerBalanceMult);
         if (kDebtChange > 0) {
@@ -299,15 +286,15 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @return _gooReserve the total amount of goo in the tank for all owned gobblers
-    /// @return _gobblerReserve the total multiplier of all gobblers owned scaled by MULT_SCALAR
+    /// @return _gobblerReserve the total multiplier of all gobblers owned
     /// @return _blockTimestampLast the last time that the reserves were updated
     function getReserves()
         public
         view
-        returns (uint112 _gooReserve, uint112 _gobblerReserve, uint40 _blockTimestampLast)
+        returns (uint112 _gooReserve, uint112 _gobblerReserve, uint32 _blockTimestampLast)
     {
         _gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        _gobblerReserve = _scaledAccountMultiple();
+        _gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
         _blockTimestampLast = blockTimestampLast;
     }
 
@@ -329,7 +316,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         uint256 _gooBalance = gooTokens + _gooReserve;
         uint256 _gobblerBalanceMult = _gobblerReserveMult;
         for (uint256 i = 0; i < gobblers.length; i++) {
-            _gobblerBalanceMult += artGobblers.getGobblerEmissionMultiple(gobblers[i]) * MULT_SCALAR;
+            _gobblerBalanceMult += artGobblers.getGobblerEmissionMultiple(gobblers[i]);
         }
         uint256 gobblerAmountMult = _gobblerBalanceMult - _gobblerReserveMult;
         // Calculate issuance
@@ -373,7 +360,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             if (artGobblers.ownerOf(gobblers[i]) != address(this)) {
                 revert InvalidNFT();
             }
-            _gobblerBalanceMult -= uint112(gobblerMult * MULT_SCALAR);
+            _gobblerBalanceMult -= uint112(gobblerMult);
         }
         uint112 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
         require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
@@ -439,7 +426,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             }
         }
         // Update accumulators, kLast, kDebt
-        _update(uint112(gooBalance), gobblerReserve * MULT_SCALAR, gooReserve, gobblerReserve * MULT_SCALAR, true);
+        _update(uint112(gooBalance), gobblerReserve, gooReserve, gobblerReserve, true);
     }
 
     /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.
@@ -560,7 +547,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 revert InvalidMultiplier(gobblers[i]);
             }
             artGobblers.transferFrom(address(this), receiver, gobblers[i]);
-            _gobblerBalanceMult -= uint112(gobblerMult * MULT_SCALAR);
+            _gobblerBalanceMult -= uint112(gobblerMult);
         }
 
         // Measure change
@@ -620,7 +607,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             // Optimistically transfer gobblers if any
             if (parameters.gobblersOut.length > 0) {
                 for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
-                    multOut += _scaledTokenMultiple(parameters.gobblersOut[i]);
+                    multOut += uint112(artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i]));
                     artGobblers.transferFrom(address(this), parameters.receiver, parameters.gobblersOut[i]);
                 }
             }
