@@ -106,6 +106,66 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         assertEq(goober.decimals(), 18);
     }
 
+    function testMintRevertCaller() public {
+        vm.startPrank(msg.sender);
+        //Revert if not Minter.
+        vm.expectRevert();
+        goober.mintGobbler();
+        vm.stopPrank();
+    }
+
+    function test_mint() public {
+        // Safety check to verify starting gobblerPrice is correct.
+        assertEq(gobblers.gobblerPrice(), 73013654753028651285);
+
+        // Add enough Goo to vault to mint a single Gobbler.
+        _writeTokenBalance(address(this), address(goo), 1000 ether);
+
+        uint256[] memory artGobbler = new uint256[](1);
+        artGobbler[0] = gobblers.mintFromGoo(75 ether, false);
+        // Check to see we own the 1st Gobbler.
+        assertEq(gobblers.ownerOf(1), address(this));
+        // Warp a day ahead until we can reveal.
+        vm.warp(block.timestamp + 86400);
+        setRandomnessAndReveal(1, "seed");
+        uint256 gobblerMult = (gobblers.getGobblerEmissionMultiple(artGobbler[0]));
+        // Based on our seed, we get a mult of 9 here.
+        assertEq(gobblerMult, 9);
+
+        // Pool is setup by depositing 1 gobbler and 53 goo.
+        // We do this after warp to not accrue extra goo.
+        uint256 gooTokens = 53 ether;
+        address me = address(this);
+        goober.deposit(artGobbler, gooTokens, me);
+
+        // Safety check to verify new mint price after warp.
+        assertEq(gobblers.gobblerPrice(), 52987405899699731484);
+
+        // Now we have pool goo = 53 and pool mult = 9.
+        // The goo/mult of our pool is <= goo/mult of the auction,
+        // since: 53 / 9 = 5 <= 52.987 / 7.3294 ~= 7.
+        // We also have enough goo to mint a single gobbler.
+        // NOTE(Getting both of the aboveto be true is a very delicate
+        // balance, especially tricky if you want to test minting
+        // more than 1 gobbler here.)
+        goober.mintGobbler();
+        // Check contract owns second minted gobbler.
+        assertEq(gobblers.ownerOf(2), address(goober));
+
+        // Check to see updated pool balance after reveal.
+        vm.warp(block.timestamp + 86400);
+        // Changing the seed string changes the randomness, and thus the rolled mult.
+        setRandomnessAndReveal(1, "seed2");
+        // _newGobblerReserve is scaled up by 1e3
+        (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
+        // We mint an 6 mult here, so we have 15 total mult including the previous 9.
+        assertEq(_newGobblerReserve, 15000);
+        // 24.9926 Goo
+        assertEq(_newGooReserve, 2599264417825316518);
+
+        // TODO(Check k)
+    }
+
     function test_swap() public {
         _writeTokenBalance(address(this), address(goo), 2000 ether);
         gobblers.addGoo(500 ether);
