@@ -115,6 +115,27 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // Internal: Non-Mutating
     //////////////////////////////////////////////////////////////*/
 
+    function _kCalculations(uint112 _gooBalance, uint112 _gobblerBalance, uint112 _kLast, bool _roundUp)
+        internal
+        pure
+        returns (uint112 _k, uint112 _kChange, bool _kChangeSign, uint256 _kDelta)
+    {
+        _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
+        _kChangeSign = _k > _kLast;
+        // Get the gross change in K as a numeric
+        _kChange = _kChangeSign ? _k - _kLast : _kLast - _k;
+        _kChange = _k - _kLast;
+        if (_roundUp) {
+            _kDelta = _kChangeSign
+                ? FixedPointMathLib.divWadUp(_k - _kLast, _kLast)
+                : FixedPointMathLib.divWadUp(_kLast - _k, _kLast);
+        } else {
+            _kDelta = _kChangeSign
+                ? FixedPointMathLib.divWadDown(_k - _kLast, _kLast)
+                : FixedPointMathLib.divWadDown(_kLast - _k, _kLast);
+        }
+    }
+
     /// @notice Returns the management fee given an amount of new fractions created on deposit.
     /// @param fractions New fractions issued for a deposit.
     function _previewManagementFee(uint256 fractions) internal pure returns (uint256 fee) {
@@ -179,7 +200,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         uint256 _gobblerBalance,
         uint112 _gooReserve,
         uint112 _gobblerReserve,
-        bool recordDebt
+        bool recordDebt,
+        bool updateK
     ) internal {
         // Check if the reserves will overflow
         /// @dev on the off chance they do, the feeTo has an escape valve in skimGoo.
@@ -211,19 +233,23 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         /// @dev We don't store reserves here as they are already stored in other contracts and there was no
         // need to duplicate the state changes
 
-        // Get the present K.
-        uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
+        if (updateK || recordDebt) {
+            // Get the present K.
+            uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
 
-        // Read the last K from storage.
-        uint112 _kLast = kLast;
+            // Read the last K from storage.
+            uint112 _kLast = kLast;
 
-        // If K decreased, record the debt
-        if ((_k < _kLast) && recordDebt) {
-            kDebt += _kLast - _k;
+            // If K decreased, record the debt
+            if ((_k < _kLast) && recordDebt) {
+                kDebt += _kLast - _k;
+            }
+
+            if (updateK) {
+                // Update historic k.
+                kLast = _k;
+            }
         }
-
-        // Update historic k.
-        kLast = _k;
 
         // Emit the reserves which can be used to chart the growth of the pool.
         emit Sync(uint112(_gooBalance), uint112(_gobblerBalance));
@@ -426,7 +452,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             }
         }
         // Update accumulators, kLast, kDebt
-        _update(uint112(gooBalance), gobblerReserve, gooReserve, gobblerReserve, true);
+        _update(uint112(gooBalance), gobblerReserve, gooReserve, gobblerReserve, true, true);
     }
 
     /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.
@@ -445,7 +471,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Transfer the excess goo to the admin for handling
         goo.safeTransfer(msg.sender, contractGooBalance);
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
-        _update(_gooReserve, _gobblerReserveMult, _gooReserve, _gobblerReserveMult, false);
+        // TODO(Is this right?)
+        _update(_gooReserve, _gobblerReserveMult, _gooReserve, _gobblerReserveMult, false, false);
     }
 
     function flagGobbler(uint256 tokenId, bool _flagged) public onlyFeeTo {
@@ -509,7 +536,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _mint(receiver, fractions);
 
         // Update kLast and accumulators
-        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false);
+        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false, true);
 
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, fractions);
     }
@@ -579,7 +606,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _burn(owner, fractions);
 
         // update reserves
-        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false);
+        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false, true);
 
         emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, fractions);
     }
@@ -646,10 +673,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
             require((balance0Adjusted * balance1Adjusted) >= ((_gooReserve * _gobblerReserve) * 1000 ** 2), "Goober: K");
         }
-        // Asses performance fee on the growth of k.
-        _performanceFee(_gooBalance, _gobblerBalance);
         // Update oracle
-        _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false);
+        _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
         emit Swap(msg.sender, parameters.receiver, amount0In, amount1In, parameters.gooOut, multOut);
     }
 }
