@@ -173,7 +173,7 @@ contract GooberTest is Test {
         emit Deposit(users[1], users[1], users[1], artGobblers, gooToDeposit, 999);
 
         /*uint256 fractions = */
-        goober.deposit(artGobblers, gooToDeposit, users[1], users[1]);
+        goober.deposit(artGobblers, gooToDeposit, users[1]);
 
         // Goo is transferred into vault
         // assertEq(gobblers.gooBalance(users[1]), x); TODO
@@ -242,7 +242,7 @@ contract GooberTest is Test {
         _setRandomnessAndReveal(3, "seed");
 
         /*uint256 fractions = */
-        goober.deposit(artGobblers, 500 * 10 ** 18, users[1], users[1]);
+        goober.deposit(artGobblers, 500 * 10 ** 18, users[1]);
 
         // TODO
 
@@ -277,7 +277,7 @@ contract GooberTest is Test {
 
         _setRandomnessAndReveal(3, "seed");
 
-        goober.deposit(artGobblers, 500 * 10 ** 18, users[1], users[1]);
+        goober.deposit(artGobblers, 500 * 10 ** 18, users[1]);
 
         vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
 
@@ -302,7 +302,7 @@ contract GooberTest is Test {
 
         _setRandomnessAndReveal(3, "seed");
 
-        goober.deposit(artGobblers, 500 * 10 ** 18, users[1], users[1]);
+        goober.deposit(artGobblers, 500 * 10 ** 18, users[1]);
 
         vm.expectRevert("Goober: MUST LEAVE LIQUIDITY");
 
@@ -346,13 +346,13 @@ contract GooberTest is Test {
         _setRandomnessAndReveal(3, "seed");
 
         uint256 gooTokens = 200 * 10 ** 18;
-        uint256 fractions = goober.deposit(artGobblers, gooTokens, users[1], users[1]);
+        uint256 fractions = goober.deposit(artGobblers, gooTokens, users[1]);
 
         // TODO
 
         bytes memory data;
         IGoober.SwapParams memory swap =
-            IGoober.SwapParams(artGobblersThree, 0 * 10 ** 18, artGobblersTwo, 100 * 10 ** 18, users[1], users[1], data);
+            IGoober.SwapParams(artGobblersThree, 0 * 10 ** 18, artGobblersTwo, 100 * 10 ** 18, users[1], data);
         goober.swap(swap);
 
         fractions = goober.withdraw(artGobblersTwo, 100 * 10 ** 18, users[1], users[1]);

@@ -1,8 +1,12 @@
 {
     "solc_args": "optimize",
     "solc_remaps": [
+        "VRGDAs/=lib/art-gobblers/lib/VRGDAs/src/",
         "art-gobblers/=lib/art-gobblers/src/",
+        "chainlink/=lib/art-gobblers/lib/chainlink/contracts/src/",
+        "ds-test/=lib/forge-std/lib/ds-test/src/",
         "forge-std/=lib/forge-std/src/",
+        "goo-issuance/=lib/art-gobblers/lib/goo-issuance/src/",
         "solmate/=lib/solmate/src/"
     ]
 }

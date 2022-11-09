@@ -52,9 +52,6 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
     }
 
     function setUp() public {
-        // Fork mainnet
-        vm.createSelectFork(vm.envString("RPC_URL"), 15_895_231);
-
         //
         utils = new Utilities();
         users = utils.createUsers(5);
@@ -123,11 +120,11 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         setRandomnessAndReveal(3, "seed");
         uint256 gooTokens = 200 ether;
         address me = address(this);
-        uint256 shares = goober.deposit(artGobblers, gooTokens, me, me);
+        uint256 shares = goober.deposit(artGobblers, gooTokens, me);
 
         bytes memory data;
         IGoober.SwapParams memory swap =
-            IGoober.SwapParams(artGobblersThree, 0 ether, artGobblersTwo, 100 ether, me, me, data);
+            IGoober.SwapParams(artGobblersThree, 0 ether, artGobblersTwo, 100 ether, me, data);
         goober.swap(swap);
 
         shares = goober.withdraw(artGobblersTwo, 100 ether, me, me);
@@ -150,7 +147,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         assertEq(goo.balanceOf(address(this)), 1);
         assertEq(goo.balanceOf(address(goober)), 0);
         //Revert when no goo in goobler contract.
-        vm.expectRevert(abi.encodePacked("NO_GOO_IN_CONTRACT"));
+        vm.expectRevert(IGoober.NoSkim.selector);
         goober.skimGoo();
     }
 }

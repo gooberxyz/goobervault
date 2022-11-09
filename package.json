@@ -13,9 +13,9 @@
     "fmt:check": "forge fmt --check",
     "solhint": "solhint --config ./.solhint.json 'src/**/*.sol' --fix",
     "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
-    "lint": "npm run fmt && npm run solhint",
-    "lint:check": "npm run fmt:check && npm run solhint:check",
-    "test": "forge test -vvv --rpc-url=${ETH_RPC_URL} --fork-block-number 15895231"
+    "lint": "npm run fmt && npm run solhint && forge snapshot",
+    "lint:check": "npm run fmt:check && npm run solhint:check && forge snapshot --check",
+    "test": "forge test -vvvv --optimize"
   },
   "devDependencies": {
     "solhint": "^3.3.6"

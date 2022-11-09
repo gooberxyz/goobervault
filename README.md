@@ -1,12 +1,7 @@
 # Goober Vault
 
-A pausable/upgradable EIP-4626 like vault for optimizing goo/goober ratio.
 
-## To Do List
+![ci](https://github.com/gooberxyz/goobervault/actions/workflows/CI.yml/badge.svg)
+[![codecov](https://codecov.io/gh/gooberxyz/goobervault/branch/master/graph/badge.svg)](https://codecov.io/gh/gooberxyz/goobervault/)
 
-1. Bonding Curve
-2. Deposit/Withdrawal functionality
-3. Tests for curve w deposit/withdrawal and emissions
-4. Gobbler mint capabilities from vault
-5. Swap support
-6. Flashloan capabilites
+A special flavor of Uniswap V2 meets EIP-4626 to form a yield optimized goo/gobbler vault.
