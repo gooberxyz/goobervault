@@ -158,7 +158,7 @@ contract GooberTest is Test {
         assertEq(gobblers.ownerOf(artGobblers[0]), users[1]);
         assertEq(gobblers.ownerOf(artGobblers[1]), users[1]);
 
-        vm.warp(block.timestamp + 172_800);
+        vm.warp(block.timestamp + 2 days);
 
         _setRandomnessAndReveal(3, "seed");
 
@@ -312,12 +312,12 @@ contract GooberTest is Test {
     // Get reserves
     // Check receiver address is not Goo nor Gobbler
     // Transfer any Goo or Gobblers to correct out addresses
-    // If flash loan —
-    //      Transfer any Goo or Gobblers IN
+    // If flash loan, call flash loan
+    // Transfer any Goo or Gobblers IN
     // Get reserves again
-    // Calculate amounts in
+    // Calculate amounts in — did we get more in than we got out? good, otherwise bad
     // Check at least some Goo or Gobblers are being swapped in
-    // Check k
+    // Check growth of k
     // Assess performance fee on growth of k
     // Update reserves
     // Emit event
@@ -434,7 +434,35 @@ contract GooberTest is Test {
         assertEq(expected, actual);
     }
 
-    // previewSwap
+    function testPreviewSwap() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory gobblersOut = new uint256[](1);
+        gobblersOut[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.stopPrank();
+
+        vm.startPrank(users[2]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory gobblersIn = new uint256[](2);
+        gobblersIn[0] = gobblers.mintFromGoo(100 ether, true);
+        gobblersIn[1] = gobblers.mintFromGoo(100 ether, true);
+        gobblers.mintFromGoo(100 ether, true); // mint but don't plan to swap
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 2 days);
+        _setRandomnessAndReveal(3, "seed");
+
+        vm.startPrank(users[1]);
+        goober.deposit(gobblersOut, 200 ether, users[1]);
+        vm.stopPrank();
+
+        //
+        uint256 gooIn = 10 ether;
+        uint256 gooOut = 0;
+
+        uint256 expectedAdditionalGooRequired = 456; // difference in, difference out, total volume plus 30 bps
+        assertEq(goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut), expectedAdditionalGooRequired);
+    }
 
     /*//////////////////////////////////////////////////////////////
     // Mint Gobbler
