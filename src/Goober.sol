@@ -315,7 +315,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     /// @notice Previews a deposit of the supplied gobblers goo.
     /// @param gobblers - array of gobbler ids
-    /// @param gooTokens - amount of goo to withdraw
+    /// @param gooTokens - amount of goo to deposit
     /// @return fractions - amount of GBR minted
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) public view returns (uint256 fractions) {
         fractions = 0;
@@ -427,11 +427,11 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         uint112 gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
 
         // Should we mint?
-        bool mint = (gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
+        bool mint = (gooBalance / gobblerReserve) >= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
         // Mint counter
         uint16 minted = 0;
         if (mint == false) {
-            revert("Pool Goo per Mult higher than Auction's");
+            revert("Pool Goo per Mult lower than Auction's");
         } else {
             // Mint Gobblers to pool when our Goo per Mult < Auction (VRGDA) Goo per Mult
             while (mint) {
@@ -440,7 +440,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                     artGobblers.mintFromGoo(mintPrice, true);
                     // TODO(Can we calculate the increase without an sload here?)
                     mintPrice = artGobblers.gobblerPrice();
-                    mint = (gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
+                    mint = (gooBalance / gobblerReserve) >= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
                     minted++;
                 } else {
                     mint = false;
@@ -481,7 +481,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver
     /// @param gobblers - array of gobbler ids
-    /// @param gooTokens - amount of goo to withdraw
+    /// @param gooTokens - amount of goo to deposit
     /// @param receiver - address to receive GBR
     /// @return fractions - amount of GBR minted
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
