@@ -159,7 +159,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // _newGobblerReserve is scaled up by 1e3
         (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
         // We mint an 6 mult here, so we have 15 total mult including the previous 9.
-        assertEq(_newGobblerReserve, 15000);
+        assertEq(_newGobblerReserve, 15);
         // 24.9926 Goo
         assertEq(_newGooReserve, 2599264417825316518);
 
