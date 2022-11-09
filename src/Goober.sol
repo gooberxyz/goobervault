@@ -326,9 +326,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Mutating external/public functions
 
-    /// @notice Previews a deposit of the supplied gobblers goo.
+    /// @notice Previews a deposit of the supplied gobblers and goo.
     /// @param gobblers - array of gobbler ids
-    /// @param gooTokens - amount of goo to withdraw
+    /// @param gooTokens - amount of goo to deposit
     /// @return fractions - amount of GBR minted
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) external view returns (uint256 fractions) {
         fractions = 0;
@@ -481,10 +481,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Other Privileged Functions
 
-    // @notice Mints Gobblers using the vault's virtual reserves of Goo if the pool's goo per mult is lower than VRGDA goo per mult.
-    function mintGobbler() public nonReentrant onlyMinter {
-        // This function is restricted to onlyMinter because we don't want
-        // the general public to use it to manipulate the goo price.
+    /// @notice Mints Gobblers using the vault's virtual reserves of Goo
+    /// @notice if specific curve balancing conditions are met
+    /// TODO(Add a revert return to allow for an initally simple keeper)
+    function mintGobbler() public nonReentrant onlyMinter returns (uint16) {
+        /// @dev Restricted to onlyMinter to prevent Goo price manipulation
+        /// @dev Prevent reentrancy in case onlyMinter address/keeper is compromised.
 
         // Get the mint price
         uint256 mintPrice = artGobblers.gobblerPrice();
@@ -494,21 +496,29 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         uint112 gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
 
         // Should we mint?
-        bool mint = (gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
-        // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
-        while (mint) {
-            if (gooBalance >= mintPrice) {
-                gooBalance -= mintPrice;
-                artGobblers.mintFromGoo(mintPrice, true);
-                // TODO(Can we calculate the increase without an sload here?)
-                mintPrice = artGobblers.gobblerPrice();
-                mint = (gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
-            } else {
-                mint = false;
+        bool mint = (gooBalance / gobblerReserve) >= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
+        // Mint counter
+        uint16 minted = 0;
+        if (mint == false) {
+            revert("Pool Goo per Mult lower than Auction's");
+        } else {
+            // Mint Gobblers to pool when our Goo per Mult < Auction (VRGDA) Goo per Mult
+            while (mint) {
+                if (gooBalance >= mintPrice) {
+                    gooBalance -= mintPrice;
+                    artGobblers.mintFromGoo(mintPrice, true);
+                    // TODO(Can we calculate the increase without an sload here?)
+                    mintPrice = artGobblers.gobblerPrice();
+                    mint = (gooBalance / gobblerReserve) >= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
+                    minted++;
+                } else {
+                    mint = false;
+                }
             }
         }
         // Update accumulators, kLast, kDebt
         _update(uint112(gooBalance), gobblerReserve, gooReserve, gobblerReserve, true, true);
+        return minted;
     }
 
     /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.
@@ -541,7 +551,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver
     /// @param gobblers - array of gobbler ids
-    /// @param gooTokens - amount of goo to withdraw
+    /// @param gooTokens - amount of goo to deposit
     /// @param receiver - address to receive GBR
     /// @return fractions - amount of GBR minted
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
