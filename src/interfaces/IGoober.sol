@@ -68,6 +68,20 @@ interface IGoober is IERC721Receiver {
 
     event Sync(uint112 gooBalance, uint112 multBalance);
 
+    // Functions, Non-Mutating
+
+    function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) external view returns (uint256 fractions);
+
+    function previewWithdraw(uint256[] calldata gobblers, uint256 gooTokens)
+        external
+        view
+        returns (uint256 fractions);
+
+    // function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
+    //     external
+    //     view
+    //     returns (uint256 additionalGooRequired);
+
     // Functions
 
     /**
