@@ -164,6 +164,12 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         assertEq(_newGooReserve, 2599264417825316518);
 
         // TODO(Check k)
+
+        //Test if we can pull Gobbler out of pool.
+        uint256[] memory artGobblerFromMint = new uint256[](1);
+        artGobblerFromMint[0] = 2; //Gobbler with tokenId = 2.
+        goober.withdraw(artGobblerFromMint, 0, me, me); //Withdraw Gobbler minted from Goober based on shares minted from kDebt.
+        assertEq(gobblers.ownerOf(2), me); //Check if we own the Gobbler now.
     }
 
     function test_swap() public {
