@@ -32,9 +32,9 @@ contract GooberTest is Test {
 
     Utilities internal utils;
     address payable[] internal users;
-    address internal FEE_TO = address(0xFEEE);
-    address internal MINTER = address(0x1337);
-    address internal OTHER = address(0xDEAD);
+    address internal constant FEE_TO = address(0xFEEE);
+    address internal constant MINTER = address(0x1337);
+    address internal constant OTHER = address(0xDEAD);
 
     ArtGobblers internal gobblers;
     VRFCoordinatorMock internal vrfCoordinator;
@@ -50,10 +50,12 @@ contract GooberTest is Test {
 
     uint256[] internal ids;
 
-    uint256 internal START_BAL = 2000 ether;
+    uint256 internal constant START_BAL = 2000 ether;
+    uint256 internal constant TIME0 = 2_000_000_000; // now-ish unix timestamp
 
     function setUp() public {
-        //
+        vm.warp(TIME0);
+
         utils = new Utilities();
         users = utils.createUsers(11);
         linkToken = new LinkToken();
@@ -128,6 +130,43 @@ contract GooberTest is Test {
         assertEq(goober.minter(), MINTER);
     }
 
+    function testSetRandomnessAndRevealHelper() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        gobblers.mintFromGoo(100 ether, true);
+        gobblers.mintFromGoo(100 ether, true);
+        gobblers.mintFromGoo(100 ether, true);
+
+        // Reveal 3 at once
+        vm.warp(block.timestamp + 1 days);
+
+        _setRandomnessAndReveal(3, "seed");
+
+        assertEq(gobblers.getGobblerEmissionMultiple(1), 9);
+        assertEq(gobblers.getGobblerEmissionMultiple(2), 8);
+        assertEq(gobblers.getGobblerEmissionMultiple(3), 6);
+
+        // Reveal one at a time
+        gobblers.addGoo(500 ether);
+        gobblers.mintFromGoo(100 ether, true);
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(1, "seed");
+        assertEq(gobblers.getGobblerEmissionMultiple(1), 9);
+
+        gobblers.addGoo(500 ether);
+        gobblers.mintFromGoo(100 ether, true);
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(1, "seed");
+        assertEq(gobblers.getGobblerEmissionMultiple(1), 9);
+
+        gobblers.addGoo(500 ether);
+        gobblers.mintFromGoo(100 ether, true);
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(1, "seed");
+        assertEq(gobblers.getGobblerEmissionMultiple(1), 9);
+        vm.stopPrank();
+    }
+
     /*//////////////////////////////////////////////////////////////
     // Deposit
     //////////////////////////////////////////////////////////////*/
@@ -145,31 +184,48 @@ contract GooberTest is Test {
         vm.startPrank(users[1]);
         gobblers.addGoo(500 ether);
         uint256[] memory artGobblers = new uint256[](2);
-        uint256[] memory artGobblersHold = new uint256[](1);
-
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
-        artGobblersHold[0] = gobblers.mintFromGoo(100 ether, true);
+        uint256 gooToDeposit = 200 ether;
 
         // Precondition checks
-        uint256 gooToDeposit = 200 ether;
-        // assertEq(gobblers.gooBalance(users[1]), x); TODO
+        // Goo ownership
+        uint256 userGooBalance = gobblers.gooBalance(users[1]);
         assertEq(gobblers.gooBalance(address(goober)), 0);
+        // Gobbler ownership
         assertEq(gobblers.ownerOf(artGobblers[0]), users[1]);
         assertEq(gobblers.ownerOf(artGobblers[1]), users[1]);
+        // Fractions of depositor
+        assertEq(goober.balanceOf(users[1]), 0);
+        // Total assets and Reserve balances
+        (uint256 gooTokens, uint256 gobblerMult) = goober.totalAssets();
+        assertEq(gooTokens, 0);
+        assertEq(gobblerMult, 0);
+        (uint112 gooReserve, uint112 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
+        assertEq(gooReserve, 0);
+        assertEq(gobblerReserve, 0);
+        assertEq(blockTimestampLast, 0);
 
-        vm.warp(block.timestamp + 2 days);
+        // Reveal
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(2, "seed");
 
-        _setRandomnessAndReveal(3, "seed");
+        // Check Deposit event
+        // vm.expectEmit(true, true, true, false);
+        // emit Deposit(users[1], users[1], artGobblers, gooToDeposit, 0);
 
-        vm.expectEmit(true, true, true, false);
-        emit Deposit(users[1], users[1], artGobblers, gooToDeposit, 999);
+        // Check FeesAccrued events
+        // vm.expectEmit(true, true, true, false);
+        // emit FeesAccrued(FEE_TO, 0, true, 0); // no performance fee assessed
+        // vm.expectEmit(true, true, true, false);
+        // emit FeesAccrued(FEE_TO, 0, false, 0); // management fee
 
-        /*uint256 fractions = */
-        goober.deposit(artGobblers, gooToDeposit, users[1]);
+        // Deposit 2 gobblers and 200 goo
+        uint256 fractions = goober.deposit(artGobblers, gooToDeposit, users[1]);
+        vm.stopPrank();
 
         // Goo is transferred into vault
-        // assertEq(gobblers.gooBalance(users[1]), x); TODO
+        assertEq(gobblers.gooBalance(users[1]), userGooBalance); // no change
         assertEq(gobblers.gooBalance(address(goober)), gooToDeposit);
 
         // Gobblers are transferred into vault
@@ -177,13 +233,17 @@ contract GooberTest is Test {
         assertEq(gobblers.ownerOf(artGobblers[1]), address(goober));
 
         // Fractions are minted to depositor
-        // TODO
+        assertEq(goober.balanceOf(users[1]), fractions);
 
         // Reserve balances and total assets are updated
-        // TODO
-
-        // Management and performance fees were accrued
-        // TODO
+        uint256 expectedGobblerMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(2);
+        (uint256 gooTokensAfter, uint256 gobblerMultAfter) = goober.totalAssets();
+        assertEq(gooTokensAfter, gooToDeposit);
+        assertEq(gobblerMultAfter, expectedGobblerMult);
+        (uint112 gooReserveAfter, uint112 gobblerReserveAfter, uint32 blockTimestampLastAfter) = goober.getReserves();
+        assertEq(gooReserveAfter, gooToDeposit);
+        assertEq(gobblerReserveAfter, expectedGobblerMult);
+        assertEq(blockTimestampLastAfter, TIME0 + 1 days);
     }
 
     // function testDepositWhenOnlyGoo() public {
@@ -421,7 +481,7 @@ contract GooberTest is Test {
         uint256[] memory artGobblersThree = new uint256[](1);
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
-        artGobblersThree[0] = gobblers.mintFromGoo(100 ether, true);
+        artGobblersThree[0] = gobblers.mintFromGoo(100 ether, true);        
         vm.warp(block.timestamp + 1 days);
         _setRandomnessAndReveal(3, "seed");
         goober.deposit(artGobblers, 100 ether, users[1]);
@@ -692,10 +752,8 @@ contract GooberTest is Test {
                         Events
     //////////////////////////////////////////////////////////////*/
 
-    // TODO(Duplicating these is sub optimal, we should use the interface)
-
     event Deposit(
-        address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 shares
+        address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
     );
 
     event Withdraw(
@@ -704,13 +762,13 @@ contract GooberTest is Test {
         address indexed owner,
         uint256[] gobblers,
         uint256 gooTokens,
-        uint256 shares
+        uint256 fractions
     );
 
-    event FeesAccrued(address indexed feeTo, uint256 shares, bool performanceFee);
+    event FeesAccrued(address indexed feeTo, uint256 fractions, bool performanceFee, uint256 _deltaK);
 
     event Swap(
-        address indexed sender,
+        address indexed caller,
         address indexed receiver,
         uint256 gooTokensIn,
         uint256 gobblersMultIn,
