@@ -772,7 +772,7 @@ contract GooberTest is Test {
     }
 
     function testEmitMintLowGoo() public {
-    // TODO(Add custom event emit for too low goo to mint and test it)
+        // TODO(Add custom event emit for too low goo to mint and test it)
     }
 
     /*//////////////////////////////////////////////////////////////
