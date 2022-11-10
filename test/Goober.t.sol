@@ -626,10 +626,11 @@ contract GooberTest is Test {
         goober.deposit(gobblersOut, 100 ether, users[1]);
         vm.stopPrank();
 
-        uint256 gooIn = 0.301808133 ether;
+        uint256 gooIn = 301808432424373119;
         uint256 gooOut = 0 ether;
 
-        // TODO(Should be 0.3009027, but seems to be ~0.301808133, perhaps due to the small multiplier)
+        // You'd think it'd be 300902708124373119, but, you need to pay 30 bps
+        // on the 30 bps, etc and its 301808432424373119.
         uint256 expectedAdditionalGooRequired = 0 ether;
         uint256 previewAdditionalGooRequired = uint256(goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut));
         // TODO(Fix imprecision in swap function)
