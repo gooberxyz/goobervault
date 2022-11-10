@@ -681,7 +681,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             // Transfer out
 
             // Optimistically transfer goo if any
-            if (parameters.gooOut >= 0) {
+            if (parameters.gooOut > 0) {
                 artGobblers.removeGoo(parameters.gooOut);
                 goo.safeTransfer(parameters.receiver, parameters.gooOut);
             }
@@ -689,7 +689,11 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             // Optimistically transfer gobblers if any
             if (parameters.gobblersOut.length > 0) {
                 for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
-                    multOut += uint112(artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i]));
+                    uint256 gobblerMult = artGobblers.getGobblerEmissionMultiple(parameters.gobblersIn[i]);
+                    if (gobblerMult < 6) {
+                        revert InvalidMultiplier(parameters.gobblersIn[i]);
+                    }
+                    multOut += uint112(gobblerMult);
                     artGobblers.transferFrom(address(this), parameters.receiver, parameters.gobblersOut[i]);
                 }
             }
@@ -701,17 +705,14 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         {
             // Transfer in
 
-            // Transfer goo if any
+            // Transfer in goo if any
             if (parameters.gooIn > 0) {
                 goo.safeTransferFrom(msg.sender, address(this), parameters.gooIn);
                 artGobblers.addGoo(parameters.gooIn);
             }
 
-            // Transfer gobblers if any
+            // Transfer in gobblers if any
             for (uint256 i = 0; i < parameters.gobblersIn.length; i++) {
-                if (artGobblers.getGobblerEmissionMultiple(parameters.gobblersIn[i]) < 6) {
-                    revert InvalidMultiplier(parameters.gobblersIn[i]);
-                }
                 artGobblers.safeTransferFrom(msg.sender, address(this), parameters.gobblersIn[i]);
             }
         }
@@ -719,14 +720,15 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         (uint112 _gooBalance, uint112 _gobblerBalance,) = getReserves();
 
         uint256 amount0In =
-            _gooBalance > _gooReserve - parameters.gooOut ? _gooBalance - (_gooReserve - parameters.gooOut) : 0;
+        _gooBalance > _gooReserve - parameters.gooOut ? _gooBalance - (_gooReserve - parameters.gooOut) : 0;
         uint256 amount1In =
-            _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
+        _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
         require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
         {
             uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
+            // Scale this to prevent a loss of precision
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-            require((balance0Adjusted * balance1Adjusted) >= ((_gooReserve * _gobblerReserve) * 1000 ** 2), "Goober: K");
+            require(balance0Adjusted * balance1Adjusted >= (_gooReserve * _gobblerReserve) * 1000 ** 2, "Goober: K");
         }
         // Update oracle
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
