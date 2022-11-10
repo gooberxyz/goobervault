@@ -446,7 +446,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
             if (balance0Adjusted * balance1Adjusted <= (_gooReserve * _gobblerReserve) * 1000 ** 2) {
                 // We know that we can only pay fees in goo, balance1
-                additionalGooRequired = (_gooReserve * _gobblerReserve) * 1000 ** 2;
+                additionalGooRequired = 0;
             }
         }
     }
