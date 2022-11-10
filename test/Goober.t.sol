@@ -752,7 +752,6 @@ contract GooberTest is Test {
         // Tries to mint a gobbler and expects revert.
         // We have enough goo to mint, so should revert due
         // to failing to maintain the conditional ratio.
-        // TODO(Add custom event emit for too low goo to mint and test it)
         vm.prank(MINTER);
         vm.expectRevert(bytes("Pool Goo per Mult lower than Auction's"));
         goober.mintGobbler();
@@ -772,7 +771,9 @@ contract GooberTest is Test {
         goober.mintGobbler();
     }
 
-    function testEmitMintLowGoo() public {}
+    function testEmitMintLowGoo() public {
+    // TODO(Add custom event emit for too low goo to mint and test it)
+    }
 
     /*//////////////////////////////////////////////////////////////
     // Flag Gobbler
