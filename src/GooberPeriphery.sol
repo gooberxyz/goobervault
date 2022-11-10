@@ -20,11 +20,41 @@ contract GooberPeriphery {
 
     constructor(address _gooberAddress) {
         goober = Goober(_gooberAddress);
+
+        goober.artGobblers().setApprovalForAll(address(goober), true);
+        goober.goo().approve(address(goober), type(uint256).max);
     }
 
     modifier ensure(uint256 deadline) {
-        require(deadline >= block.timestamp, "Goober: EXPIRED");
+        require(deadline >= block.timestamp, "GooberPeriphery: EXPIRED");
         _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    // External: Non Mutating
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Handle deposits of Art Gobblers with an on receive hook, verifying characteristics.
+    /// @dev We don't accept non art gobbler NFTs, Art Gobblers with invalid multiples.
+    function onERC721Received(address, address, uint256 tokenId, bytes calldata) external view returns (bytes4) {
+        /// @dev We only want Art Gobblers NFTs
+        if (msg.sender != address(goober.artGobblers())) {
+            revert IGoober.InvalidNFT();
+        }
+
+        // TODO: Do we need this here?
+        /// @dev revert on flagged NFTs
+        // if (flagged[tokenId] == true) {
+        //     revert InvalidNFT();
+        // }
+
+        /// @dev We want to make sure the gobblers we are getting are revealed.
+        uint256 gobMult = goober.artGobblers().getGobblerEmissionMultiple(tokenId);
+        if (gobMult < 6) {
+            revert IGoober.InvalidMultiplier(tokenId);
+        }
+
+        return IERC721Receiver.onERC721Received.selector;
     }
 
     function deposit(
@@ -34,6 +64,12 @@ contract GooberPeriphery {
         uint256 minFractionsOut,
         uint256 deadline
     ) external ensure(deadline) returns (uint256 fractionsOut) {
+        goober.goo().transferFrom(msg.sender, address(this), gooTokens);
+
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            goober.artGobblers().safeTransferFrom(msg.sender, address(this), gobblers[i]);
+        }
+
         fractionsOut = goober.deposit(gobblers, gooTokens, receiver);
 
         require(fractionsOut >= minFractionsOut, "GooberPeriphery: INSUFFICIENT_LIQUIDITY_MINTED");
