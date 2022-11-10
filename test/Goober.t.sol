@@ -626,20 +626,21 @@ contract GooberTest is Test {
         goober.deposit(gobblersOut, 100 ether, users[1]);
         vm.stopPrank();
 
-        uint256 gooIn = 301808432424373119;
+        uint256 gooIn = 301808132521938937;
         uint256 gooOut = 0 ether;
 
         // TODO(Fix preview and swap erroneous goo)
         // You'd think it'd be 300902708124373119, but, you need to pay 30 bps
         // on the 30 bps, etc and its 301808432424373119. This has some imprecision at the 9th decimal to fix
-        int256 expectedAdditionalGooRequired = 301808132521938936;
+        int256 expectedAdditionalGooRequired = 301808132521938937;
         int256 previewAdditionalGooRequired = goober.previewSwap(gobblersIn, 0, gobblersOut, gooOut);
         // TODO(Fix imprecision in swap function)
         assertEq(previewAdditionalGooRequired, expectedAdditionalGooRequired);
         vm.startPrank(users[2]);
         bytes memory data;
         IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn, users[2], data);
-        goober.swap(swap);
+        int256 erroneousGoo = goober.swap(swap);
+        assertEq(erroneousGoo, int256(0));
         vm.stopPrank();
     }
 
