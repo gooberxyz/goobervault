@@ -272,8 +272,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         return fee;
     }
 
-    /// @notice Returns and mints the management fee given an amount of new shares created on deposit.
-    /// @param fractions New shares issued for a deposit.
+    /// @notice Returns and mints the management fee given an amount of new fractions created on deposit.
+    /// @param fractions New fractions issued for a deposit.
     function _managementFee(uint256 fractions) internal returns (uint256 fee) {
         fee = _previewManagementFee(fractions);
         _mint(feeTo, fee);
@@ -363,7 +363,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @notice Previews a withdraw of the requested gobblers and goo tokens from the vault.
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
-    /// @return fractions - amount of shares that have been withdrawn
+    /// @return fractions - amount of fractions that have been withdrawn
     function previewWithdraw(uint256[] calldata gobblers, uint256 gooTokens)
         external
         view
@@ -546,7 +546,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Get reserve balances before they are updated from deposit transfers
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves(); // gas savings
 
-        // Asses performance fee since last transaction
+        // Assess performance fee since last transaction
         _performanceFee(_gooReserve, _gobblerReserveMult);
 
         // Transfer goo if any
@@ -579,7 +579,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
         }
 
-        // Mint shares to depositor less management fee
+        // Mint fractions to depositor less management fee
         fractions -= _managementFee(fractions);
         _mint(receiver, fractions);
 
@@ -593,8 +593,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
     /// @param receiver - address to receive the goo and gobblers
-    /// @param owner - owner of the shares to be withdrawn
-    /// @return fractions - amount of shares that have been withdrawn
+    /// @param owner - owner of the fractions to be withdrawn
+    /// @return fractions - amount of fractions that have been withdrawn
     function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
         external
         nonReentrant
@@ -604,7 +604,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
         (uint112 _gooBalance, uint112 _gobblerBalanceMult) = (_gooReserve, _gobblerReserveMult);
 
-        // Asses performance fee since last transaction
+        // Assess performance fee since last transaction
         _performanceFee(_gooReserve, _gobblerReserveMult);
 
         // Optimistically transfer goo if any
@@ -631,7 +631,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
 
         {
-            // Calculate the shares to burn based on the changes in k.
+            // Calculate the fractions to burn based on the changes in k.
             // Calculate the fractions to burn based on the changes in k.
             (,,, uint112 _kDelta,) = _kCalculations(
                 _gooBalance,
@@ -648,12 +648,14 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
             // Check that we can withdraw the requested amount of liquidity.
-            require(allowed >= fractions, "Goober: INSUFFICIENT_ALLOWANCE");
+            if (allowed < fractions) {
+                revert InsufficientAllowance();
+            }
 
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - fractions;
         }
 
-        // Burn the shares from owner
+        // Burn the fractions from owner
         _burn(owner, fractions);
 
         // update reserves

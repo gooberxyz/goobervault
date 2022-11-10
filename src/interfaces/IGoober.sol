@@ -15,6 +15,7 @@ interface IGoober is IERC721Receiver {
     error InvalidMultiplier(uint256 gobblerId);
     error NoSkim();
     error MustLeaveLiquidity();
+    error InsufficientAllowance();
 
     /**
      * @notice The caller doesn't have permission to access that function.
@@ -43,7 +44,7 @@ interface IGoober is IERC721Receiver {
     // Events
 
     event Deposit(
-        address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 shares
+        address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
     );
 
     event Withdraw(
@@ -52,10 +53,10 @@ interface IGoober is IERC721Receiver {
         address indexed owner,
         uint256[] gobblers,
         uint256 gooTokens,
-        uint256 shares
+        uint256 fractions
     );
 
-    event FeesAccrued(address indexed feeTo, uint256 shares, bool performanceFee, uint256 _deltaK);
+    event FeesAccrued(address indexed feeTo, uint256 fractions, bool performanceFee, uint256 _deltaK);
 
     event Swap(
         address indexed caller,
@@ -98,11 +99,11 @@ interface IGoober is IERC721Receiver {
 
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
         external
-        returns (uint256 shares);
+        returns (uint256 fractions);
 
     function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
         external
-        returns (uint256 shares);
+        returns (uint256 fractions);
 
     function swap(SwapParams calldata params) external;
 }
