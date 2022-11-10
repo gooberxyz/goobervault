@@ -125,8 +125,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         if (_k == 0) {
             revert MustLeaveLiquidity();
         }
-        _kDelta = 0;
-        _kDebtChange = 0;
         _kChangeSign = _k > _kLast;
         // Get the gross change in K as a numeric
         _kChange = _kChangeSign ? _k - _kLast : _kLast - _k;
@@ -168,9 +166,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // No k, no fee
         uint112 _kLast = kLast;
         uint112 _kDebt = kDebt;
-        fee = 0;
-        kDebtChange = 0;
-        kDelta = 0;
         // If kLast was at 0, then we won't accrue a fee yet, as the pool is brand new.
         if (_kLast > 0) {
             (, uint112 _kChange, bool _kChangeSign, uint112 _kDelta, uint112 _kDebtChange) =
@@ -332,7 +327,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param gooTokens - amount of goo to withdraw
     /// @return fractions - amount of GBR minted
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) external view returns (uint256 fractions) {
-        fractions = 0;
         // Collect a virtual performance fee
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
         uint256 _totalSupply = totalSupply;
@@ -409,7 +403,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         view
         returns (uint256 additionalGooRequired)
     {
-        additionalGooRequired = 0;
         (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves();
         // Simulate transfers out
         uint112 _gooBalance = _gooReserve - uint112(gooOut);
