@@ -125,6 +125,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         if (_k == 0) {
             revert MustLeaveLiquidity();
         }
+        _kDelta = 0;
+        _kDebtChange = 0;
         _kChangeSign = _k > _kLast;
         // Get the gross change in K as a numeric
         _kChange = _kChangeSign ? _k - _kLast : _kLast - _k;
@@ -166,6 +168,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // No k, no fee
         uint112 _kLast = kLast;
         uint112 _kDebt = kDebt;
+        fee = 0;
+        kDebtChange = 0;
+        kDelta = 0;
         // If kLast was at 0, then we won't accrue a fee yet, as the pool is brand new.
         if (_kLast > 0) {
             (, uint112 _kChange, bool _kChangeSign, uint112 _kDelta, uint112 _kDebtChange) =
