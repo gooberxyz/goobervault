@@ -694,6 +694,117 @@ contract GooberTest is Test {
 
     // Goober: INSUFFICIENT_INPUT_AMOUNT
 
+    function testSafeSwap() public {
+        vm.startPrank(users[1]);
+        uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 4);
+
+        uint256[] memory artGobblersToDeposit = new uint256[](3);
+        artGobblersToDeposit[0] = artGobblers[0];
+        artGobblersToDeposit[1] = artGobblers[1];
+        artGobblersToDeposit[2] = artGobblers[2];
+
+        uint256[] memory artGobblersToSwap = new uint256[](1);
+        artGobblersToSwap[0] = artGobblers[3];
+
+        uint256[] memory artGobblersOut = new uint256[](1);
+        artGobblersOut[0] = artGobblers[0];
+
+        uint256 gooToDeposit = 200 ether;
+
+        // Reveal
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(4, "seed");
+
+        // Deposit 2 gobblers and 200 goo
+        uint256 expectedFractions = goober.previewDeposit(artGobblersToDeposit, gooToDeposit);
+
+        goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
+
+        bytes memory data;
+        IGoober.SwapParams memory swap =
+            IGoober.SwapParams(artGobblersToSwap, 169400705164942801, artGobblersOut, 0, users[1], data);
+
+        int256 expectedErroneousGoo = goober.previewSwap(artGobblersToSwap, 169400705164942801, artGobblersOut, 0);
+
+        int256 erroneousGoo = goober.safeSwap(swap, 0, block.timestamp + 1);
+
+        assertEq(expectedErroneousGoo, erroneousGoo);
+
+        vm.stopPrank();
+    }
+
+    function testSafeSwapRevertsWhenExpired() public {
+        vm.startPrank(users[1]);
+        uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 4);
+
+        uint256[] memory artGobblersToDeposit = new uint256[](3);
+        artGobblersToDeposit[0] = artGobblers[0];
+        artGobblersToDeposit[1] = artGobblers[1];
+        artGobblersToDeposit[2] = artGobblers[2];
+
+        uint256[] memory artGobblersToSwap = new uint256[](1);
+        artGobblersToSwap[0] = artGobblers[3];
+
+        uint256[] memory artGobblersOut = new uint256[](1);
+        artGobblersOut[0] = artGobblers[0];
+
+        uint256 gooToDeposit = 200 ether;
+
+        // Reveal
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(4, "seed");
+
+        // Deposit 2 gobblers and 200 goo
+        uint256 expectedFractions = goober.previewDeposit(artGobblersToDeposit, gooToDeposit);
+
+        goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
+
+
+        bytes memory data;
+        IGoober.SwapParams memory swap =
+            IGoober.SwapParams(artGobblersToSwap, 169400705164942801, artGobblersOut, 0, users[1], data);
+
+        vm.expectRevert("Goober: EXPIRED");
+
+        goober.safeSwap(swap, 0, block.timestamp - 1);
+    }
+
+        function testSafeSwapRevertsWhenErroneousGooIsTooLarge() public {
+        vm.startPrank(users[1]);
+        uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 4);
+
+        uint256[] memory artGobblersToDeposit = new uint256[](3);
+        artGobblersToDeposit[0] = artGobblers[0];
+        artGobblersToDeposit[1] = artGobblers[1];
+        artGobblersToDeposit[2] = artGobblers[2];
+
+        uint256[] memory artGobblersToSwap = new uint256[](1);
+        artGobblersToSwap[0] = artGobblers[3];
+
+        uint256[] memory artGobblersOut = new uint256[](1);
+        artGobblersOut[0] = artGobblers[0];
+
+        uint256 gooToDeposit = 200 ether;
+
+        // Reveal
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(4, "seed");
+
+        // Deposit 2 gobblers and 200 goo
+        uint256 expectedFractions = goober.previewDeposit(artGobblersToDeposit, gooToDeposit);
+
+        goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
+
+
+        bytes memory data;
+        IGoober.SwapParams memory swap =
+            IGoober.SwapParams(artGobblersToSwap, 0, artGobblersOut, 0, users[1], data);
+
+        vm.expectRevert("Goober: Bad.");
+
+        goober.safeSwap(swap, 0, block.timestamp + 1);
+    }        
+
     /*//////////////////////////////////////////////////////////////
     // Accounting
     //////////////////////////////////////////////////////////////*/

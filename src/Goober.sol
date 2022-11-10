@@ -732,7 +732,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // TODO(Get rid of the struct here if possible by getting clever with the stack)
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool
-    function swap(SwapParams calldata parameters) external nonReentrant returns (int256 erroneousGoo) {
+    function swap(SwapParams calldata parameters) public nonReentrant returns (int256 erroneousGoo) {
         erroneousGoo = 0;
         require(parameters.gooOut > 0 || parameters.gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
         uint112 multOut = 0;
@@ -809,5 +809,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Update oracle
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
         emit Swap(msg.sender, parameters.receiver, amount0In, amount1In, parameters.gooOut, multOut);
+    }
+       
+    /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool  
+    function safeSwap(SwapParams calldata parameters, int256 erroneousGooAbs, uint256 deadline) external ensure(deadline) returns (int256 erroneousGoo) {
+        erroneousGoo = swap(parameters);
+
+        require(erroneousGoo > 0 ? erroneousGoo <= erroneousGooAbs : erroneousGoo >= -erroneousGooAbs, "Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
     }
 }
