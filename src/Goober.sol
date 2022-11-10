@@ -6,7 +6,6 @@ pragma solidity ^0.8.17;
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import "./math/UQ112x112.sol";
@@ -15,8 +14,6 @@ import "./interfaces/IGooberCallee.sol";
 
 // Goober is a Uniswap V2 and EIP-4626 flavored yield vault to optimize gobbler/goo production.
 contract Goober is ReentrancyGuard, ERC20, IGoober {
-    // We want to ensure all transfers are safe
-    using SafeTransferLib for Goo;
     // We use this for fixed point WAD scalar math
     using FixedPointMathLib for uint256;
     // This is the Uniswap V2 112 bit Q math, updated for Solidity 8.
@@ -526,7 +523,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             revert NoSkim();
         }
         // Transfer the excess goo to the admin for handling
-        goo.safeTransfer(msg.sender, contractGooBalance);
+        goo.transfer(msg.sender, contractGooBalance);
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
         // TODO(Is this right?)
         _update(_gooReserve, _gobblerReserveMult, _gooReserve, _gobblerReserveMult, false, false);
@@ -558,7 +555,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
         // Transfer goo if any
         if (gooTokens > 0) {
-            goo.safeTransferFrom(msg.sender, address(this), gooTokens);
+            goo.transferFrom(msg.sender, address(this), gooTokens);
             artGobblers.addGoo(gooTokens);
         }
 
@@ -617,7 +614,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Optimistically transfer goo if any
         if (gooTokens >= 0) {
             artGobblers.removeGoo(gooTokens);
-            goo.safeTransfer(receiver, gooTokens);
+            goo.transfer(receiver, gooTokens);
             _gooBalance -= uint112(gooTokens);
         }
 
@@ -688,7 +685,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             // Optimistically transfer goo if any
             if (parameters.gooOut >= 0) {
                 artGobblers.removeGoo(parameters.gooOut);
-                goo.safeTransfer(parameters.receiver, parameters.gooOut);
+                goo.transfer(parameters.receiver, parameters.gooOut);
             }
 
             // Optimistically transfer gobblers if any
@@ -708,7 +705,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
             // Transfer goo if any
             if (parameters.gooIn > 0) {
-                goo.safeTransferFrom(msg.sender, address(this), parameters.gooIn);
+                goo.transferFrom(msg.sender, address(this), parameters.gooIn);
                 artGobblers.addGoo(parameters.gooIn);
             }
 
