@@ -695,9 +695,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             // Optimistically transfer gobblers if any
             if (parameters.gobblersOut.length > 0) {
                 for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
-                    uint256 gobblerMult = artGobblers.getGobblerEmissionMultiple(parameters.gobblersIn[i]);
+                    uint256 gobblerMult = artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i]);
                     if (gobblerMult < 6) {
-                        revert InvalidMultiplier(parameters.gobblersIn[i]);
+                        revert InvalidMultiplier(parameters.gobblersOut[i]);
                     }
                     multOut += uint112(gobblerMult);
                     artGobblers.transferFrom(address(this), parameters.receiver, parameters.gobblersOut[i]);
