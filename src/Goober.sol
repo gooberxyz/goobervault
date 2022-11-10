@@ -655,7 +655,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
 
             // Check that we can withdraw the requested amount of liquidity.
-            require(allowed >= fractions, "Goober: INSUFFICIENT_ALLOWANCE");
+            if (allowed < fractions) {
+                revert InsufficientAllowance();
+            }
 
             if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - fractions;
         }

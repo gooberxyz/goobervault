@@ -81,7 +81,7 @@ contract GooberTest is Test {
         });
         gobblers = new ArtGobblers({
             _merkleRoot: keccak256(abi.encodePacked(users[0])),
-            _mintStart: block.timestamp,
+            _mintStart: TIME0,
             _goo: goo,
             _pages: Pages(pagesAddress),
             _team: address(team),
@@ -92,7 +92,7 @@ contract GooberTest is Test {
             _provenanceHash: keccak256(abi.encodePacked("provenance"))
         });
         pages = new Pages({
-            _mintStart: block.timestamp,
+            _mintStart: TIME0,
             _goo: goo,
             _community: address(0xBEEF),
             _artGobblers: gobblers,
@@ -138,7 +138,7 @@ contract GooberTest is Test {
         gobblers.mintFromGoo(100 ether, true);
 
         // Reveal 3 at once
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(TIME0 + 1 days);
 
         _setRandomnessAndReveal(3, "seed");
 
@@ -182,10 +182,8 @@ contract GooberTest is Test {
     function testDepositBoth() public {
         // Add Goo and mint Gobblers
         vm.startPrank(users[1]);
-        gobblers.addGoo(500 ether);
-        uint256[] memory artGobblers = new uint256[](2);
-        artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
-        artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
+        uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 2);
+
         uint256 gooToDeposit = 200 ether;
 
         // Precondition checks
@@ -210,6 +208,7 @@ contract GooberTest is Test {
         vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(2, "seed");
 
+        // TODO fix event tests
         // Check Deposit event
         // vm.expectEmit(true, true, true, false);
         // emit Deposit(users[1], users[1], artGobblers, gooToDeposit, 0);
@@ -290,8 +289,7 @@ contract GooberTest is Test {
         artGobblersHold[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblersToWithdraw[0] = artGobblers[0];
 
-        vm.warp(block.timestamp + 172_800);
-
+        vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(3, "seed");
 
         /*uint256 fractions = */
@@ -310,11 +308,122 @@ contract GooberTest is Test {
 
     // function testWithdrawWhenDepositedOnlyGobblers() public {}
 
+    function testRevertWithdrawWhenOwnerIsNotReceiver() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory artGobblers = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.stopPrank();
+
+        vm.startPrank(users[2]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory artGobblers2 = new uint256[](1);
+        artGobblers2[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.stopPrank();
+
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(2, "seed");
+
+        vm.prank(users[1]);
+        goober.deposit(artGobblers, 200 ether, users[1]);
+
+        vm.startPrank(users[2]);
+        uint256 fractions = goober.deposit(artGobblers2, 200 ether, users[2]);
+        goober.approve(OTHER, 1); // not the right amount
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 7 days);
+
+        vm.expectRevert(IGoober.InsufficientAllowance.selector);
+
+        vm.prank(OTHER);
+        goober.withdraw(artGobblers2, fractions, users[2], users[2]);
+    }
+
+    function testWithdrawWhenOwnerIsNotReceiverButWithSufficientAllowance() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory artGobblers = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.stopPrank();
+
+        vm.startPrank(users[2]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory artGobblers2 = new uint256[](1);
+        artGobblers2[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.stopPrank();
+
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(2, "seed");
+
+        vm.prank(users[1]);
+        goober.deposit(artGobblers, 200 ether, users[1]);
+
+        vm.startPrank(users[2]);
+        uint256 fractions = goober.deposit(artGobblers2, 200 ether, users[2]);
+        goober.approve(OTHER, type(uint256).max);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 7 days);
+
+        // Other account with sufficient allowance can withdraw
+
+        vm.prank(OTHER);
+        goober.withdraw(artGobblers2, fractions, users[2], users[2]);
+    }
+
+    function testWithdrawWhenOwnerIsNotReceiverButWithSufficientAllowanceThatIsNotMax() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory artGobblers = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.stopPrank();
+
+        vm.startPrank(users[2]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory artGobblers2 = new uint256[](1);
+        artGobblers2[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.stopPrank();
+
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(2, "seed");
+
+        vm.prank(users[1]);
+        goober.deposit(artGobblers, 200 ether, users[1]);
+
+        vm.startPrank(users[2]);
+        uint256 fractions = goober.deposit(artGobblers2, 200 ether, users[2]);
+        goober.approve(OTHER, type(uint256).max - 1);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 7 days);
+
+        // Other account with sufficient allowance can withdraw
+
+        vm.prank(OTHER);
+        goober.withdraw(artGobblers2, fractions, users[2], users[2]);
+    }
+
     // test withdraw when owner != receiver
 
     // testEventWithdraw
 
     // Goober: INSUFFICIENT LIQUIDITY WITHDRAW edge cases
+
+    // TODO getting std Arithmetic over/underflow revert before Goober revert
+    // function testRevertDepositWhenGooBalanceWouldOverflowUint112() public {
+    //     _writeTokenBalance(users[10], address(goo), type(uint128).max);
+        
+    //     vm.startPrank(users[10]);
+    //     uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 1);
+
+    //     vm.warp(TIME0 + 1 days);
+    //     _setRandomnessAndReveal(1, "seed");
+
+    //     vm.expectRevert("Goober: OVERFLOW");
+
+    //     goober.deposit(artGobblers, type(uint112).max + 1, users[10]);
+    // }
 
     function testRevertWithdrawWhenInsufficientGobblerMult() public {
         vm.startPrank(users[1]);
@@ -326,7 +435,7 @@ contract GooberTest is Test {
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
         artGobblersHold[0] = gobblers.mintFromGoo(100 ether, true);
 
-        vm.warp(block.timestamp + 172_800);
+        vm.warp(block.timestamp + 1 days);
 
         _setRandomnessAndReveal(3, "seed");
 
@@ -351,7 +460,7 @@ contract GooberTest is Test {
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
         artGobblersHold[0] = gobblers.mintFromGoo(100 ether, true);
 
-        vm.warp(block.timestamp + 172_800);
+        vm.warp(block.timestamp + 1 days);
 
         _setRandomnessAndReveal(3, "seed");
 
@@ -394,7 +503,7 @@ contract GooberTest is Test {
         artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblersThree[0] = artGobblers[0];
 
-        vm.warp(block.timestamp + 172800);
+        vm.warp(block.timestamp + 1 days);
 
         _setRandomnessAndReveal(3, "seed");
 
@@ -433,7 +542,7 @@ contract GooberTest is Test {
         artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblersThree[0] = gobblers.mintFromGoo(100 ether, true);
 
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(3, "seed");
 
         uint256 expectedGooTokens = 300 ether;
@@ -458,7 +567,7 @@ contract GooberTest is Test {
         // Test first deposit
         uint256[] memory artGobblers = new uint256[](1);
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(1, "seed");
         uint256 expected = goober.previewDeposit(artGobblers, 100 ether);
         uint256 actual = goober.deposit(artGobblers, 100 ether, users[1]);
@@ -482,7 +591,7 @@ contract GooberTest is Test {
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblersThree[0] = gobblers.mintFromGoo(100 ether, true);        
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(3, "seed");
         goober.deposit(artGobblers, 100 ether, users[1]);
         goober.deposit(artGobblersTwo, 100 ether, users[1]);
@@ -509,7 +618,7 @@ contract GooberTest is Test {
     //     gobblers.mintFromGoo(100 ether, true); // mint but don't plan to swap
     //     vm.stopPrank();
 
-    //     vm.warp(block.timestamp + 2 days);
+    //     vm.warp(TIME0 + 2 days);
     //     _setRandomnessAndReveal(3, "seed");
 
     //     vm.startPrank(users[1]);
@@ -547,7 +656,7 @@ contract GooberTest is Test {
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
         artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(3, "seed");
         vm.stopPrank();
 
@@ -570,7 +679,7 @@ contract GooberTest is Test {
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
         artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(3, "seed");
         vm.stopPrank();
 
@@ -592,7 +701,7 @@ contract GooberTest is Test {
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
         artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(3, "seed");
         vm.stopPrank();
 
@@ -624,7 +733,7 @@ contract GooberTest is Test {
         artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
         artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(3, "seed");
         vm.stopPrank();
 
@@ -737,6 +846,16 @@ contract GooberTest is Test {
 
     function _writeTokenBalance(address who, address token, uint256 amt) internal {
         stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
+    }
+
+    function _addGooAndMintGobblers(uint256 _gooAmount, uint256 _numGobblers) internal returns (uint256[] memory) {
+        // TODO add input validation check
+        gobblers.addGoo(_gooAmount);
+        uint256[] memory artGobblers = new uint256[](_numGobblers);
+        for (uint256 i = 0; i < _numGobblers; i++) {
+            artGobblers[i] = gobblers.mintFromGoo(100 ether, true);
+        }
+        return artGobblers;
     }
 
     /// @dev Call back vrf with randomness and reveal gobblers.
