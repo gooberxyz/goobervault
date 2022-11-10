@@ -332,7 +332,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param gooTokens - amount of goo to withdraw
     /// @return fractions - amount of GBR minted
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) external view returns (uint256 fractions) {
-        fractions = 0;
         // Collect a virtual performance fee
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
         uint256 _totalSupply = totalSupply;
@@ -409,7 +408,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         view
         returns (uint256 additionalGooRequired)
     {
-        additionalGooRequired = 0;
         (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves();
         // Simulate transfers out
         uint112 _gooBalance = _gooReserve - uint112(gooOut);
