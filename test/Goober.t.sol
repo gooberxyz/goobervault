@@ -655,61 +655,110 @@ contract GooberTest is Test {
         // Add enough Goo to vault to mint a single Gobbler.
         _writeTokenBalance(users[10], address(goo), 1000 ether);
 
+        // Mint the first gobbler
         vm.startPrank(users[10]);
         uint256[] memory artGobbler = new uint256[](1);
         artGobbler[0] = gobblers.mintFromGoo(75 ether, false);
-        // Check to see we own the 1st Gobbler.
+        // Check to see we own the first Gobbler.
         assertEq(gobblers.ownerOf(1), users[10]);
-        // Warp a day ahead until we can reveal.
+        // Warp a day ahead until we can reveal Gobbler 1.
         vm.warp(block.timestamp + 86400);
         _setRandomnessAndReveal(1, "seed");
         uint256 gobblerMult = (gobblers.getGobblerEmissionMultiple(artGobbler[0]));
         // Based on our seed, we get a mult of 9 here.
         assertEq(gobblerMult, 9);
 
-        // Pool is setup by depositing 1 gobbler and 53 goo.
+        // Pool is setup by depositing 1 gobbler and 81 goo.
         // We do this after warp to not accrue extra goo.
-        uint256 gooTokens = 53 ether;
+        // Depositing automatically makes the goo virtual.
+        uint256 gooTokens = 81 ether;
         goober.deposit(artGobbler, gooTokens, users[10]);
         vm.stopPrank();
 
-        // Safety check to verify new mint price after warp.
+        // Safety check to verify new mint price after warp and mint.
         assertEq(gobblers.gobblerPrice(), 52987405899699731484);
 
-        // Now we have pool goo = 53 and pool mult = 9.
+        // Now we have pool virtual goo = 81 and pool mult = 9.
         // The goo/mult of our pool is <= goo/mult of the auction,
-        // since: 53 / 9 = 5 <= 52.987 / 7.3294 ~= 7.
+        // since: 81 / 9 = 9 >= 52.987 / 7.3294 ~= 7.
         // We also have enough goo to mint a single gobbler.
-        // NOTE(Getting both of the aboveto be true is a very delicate
+        // NOTE(Getting both of the above to be true is a very delicate
         // balance, especially tricky if you want to test minting
         // more than 1 gobbler here.)
+
+        // Mint a gobbler, and check we return 1 (gobbler) minted.
+        // NOTE(Updates K, reserves and VRGDA in the process.)
         vm.prank(MINTER);
-        goober.mintGobbler();
+        assertEq(goober.mintGobbler(), 1);
         // Check contract owns second minted gobbler.
         assertEq(gobblers.ownerOf(2), address(goober));
 
-        // Check to see updated pool balance after reveal.
+        // Check our Goo balance went down from minting: 81 - 52.99 ~= 28.01.
+        (uint112 _GooReserve, uint112 _GobblerReserve,) = goober.getReserves();
+        assertEq(_GooReserve, 28012594100300268516);
+
+        // Warp ahead to reveal second gobbler.
         vm.warp(block.timestamp + 1 days);
         // Changing the seed string changes the randomness, and thus the rolled mult.
         _setRandomnessAndReveal(1, "seed2");
-        // _newGobblerReserve is scaled up by 1e3
         (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
-        // We mint an 6 mult here, so we have 15 total mult including the previous 9.
+        // Check we have 15 total mult including the previous 9, since we minted a 6.
         assertEq(_newGobblerReserve, 15);
-        // 24.9926 Goo
-        assertEq(_newGooReserve, 2599264417825316518);
+        // Check our goo balance updated from emission.
+        assertEq(_newGooReserve, 46140671657193055549);
 
-        // TODO(Check k)
-
-        //Test if we can pull Gobbler out of pool.
-        uint256[] memory artGobblerFromMint = new uint256[](1);
-        artGobblerFromMint[0] = 2; //Gobbler with tokenId = 2.
-        vm.prank(users[10]);
-        goober.withdraw(artGobblerFromMint, 0, users[10], users[10]); //Withdraw Gobbler minted from Goober based on shares minted from kDebt.
-        assertEq(gobblers.ownerOf(2), users[10]); //Check if we own the Gobbler now.
+        // NOTE(Checking k uneeded since _update() handles all of that
     }
 
-    function testMintRevertCaller() public {
+    // function test_withdraw_minted() public {
+    // Test if we can pull a minted Gobbler out of pool)
+    //     uint256[] memory artGobblerFromMint = new uint256[](1);
+    //     artGobblerFromMint[0] = 2; //Gobbler with tokenId = 2.
+    //     vm.prank(users[10]);
+    //     goober.withdraw(artGobblerFromMint, 0, users[10], users[10]); //Withdraw Gobbler minted from Goober based on shares minted from kDebt.
+    //     assertEq(gobblers.ownerOf(2), users[10]); //Check if we own the Gobbler now.
+    // }
+
+    function testMintRevertRatio() public {
+        // Safety check to verify starting gobblerPrice is correct.
+        assertEq(gobblers.gobblerPrice(), 73013654753028651285);
+
+        /// Add enough Goo to vault to mint a single Gobbler.
+        _writeTokenBalance(users[10], address(goo), 1000 ether);
+
+        // Mint the first gobbler
+        vm.startPrank(users[10]);
+        uint256[] memory artGobbler = new uint256[](1);
+        artGobbler[0] = gobblers.mintFromGoo(75 ether, false);
+        // Check to see we own the first Gobbler.
+        assertEq(gobblers.ownerOf(1), users[10]);
+        // Warp a day ahead until we can reveal Gobbler 1.
+        vm.warp(block.timestamp + 86400);
+        _setRandomnessAndReveal(1, "seed");
+        uint256 gobblerMult = (gobblers.getGobblerEmissionMultiple(artGobbler[0]));
+        // Based on our seed, we get a mult of 9 here.
+        assertEq(gobblerMult, 9);
+
+        // Safety check to verify new mint price after warp and mint.
+        assertEq(gobblers.gobblerPrice(), 52987405899699731484);
+
+        // Pool is setup by depositing 2 gobbler and 55 goo.
+        // We do this after warp to not accrue extra goo.
+        // Depositing automatically makes the goo virtual.
+        uint256 gooTokens = 55 ether;
+        goober.deposit(artGobbler, gooTokens, users[10]);
+        vm.stopPrank();
+
+        // Tries to mint a gobbler and expects revert.
+        // We have enough goo to mint, so should revert due
+        // to failing to maintain the conditional ratio.
+        // TODO(Add custom event emit for too low goo to mint and test it)
+        vm.prank(MINTER);
+        vm.expectRevert(bytes("Pool Goo per Mult lower than Auction's"));
+        goober.mintGobbler();
+    }
+
+    function testRevertMintCaller() public {
         vm.startPrank(msg.sender);
         //Revert if not Minter.
         vm.expectRevert();
@@ -719,10 +768,11 @@ contract GooberTest is Test {
 
     function testRevertMintGobblerWhenNotMinter() public {
         vm.expectRevert(abi.encodeWithSelector(IGoober.AccessControlViolation.selector, OTHER, MINTER));
-
         vm.prank(OTHER);
         goober.mintGobbler();
     }
+
+    function testEmitMintLowGoo() public {}
 
     /*//////////////////////////////////////////////////////////////
     // Flag Gobbler
