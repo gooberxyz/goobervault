@@ -221,6 +221,14 @@ contract GooberTest is Test {
 
         // Deposit 2 gobblers and 200 goo
         uint256 fractions = goober.deposit(artGobblers, gooToDeposit, users[1]);
+        // Check all the goo tokens were burned 
+        // Since initial supply = 0, we can just use local vars.
+        // TODO(Find a way to call gobblers.gooBalance() for the definition below
+        // without stack too deep. 
+        // uint256 finalSupply =  (300) + gobblers.gooBalance(address(this));
+        // TODO(Find a way to call goo.totalSupply for the assert below
+        // without stack too deep. 
+        // assertEq(finalSupply, goo.totalSupply());
         vm.stopPrank();
 
         // Goo is transferred into vault
@@ -244,6 +252,12 @@ contract GooberTest is Test {
         assertEq(gobblerReserveAfter, expectedGobblerMult);
         assertEq(blockTimestampLastAfter, TIME0 + 1 days);
     }
+
+    // Total initial supply of Goo is zero. 
+    // function testTotalSupply() public {
+    // uint256 gooSupply = goo.totalSupply();
+    // assertEq(gooSupply, 0);
+    // }
 
     // function testDepositWhenOnlyGoo() public {
 
