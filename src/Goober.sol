@@ -446,12 +446,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 if ((balance0Adjusted * balance1Adjusted) <= ((_gooReserve * _gobblerReserve) * 1000 ** 2)) {
                     erroneousGoo = erroneousGoo
                         + int256(
-                            (((_gooReserve * _gobblerReserve * 1000 ** 2) / balance1Adjusted) - balance0Adjusted) / 1000
+                            (((_gooReserve * _gobblerReserve * 1000 ** 2) / balance1Adjusted) - balance0Adjusted) / 997
                         );
                 } else {
                     erroneousGoo = erroneousGoo
                         - int256(
-                            ((balance1Adjusted - (_gooReserve * _gobblerReserve * 1000 ** 2) / balance0Adjusted)) / 1000
+                            (balance0Adjusted - ((_gooReserve * _gobblerReserve * 1000 ** 2) / balance1Adjusted)) / 997
                         );
                 }
             }
@@ -695,9 +695,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             // Optimistically transfer gobblers if any
             if (parameters.gobblersOut.length > 0) {
                 for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
-                    uint256 gobblerMult = artGobblers.getGobblerEmissionMultiple(parameters.gobblersIn[i]);
+                    uint256 gobblerMult = artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i]);
                     if (gobblerMult < 6) {
-                        revert InvalidMultiplier(parameters.gobblersIn[i]);
+                        revert InvalidMultiplier(parameters.gobblersOut[i]);
                     }
                     multOut += uint112(gobblerMult);
                     artGobblers.transferFrom(address(this), parameters.receiver, parameters.gobblersOut[i]);
@@ -736,8 +736,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             if ((balance0Adjusted * balance1Adjusted) <= ((_gooReserve * _gobblerReserve) * 1000 ** 2)) {
                 revert("Goober: K");
             } else {
-                erroneousGoo = erroneousGoo
-                    - int256(((balance1Adjusted - (_gooReserve * _gobblerReserve * 1000 ** 2) / balance0Adjusted)) / 1000);
+                erroneousGoo = erroneousGoo = erroneousGoo
+                    - int256((balance0Adjusted - ((_gooReserve * _gobblerReserve * 1000 ** 2) / balance1Adjusted)) / 997);
             }
         }
         // Update oracle
