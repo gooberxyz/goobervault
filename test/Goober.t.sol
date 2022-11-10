@@ -631,13 +631,13 @@ contract GooberTest is Test {
 
         // TODO(Should be 0.3009027, but seems to be ~0.301808133, perhaps due to the small multiplier)
         uint256 expectedAdditionalGooRequired = 0.301808133 ether;
-        goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut);
-        // TODO(Fix the preview function)
+        uint256 previewAdditionalGooRequired = uint256(goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut));
+        // TODO(Fix imprecision in swap function)
         //assertEq(previewAdditionalGooRequired, expectedAdditionalGooRequired);
         vm.startPrank(users[2]);
         bytes memory data;
         IGoober.SwapParams memory swap =
-            IGoober.SwapParams(gobblersOut, 0 ether, gobblersIn, expectedAdditionalGooRequired, users[2], data);
+            IGoober.SwapParams(gobblersOut, gooIn, gobblersIn, expectedAdditionalGooRequired, users[2], data);
         goober.swap(swap);
         vm.stopPrank();
     }

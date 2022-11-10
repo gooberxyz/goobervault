@@ -406,8 +406,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
         external
         view
-        returns (uint256 additionalGooRequired)
+        returns (int256 erroneousGoo)
     {
+        erroneousGoo = 0;
         (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves();
         // Simulate transfers out
         uint112 _gooBalance = _gooReserve - uint112(gooOut);
@@ -433,19 +434,26 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             }
             _gobblerBalance += gobblerMult;
         }
-        // Calculate additionalGooRequired
-        uint256 amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
-        uint256 amount1In =
-            _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
-        require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
         {
-            // This takes 997/1000
-            uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
-            uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-            if (balance0Adjusted * balance1Adjusted <= (_gooReserve * _gobblerReserve) * 1000 ** 2) {
-                // TODO(Make this work)
-                // We know that we can only pay fees in goo, balance1
-                additionalGooRequired = 0;
+            // Calculate additionalGooRequired
+            uint256 amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
+            uint256 amount1In =
+                _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
+            require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
+            {
+                uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
+                uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
+                if ((balance0Adjusted * balance1Adjusted) <= ((_gooReserve * _gobblerReserve) * 1000 ** 2)) {
+                    erroneousGoo = erroneousGoo
+                        + int256(
+                            (((_gooReserve * _gobblerReserve * 1000 ** 2) / balance1Adjusted) - balance0Adjusted) / 1000
+                        );
+                } else {
+                    erroneousGoo = erroneousGoo
+                        - int256(
+                            ((balance1Adjusted - (_gooReserve * _gobblerReserve * 1000 ** 2) / balance0Adjusted)) / 1000
+                        );
+                }
             }
         }
     }
@@ -665,7 +673,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // TODO(Get rid of the struct here if possible by getting clever with the stack)
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool
-    function swap(SwapParams calldata parameters) external nonReentrant {
+    function swap(SwapParams calldata parameters) external nonReentrant returns (int256 erroneousGoo) {
+        erroneousGoo = 0;
         require(parameters.gooOut > 0 || parameters.gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
         uint112 multOut = 0;
         (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
@@ -723,9 +732,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
         {
             uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
-            // Scale this to prevent a loss of precision
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-            require(balance0Adjusted * balance1Adjusted >= (_gooReserve * _gobblerReserve) * 1000 ** 2, "Goober: K");
+            if ((balance0Adjusted * balance1Adjusted) <= ((_gooReserve * _gobblerReserve) * 1000 ** 2)) {
+                revert("Goober: K");
+            } else {
+                erroneousGoo = erroneousGoo
+                    - int256(((balance1Adjusted - (_gooReserve * _gobblerReserve * 1000 ** 2) / balance0Adjusted)) / 1000);
+            }
         }
         // Update oracle
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
