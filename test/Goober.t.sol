@@ -106,7 +106,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         assertEq(goober.decimals(), 18);
     }
 
-    function testMintRevertCaller() public {
+    function test_mint_revert_caller() public {
         vm.startPrank(msg.sender);
         //Revert if not Minter.
         vm.expectRevert();
@@ -115,6 +115,44 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
     }
 
     function test_mint_revert_goo() public {
+        // Safety check to verify starting gobblerPrice is correct.
+        assertEq(gobblers.gobblerPrice(), 73013654753028651285);
+
+        // Add enough goo to vault to mint one gobbler.
+        _writeTokenBalance(address(this), address(goo), 1000 ether);
+
+        // Mint the first gobbler
+        uint256[] memory artGobbler = new uint256[](1);
+        artGobbler[0] = gobblers.mintFromGoo(75 ether, false);
+
+        // Safety check to verify new VRGDA price after first mint.
+        assertEq(gobblers.gobblerPrice(), 76793341883622799170);
+
+        // Warp a day ahead until we can reveal Gobbler 1.
+        vm.warp(block.timestamp + 86400);
+        setRandomnessAndReveal(1, "seed");
+        uint256 gobblerMult = (gobblers.getGobblerEmissionMultiple(artGobbler[0]));
+        // Based on our seed, we get a mult of 9 here.
+        assertEq(gobblerMult, 9);
+
+        // Safety check to verify new VRGDA price after first mint and warp.
+        assertEq(gobblers.gobblerPrice(), 52987405899699731484);
+
+        // Pool is setup by depositing 1 gobbler (9 mult) and 20 goo.
+        // We make goo virtual after warp to not accrue extra goo.
+        uint256 gooTokens = 20 ether;
+        address me = address(this);
+        goober.deposit(artGobbler, gooTokens, me);
+        gobblers.addGoo(20 ether);
+
+        // Tries to mint a gobbler, should revert due to
+        // insufficient goo balance.
+        // TODO(Add custom event emit for this and test it)
+        vm.expectRevert(bytes("Pool Goo per Mult lower than Auction's"));
+        goober.mintGobbler();
+    }
+
+    function test_mint_revert_ratio() public {
         // Safety check to verify starting gobblerPrice is correct.
         assertEq(gobblers.gobblerPrice(), 73013654753028651285);
 
@@ -133,7 +171,7 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // Based on our seed, we get a mult of 9 here.
         assertEq(gobblerMult, 9);
 
-        // Safety check to verify new VRGDA price after first mint.
+        // Safety check to verify new VRGDA price after first mint and warp.
         assertEq(gobblers.gobblerPrice(), 52987405899699731484);
 
         // Mint a second gobbler
@@ -150,14 +188,16 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         assertEq(gobblers.gobblerPrice(), 38453974223663505198);
 
         // Pool is setup by depositing 2 gobblers (15 mult) and 60 goo.
-        // We do this after warp to not accrue extra goo.
+        // We make goo virtual after warp to not accrue extra goo.
         uint256 gooTokens = 60 ether;
         address me = address(this);
         goober.deposit(artGobblers, gooTokens, me);
+        gobblers.addGoo(60 ether);
 
-        // Expect the first revert message, since 60 / 15 < 38.45 / 7.32,
-        // implying the pool is not imbalanced enough to mint and
-        // revert confirms we don't reach the while.
+        // Try mint and expect the first revert message
+        // since 60 / 15 < 38.45 / 7.32, implying the pool is not
+        // imbalanced enough to mint and the revert confirms
+        // that we don't reach the while loop.
         vm.expectRevert(bytes("Pool Goo per Mult lower than Auction's"));
         goober.mintGobbler();
     }
@@ -188,6 +228,8 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         uint256 gooTokens = 81 ether;
         address me = address(this);
         goober.deposit(artGobbler, gooTokens, me);
+        // Make the goo virtual, since that's what we mint with.
+        gobblers.addGoo(81 ether);
 
         // Safety check to verify new mint price after warp.
         assertEq(gobblers.gobblerPrice(), 52987405899699731484);
@@ -219,8 +261,10 @@ contract TestUERC20Functionality is Test, IERC721Receiver {
         // Check to see updated pool balance after reveal.
 
         (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
-        // We mint an 6 mult here, so check we have 15 total mult including the previous 9.
+        // Check we have 15 total mult including the previous 9, since we minted a 6.
         assertEq(_newGobblerReserve, 15);
+        // Check our goo balance updated from emission.
+        assertEq(_newGooReserve, 46140671657193055549);
 
         // NOTE(Checking k uneeded since _update() handles all of that
     }

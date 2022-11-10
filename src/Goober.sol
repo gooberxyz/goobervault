@@ -513,6 +513,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                     minted++;
                 } else {
                     mint = false;
+                    // TODO(Emit a custom event here to know we didn't have enough goo to mint)
                 }
             }
         }
