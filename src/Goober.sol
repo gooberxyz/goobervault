@@ -443,26 +443,20 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             {
                 uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
                 uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-                if ((balance0Adjusted * balance1Adjusted) <= ((_gooReserve * _gobblerReserve) * 1000 ** 2)) {
+                uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
+                uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
+                if (adjustedBalanceK <= expectedK) {
                     erroneousGoo = erroneousGoo
                         + int256(
                             FixedPointMathLib.mulWadUp(
-                                FixedPointMathLib.divWadUp(
-                                    (((_gooReserve * _gobblerReserve * 1000 ** 2) / balance1Adjusted) - balance0Adjusted),
-                                    997
-                                ),
-                                1
+                                FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
                             )
                         );
                 } else {
                     erroneousGoo = erroneousGoo
                         - int256(
                             FixedPointMathLib.mulWadDown(
-                                FixedPointMathLib.divWadDown(
-                                    (balance0Adjusted - ((_gooReserve * _gobblerReserve * 1000 ** 2) / balance1Adjusted)),
-                                    997
-                                ),
-                                1
+                                FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 997), 1
                             )
                         );
                 }
@@ -745,16 +739,15 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         {
             uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-            if ((balance0Adjusted * balance1Adjusted) <= ((_gooReserve * _gobblerReserve) * 1000 ** 2)) {
+            uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
+            uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
+            if (adjustedBalanceK <= expectedK) {
                 revert("Goober: K");
             } else {
                 erroneousGoo = erroneousGoo
                     - int256(
                         FixedPointMathLib.mulWadDown(
-                            FixedPointMathLib.divWadDown(
-                                (balance0Adjusted - ((_gooReserve * _gobblerReserve * 1000 ** 2) / balance1Adjusted)), 997
-                            ),
-                            1
+                            FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 997), 1
                         )
                     );
             }
