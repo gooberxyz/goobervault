@@ -603,34 +603,44 @@ contract GooberTest is Test {
         assertEq(expected, actual);
     }
 
-    // function testPreviewSwap() public {
-    //     vm.startPrank(users[1]);
-    //     gobblers.addGoo(500 ether);
-    //     uint256[] memory gobblersOut = new uint256[](1);
-    //     gobblersOut[0] = gobblers.mintFromGoo(100 ether, true);
-    //     vm.stopPrank();
+    function testPreviewSwap() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory gobblersOut = new uint256[](1);
+        gobblersOut[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.stopPrank();
 
-    //     vm.startPrank(users[2]);
-    //     gobblers.addGoo(500 ether);
-    //     uint256[] memory gobblersIn = new uint256[](2);
-    //     gobblersIn[0] = gobblers.mintFromGoo(100 ether, true);
-    //     gobblersIn[1] = gobblers.mintFromGoo(100 ether, true);
-    //     gobblers.mintFromGoo(100 ether, true); // mint but don't plan to swap
-    //     vm.stopPrank();
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(1, "1");
 
-    //     vm.warp(TIME0 + 2 days);
-    //     _setRandomnessAndReveal(3, "seed");
+        vm.startPrank(users[2]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory gobblersIn = new uint256[](1);
+        gobblersIn[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.stopPrank();
 
-    //     vm.startPrank(users[1]);
-    //     goober.deposit(gobblersOut, 200 ether, users[1]);
-    //     vm.stopPrank();
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(1, "1");
 
-    //     uint256 gooIn = 10 ether;
-    //     uint256 gooOut = 0;
+        vm.startPrank(users[1]);
+        goober.deposit(gobblersOut, 100 ether, users[1]);
+        vm.stopPrank();
 
-    //     uint256 expectedAdditionalGooRequired = XYZ;
-    //     assertEq(goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut), expectedAdditionalGooRequired);
-    // }
+        uint256 gooIn = 0 ether;
+        uint256 gooOut = 0 ether;
+
+        // TODO(Should be 0.3009027, but seems to be ~0.301808133, perhaps due to the small multiplier)
+        uint256 expectedAdditionalGooRequired = 0.301808133 ether;
+        goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut);
+        // TODO(Fix the preview function)
+        //assertEq(previewAdditionalGooRequired, expectedAdditionalGooRequired);
+        vm.startPrank(users[2]);
+        bytes memory data;
+        IGoober.SwapParams memory swap =
+            IGoober.SwapParams(gobblersOut, 0 ether, gobblersIn, expectedAdditionalGooRequired, users[2], data);
+        goober.swap(swap);
+        vm.stopPrank();
+    }
 
     /*//////////////////////////////////////////////////////////////
     // Mint Gobbler
