@@ -414,7 +414,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Simulate transfers out
         uint112 _gooBalance = _gooReserve - uint112(gooOut);
         uint112 _gobblerBalance = _gobblerReserve;
-        uint112 gobblerMult = 0;
         uint112 multOut = 0;
         for (uint256 i = 0; i < gobblersOut.length; i++) {
             uint112 gobblerMult = uint112(artGobblers.getGobblerEmissionMultiple(gobblersOut[i]));
@@ -430,7 +429,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Simulate transfers in
         _gooBalance += uint112(gooIn);
         for (uint256 i = 0; i < gobblersIn.length; i++) {
-            gobblerMult = uint112(artGobblers.getGobblerEmissionMultiple(gobblersIn[i]));
+            uint112 gobblerMult = uint112(artGobblers.getGobblerEmissionMultiple(gobblersIn[i]));
             if (gobblerMult < 6) {
                 revert InvalidMultiplier(gobblersIn[i]);
             }
@@ -442,11 +441,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
         require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
         {
+            // This takes 997/1000
             uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-            if ((balance0Adjusted * balance1Adjusted) < ((_gooReserve * _gobblerReserve) * 1000 ** 2)) {
-                additionalGooRequired =
-                    (((_gooReserve * _gobblerReserve) * 1000 ** 2) - (balance0Adjusted * balance1Adjusted)) / 1000 ** 2;
+            if (balance0Adjusted * balance1Adjusted <= (_gooReserve * _gobblerReserve) * 1000 ** 2) {
+                // We know that we can only pay fees in goo, balance1
+                additionalGooRequired = (_gooReserve * _gobblerReserve) * 1000 ** 2;
             }
         }
     }
@@ -724,7 +724,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
             // Scale this to prevent a loss of precision
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-            require((balance0Adjusted * balance1Adjusted) >= ((_gooReserve * _gobblerReserve) * 1000 ** 2), "Goober: K");
+            require(balance0Adjusted * balance1Adjusted >= (_gooReserve * _gobblerReserve) * 1000 ** 2, "Goober: K");
         }
         // Update oracle
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
