@@ -405,9 +405,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
-    external
-    view
-    returns (uint256 additionalGooRequired)
+        external
+        view
+        returns (uint256 additionalGooRequired)
     {
         additionalGooRequired = 0;
         (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves();
@@ -438,7 +438,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Calculate additionalGooRequired
         uint256 amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
         uint256 amount1In =
-        _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
+            _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
         require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
         {
             // This takes 997/1000
@@ -451,7 +451,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             }
         }
     }
-
 
     /*//////////////////////////////////////////////////////////////
     // External: Mutating, Admin
@@ -720,9 +719,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         (uint112 _gooBalance, uint112 _gobblerBalance,) = getReserves();
 
         uint256 amount0In =
-        _gooBalance > _gooReserve - parameters.gooOut ? _gooBalance - (_gooReserve - parameters.gooOut) : 0;
+            _gooBalance > _gooReserve - parameters.gooOut ? _gooBalance - (_gooReserve - parameters.gooOut) : 0;
         uint256 amount1In =
-        _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
+            _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
         require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
         {
             uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
