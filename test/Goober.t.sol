@@ -759,7 +759,6 @@ contract GooberTest is Test {
 
         goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
 
-
         bytes memory data;
         IGoober.SwapParams memory swap =
             IGoober.SwapParams(artGobblersToSwap, 169400705164942801, artGobblersOut, 0, users[1], data);
@@ -769,7 +768,7 @@ contract GooberTest is Test {
         goober.safeSwap(swap, 0, block.timestamp - 1);
     }
 
-        function testSafeSwapRevertsWhenErroneousGooIsTooLarge() public {
+    function testSafeSwapRevertsWhenErroneousGooIsTooLarge() public {
         vm.startPrank(users[1]);
         uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 4);
 
@@ -795,15 +794,13 @@ contract GooberTest is Test {
 
         goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
 
-
         bytes memory data;
-        IGoober.SwapParams memory swap =
-            IGoober.SwapParams(artGobblersToSwap, 0, artGobblersOut, 0, users[1], data);
+        IGoober.SwapParams memory swap = IGoober.SwapParams(artGobblersToSwap, 0, artGobblersOut, 0, users[1], data);
 
         vm.expectRevert("Goober: Bad.");
 
         goober.safeSwap(swap, 0, block.timestamp + 1);
-    }        
+    }
 
     /*//////////////////////////////////////////////////////////////
     // Accounting

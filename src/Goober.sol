@@ -814,11 +814,18 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
         emit Swap(msg.sender, parameters.receiver, amount0In, amount1In, parameters.gooOut, multOut);
     }
-       
-    /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool  
-    function safeSwap(SwapParams calldata parameters, int256 erroneousGooAbs, uint256 deadline) external ensure(deadline) returns (int256 erroneousGoo) {
+
+    /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool
+    function safeSwap(SwapParams calldata parameters, int256 erroneousGooAbs, uint256 deadline)
+        external
+        ensure(deadline)
+        returns (int256 erroneousGoo)
+    {
         erroneousGoo = swap(parameters);
 
-        require(erroneousGoo > 0 ? erroneousGoo <= erroneousGooAbs : erroneousGoo >= -erroneousGooAbs, "Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        require(
+            erroneousGoo > 0 ? erroneousGoo <= erroneousGooAbs : erroneousGoo >= -erroneousGooAbs,
+            "Goober: SWAP_EXCEEDS_ERRONEOUS_GOO"
+        );
     }
 }
