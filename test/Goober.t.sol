@@ -1063,13 +1063,10 @@ contract GooberTest is Test {
         uint256 gooIn = 301808132521938937;
         uint256 gooOut = 0 ether;
 
-        // TODO(Fix preview and swap erroneous goo)
-        // You'd think it'd be 300902708124373119, but, you need to pay 30 bps
-        // on the 30 bps, etc and its 301808432424373119. This has some imprecision at the 9th decimal to fix
         int256 expectedAdditionalGooRequired = 301808132521938937;
         int256 previewAdditionalGooRequired = goober.previewSwap(gobblersIn, 0, gobblersOut, gooOut);
-        // TODO(Fix imprecision in swap function)
         assertEq(previewAdditionalGooRequired, expectedAdditionalGooRequired);
+        assertEq(goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut), 0);
         vm.startPrank(users[2]);
         bytes memory data;
         IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn, users[2], data);
@@ -1193,6 +1190,9 @@ contract GooberTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, artGobblerUnrevealed[0]));
         goober.previewSwap(artGobblerUnrevealed, 0, artGobbler, 0 ether);
+
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, artGobblerUnrevealed[0]));
+        goober.previewSwap(artGobbler, 0, artGobblerUnrevealed, 0 ether);
 
         bytes memory data;
         IGoober.SwapParams memory swap =
