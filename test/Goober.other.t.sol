@@ -35,14 +35,22 @@ contract GooberOtherTest is Test {
 
     uint256[] internal ids;
 
-    // Storage to avoid stack too deep error
+    // Time
+    uint256 internal constant TIME0 = 2_000_000_000;
+
+    // Users
+    address internal vault;
+    address internal constant alice = address(0xAAAA);
+    address internal constant bob = address(0xBBBB);
+    address internal constant feeTo = address(0xFFFF1);
+    address internal constant minter = address(0xFFFF2);    
+
+    // Gobblers
     uint256[] internal aliceGobblers;
     uint256[] internal aliceGobblersOnlyTwo;
     uint256[] internal bobGobblers;
     uint256[] internal bobGobblersEmpty;
     uint256[] internal bobSwapOut;
-
-    uint256 internal constant TIME0 = 2_000_000_000;
 
     function setUp() public {
         // Start from TIME0
@@ -91,18 +99,29 @@ contract GooberOtherTest is Test {
         goober = new Goober({
             _gobblersAddress: address(gobblers),
             _gooAddress: address(goo),
-            _feeTo: address(0xFFFF1),
-            _minter: address(0xFFFF2)
+            _feeTo: feeTo,
+            _minter: minter
         });
+        vault = address(goober);
     }
 
-    // Scenario:
+    // Scenario
     // 
-    // Vault = V, A = Alice, B = Bob
+    // V = Vault, A = Alice, B = Bob, F = FeeTo
+    // gbr = Goober vault fractions
+    // goo = physically held Goo tokens
+    // gbbl = physically held Gobbler NFTs
+    // mult = Gobbler multiplier for account
     // 
+    //  _____________________________________________________________________________________________________________
+    // | V gbr | V goo | V gbbl | V mult | A gbr | A goo | A gbbl | A mult | B gbr | B goo | B gbbl | B mult | F goo |
+    // |=============================================================================================================|
+
+
+
     //  ________________________________________________________________________________________
     // | V gbr | V mult | A gbr | A goo | A gbblrs | A mult | B gbr | B goo | B gbblrs | B mult |
-    // |========================================================================================|
+    // |========================================================================================|    
     // | 0. Vault, Alice, Bob starting balances
     // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
     // |     0 |      0 |     0 |  2000 |        0 |      0 |     0 |  2000 |        0 |      0 |
@@ -141,11 +160,11 @@ contract GooberOtherTest is Test {
     // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
     // |   200 |     20 |   ~57 |   800 |        1 |      6 |     0 |  2000 |        1 |      6 | TODO add V
     // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 9. Alice swaps Gobbler 6 for 
+    // | 9. Alice swaps in Gobbler 6 and XYZ Goo for Gobbler 8 out
     // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
     // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
     // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 10. Small deposit – triggers a small fee, but not enough to fully offset the debt
+    // | 10. Bob deposits 10 Goo (Triggers a small fee, but not enough to fully offset the debt)
     // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
     // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
     // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
@@ -172,12 +191,7 @@ contract GooberOtherTest is Test {
     // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
 
     function testMultipleDepositSwapMintWithdraw() public {
-        // 0. Vault, Alice, Bob starting balances
-        address vault = address(goober);
-        address alice = address(0xAAAA);
-        address bob = address(0xBBBB);
-        address minter = address(0xFFFF2);
-
+        // 0. Vault, Alice, Bob, FeeTo starting balances    
         _writeTokenBalance(alice, address(goo), 2000 ether);
         _writeTokenBalance(bob, address(goo), 2000 ether);        
         vm.startPrank(alice);
