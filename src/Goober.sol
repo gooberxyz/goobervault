@@ -521,6 +521,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                             )
                         );
                 }
+                // Otherwise, return 0
             }
         }
     }
@@ -855,12 +856,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
 
             if (adjustedBalanceK < expectedK) {
-                erroneousGoo = erroneousGoo
-                    + int256(
-                        FixedPointMathLib.mulWadUp(
-                            FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
-                        )
-                    );
+                revert("Goober: K");
             } else if (adjustedBalanceK > expectedK) {
                 erroneousGoo = erroneousGoo
                     - int256(
