@@ -1079,6 +1079,46 @@ contract GooberTest is Test {
         vm.stopPrank();
     }
 
+    function testPreviewSwapGobblerForGobbler() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(700 ether);
+
+        // Gobblers to deposit
+        uint256[] memory gobblersDeposit = new uint256[](4);
+        gobblersDeposit[0] = gobblers.mintFromGoo(100 ether, true);
+        gobblersDeposit[1] = gobblers.mintFromGoo(100 ether, true);
+        gobblersDeposit[2] = gobblers.mintFromGoo(100 ether, true);
+        gobblersDeposit[3] = gobblers.mintFromGoo(100 ether, true);
+
+        // Gobblers to deposit
+        uint256[] memory gobblersWallet = new uint256[](4);
+        gobblersWallet[0] = gobblers.mintFromGoo(100 ether, true);
+        gobblersWallet[1] = gobblers.mintFromGoo(100 ether, true);
+        gobblersWallet[2] = gobblers.mintFromGoo(100 ether, true);
+
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(7, "Seed");
+
+        uint256[] memory gobblerIn = new uint256[](1);
+        gobblerIn[0] = gobblersWallet[0];
+
+        uint256[] memory gobblerOut = new uint256[](1);
+        gobblerOut[0] = gobblersDeposit[1];
+
+        goober.deposit(gobblersDeposit, 1234 ether, users[1]);
+
+        int256 previewAdditionalGooRequired = goober.previewSwap(gobblerIn, 0, gobblerOut, 0);
+
+        uint256 additionalGooAbs = uint256(previewAdditionalGooRequired);
+
+        bytes memory data;
+        IGoober.SwapParams memory swap = IGoober.SwapParams(gobblerOut, 0, gobblerIn, additionalGooAbs, users[1], data);
+        int256 erroneousGoo = goober.swap(swap);
+        assertEq(erroneousGoo, int256(0));
+        vm.stopPrank();
+    }
+
+
     /*//////////////////////////////////////////////////////////////
     // Mint Gobbler
     //////////////////////////////////////////////////////////////*/
