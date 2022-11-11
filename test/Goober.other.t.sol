@@ -14,6 +14,14 @@ import "./mocks/MockERC721.sol";
 import "../src/Goober.sol";
 import "../src/interfaces/IGoober.sol";
 
+// TODO Spot check data table
+// TODO Improve tracking on aliceGooBalance, bobGooBalance, aliceGooberBalance, bobGooberBalance
+// TODO Add numerical assertions for management and performance fees accruing to FeeTo account
+// TODO Bring in LibGOO for actual emission amounts
+// TODO Use previewDeposit, previewWithdraw, previewSwap for asserting actual results
+// TODO Consider forking mainnet and running against deployed Goo / ArtGobblers contracts
+// TODO Consider fuzzing # Gobblers to mint, Goo deposit amounts, Swap params, and time to let Goo accrue
+
 contract GooberOtherTest is Test {
     using stdStorage for StdStorage;
 
@@ -43,14 +51,27 @@ contract GooberOtherTest is Test {
     address internal constant alice = address(0xAAAA);
     address internal constant bob = address(0xBBBB);
     address internal constant feeTo = address(0xFFFF1);
-    address internal constant minter = address(0xFFFF2);    
+    address internal constant minter = address(0xFFFF2);
 
-    // Gobblers
+    // Goo
+    uint256 internal aliceGooBalance;
+    uint256 internal bobGooBalance;
+
+    // Gobblers (in storage to avoid stack too deep)
     uint256[] internal aliceGobblers;
     uint256[] internal aliceGobblersOnlyTwo;
+    uint256[] internal aliceSwapOut;
+    uint256[] internal aliceSwapIn;
+    uint256[] internal aliceWithdraw;
     uint256[] internal bobGobblers;
     uint256[] internal bobGobblersEmpty;
     uint256[] internal bobSwapOut;
+    uint256[] internal bobSwapIn;
+    uint256[] internal emptyGobblers;
+
+    // Goober Vault Fractions
+    uint256 internal aliceGooberBalance;
+    uint256 internal bobGooberBalance;
 
     function setUp() public {
         // Start from TIME0
@@ -105,90 +126,92 @@ contract GooberOtherTest is Test {
         vault = address(goober);
     }
 
-    // Scenario
+    // Scenario //////////////////////////////////////////////////////////////////////////////////////////////////////
     // 
     // V = Vault, A = Alice, B = Bob, F = FeeTo
+    // 
     // gbr = Goober vault fractions
     // goo = physically held Goo tokens
     // gbbl = physically held Gobbler NFTs
     // mult = Gobbler multiplier for account
     // 
+    // Token ID 1 will have Multiplier 9
+    // Token ID 2 will have Multiplier 8
+    // Token ID 3 will have Multiplier 6
+    // Token ID 4 will have Multiplier 9
+    // Token ID 5 will have Multiplier 6
+    // 
     //  _____________________________________________________________________________________________________________
     // | V gbr | V goo | V gbbl | V mult | A gbr | A goo | A gbbl | A mult | B gbr | B goo | B gbbl | B mult | F goo |
     // |=============================================================================================================|
-
-
-
-    //  ________________________________________________________________________________________
-    // | V gbr | V mult | A gbr | A goo | A gbblrs | A mult | B gbr | B goo | B gbblrs | B mult |
-    // |========================================================================================|    
-    // | 0. Vault, Alice, Bob starting balances
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |     0 |      0 |     0 |  2000 |        0 |      0 |     0 |  2000 |        0 |      0 |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 1. Alice adds 1000 Goo and mints 3 Gobblers
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |     0 |      0 |     0 |  1000 |        3 |      0 |     0 |     0 |        0 |      0 |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 2. Bob adds 500 Goo and mints 1 Gobbler
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |     0 |      0 |     0 |  1000 |        3 |      0 |     0 |  1500 |        1 |      0 |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 3. Gobblers reveal – Alice gets a 9, 8, 6 and Bob gets a 9
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |     0 |      0 |     0 |  1000 |        3 |     23 |     0 |  1500 |        1 |      9 |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 4. Alice deposits 200 Goo and Gobblers 9, 8
-    // | (Mints ~57.1433 GBR, No performance fee bc no growth in k since lastK as initial deposit)
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   200 |     17 |   ~57 |   800 |        1 |      6 |     0 |  1500 |        1 |      9 |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 5. Vault accrues Goo for 1 hour (receives XYZ GBR in emissions from Gobblers)
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   200 |     17 |   ~57 |   800 |        1 |      6 |     0 |  1500 |        1 |      9 | TODO add V goo and gbblrs
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 6. Bob swaps in Gobbler 9 for 500 Goo and Gobbler 6 out
-    // | (Swap requires additional XYZ GOO, Vault accrues XYZ Goo as swap fee)
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   200 |     20 |   ~57 |   800 |        1 |      6 |     0 |  2000 |        1 |      6 | TODO check the actual in previewSwap() -- won't Bob get some Goo back?
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 7. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ | TODO add V
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 8. Vault mints 1 Gobbler
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   200 |     20 |   ~57 |   800 |        1 |      6 |     0 |  2000 |        1 |      6 | TODO add V
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 9. Alice swaps in Gobbler 6 and XYZ Goo for Gobbler 8 out
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 10. Bob deposits 10 Goo (Triggers a small fee, but not enough to fully offset the debt)
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 11. Gobblers reveal – Vault gets a XYZ
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 12. Deposit
-    // | (Between the swap fee and the mint, there's now enough to offset the debt so a performance fee is assessed)
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 13. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 14. Bob withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // | 15. Alice withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
-    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 0. Vault, Alice, Bob, FeeTo starting balances                                                               |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |     0 |     0 |      0 |     0 |      0 |  2000 |      0 |      0 |     0 |  2000 |      0 |      0 |     0 |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 1. Alice adds 1000 Goo and mints 3 Gobblers                                                                 |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |     0 |     0 |      0 |     0 |      0 |  1000 |      3 |      0 |     0 |     0 |      0 |      0 |     0 |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 2. Bob adds 500 Goo and mints 1 Gobbler                                                                     |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |     0 |     0 |      0 |     0 |      0 |  1000 |      3 |      0 |     0 |  1500 |      1 |      0 |     0 |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 3. Gobblers reveal – Alice gets a 9, 8, and 6 and Bob gets a Gobbler 9                                      |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |     0 |     0 |      0 |     0 |      0 |  1000 |      3 |     23 |     0 |  1500 |      1 |      9 |     0 |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 4. Alice deposits 200 Goo and Gobblers 9, 8, minting ~57.1433 GBR vault fractions                           |
+    // | (FeeTo receives XYZ Goo as management fee, No performance fee bc there's no growth in k since lastK)        |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |     0 |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 5. Vault accrues Goo for 1 hour, receiving XYZ GBR in emissions from 2 Gobblers with multiple 17            |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |   XYZ |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 6. Bob swaps in a Gobbler 9 for 500 Goo and a Gobbler 8 out (Vault receives XYZ Goo as swap fee)            |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |   XYZ |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  2000 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 7. Vault accrues Goo for 1 hour, receiving XYZ GBR in emissions from 2 Gobblers with multiple 20            |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |   XYZ |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  2000 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 8. Vault mints 1 Gobbler for ~59.7 Goo                                                                      |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |   XYZ |      3 |    18 |    ~57 |   800 |      1 |      6 |     0 |  2000 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 9. Alice swaps in a Gobbler 6 and XYZ Goo for a Gobbler 9 out                                               |
+    // | (Vault receives XYZ Goo as swap fee, Vault records kDebt)                                                   |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |   XYZ |      3 |    15 |    ~57 |   XYZ |      1 |      9 |     0 |  2000 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 10. Bob deposits 10 Goo, minting him ~17.0487 GBR fractions                                                 |
+    // | (This triggers a small performance fee, but not enough to fully offset the kDebt so no performance fee)     |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |   XYZ |      3 |    15 |    ~57 |   XYZ |      1 |      9 |   ~17 |  1990 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 11. Gobblers reveal – Vault gets a Gobbler 6, plus ~55 Goo in emissions for the 1 day which elapsed         |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |   XYZ |      3 |    21 |    ~57 |   XYZ |      1 |      9 |   ~17 |  1990 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 12. Bob deposits 10 more Goo, minting him XYZ GBR fractions                                                 |
+    // | (Between the swap fee and the mint, there's now enough to offset the kDebt so a performance fee is assessed)|
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |   XYZ |      3 |    21 |    ~57 |   XYZ |      1 |      9 |   XYZ |  1980 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 13. Vault accrues Goo for 1 hour, receiving ~2.9679 GBR in emissions from 3 Gobblers with multiple 21       |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   200 |   XYZ |      3 |    21 |    ~57 |   XYZ |      1 |      9 |   XYZ |  1980 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 14. Bob withdraws XYZ Goo for XYZ GBR fractions (FeeTo accrues XYZ Goo as fee)                              |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   XYZ |   XYZ |      3 |    21 |    ~57 |   XYZ |      1 |      9 |   XYZ |  1980 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // | 15. Alice withdraws XYZ Goo and 2 Gobbler 6s for ~35.5816 GBR fractions (FeeTo accrues XYZ Goo as fee)      |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
+    // |   XYZ |   XYZ |      1 |     9 |    ~57 |   XYZ |      1 |     21 |   XYZ |  1980 |      1 |      8 |   XYZ |
+    // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
 
     function testMultipleDepositSwapMintWithdraw() public {
         // 0. Vault, Alice, Bob, FeeTo starting balances    
@@ -229,7 +252,6 @@ contract GooberOtherTest is Test {
         aliceGobblers[2] = gobblers.mintFromGoo(100 ether, true);
         vm.stopPrank();
 
-        // Check TODO
         assertEq(goo.balanceOf(vault), 0);
         assertEq(goo.balanceOf(alice), 1000 ether);
         assertEq(goo.balanceOf(bob), 2000 ether);
@@ -252,7 +274,6 @@ contract GooberOtherTest is Test {
         bobGobblers[0] = gobblers.mintFromGoo(100 ether, true);
         vm.stopPrank();
     
-        // Check TODO
         assertEq(goo.balanceOf(vault), 0);
         assertEq(goo.balanceOf(alice), 1000 ether);
         assertEq(goo.balanceOf(bob), 1500 ether);
@@ -268,11 +289,10 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, 0);
         assertEq(vaultLastTimestamp, 0);
 
-        // 3. Gobblers reveal – Alice gets a 9, 8, 6 and Bob gets a 9
+        // 3. Gobblers reveal – Alice gets a 9, 8, and 6 and Bob gets a Gobbler 9
         vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(4, "seed");
 
-        // Check TODO
         assertEq(gobblers.ownerOf(1), alice);
         assertEq(gobblers.getGobblerEmissionMultiple(1), 9);
         assertEq(gobblers.ownerOf(2), alice);
@@ -282,7 +302,8 @@ contract GooberOtherTest is Test {
         assertEq(gobblers.ownerOf(4), bob);
         assertEq(gobblers.getGobblerEmissionMultiple(4), 9);
 
-        // 4. Alice deposits 200 Goo and Gobblers 9, 8 (mints 57.1433 GBR, No performance fee because no growth in k since lastK on initial deposit)
+        // 4. Alice deposits 200 Goo and Gobblers 9, 8, minting ~57.1433 GBR vault fractions
+        // (FeeTo receives XYZ Goo as management fee, No performance fee bc there's no growth in k since lastK)
         aliceGobblersOnlyTwo = new uint256[](2);
         aliceGobblersOnlyTwo[0] = aliceGobblers[0];
         aliceGobblersOnlyTwo[1] = aliceGobblers[1];
@@ -290,7 +311,7 @@ contract GooberOtherTest is Test {
         uint256 aliceFractions = goober.deposit(aliceGobblersOnlyTwo, 200 ether, alice);
         vm.stopPrank();
 
-        // // Check Goo is transferred into vault,
+        // Check Goo is transferred into vault,
         uint256 expectedGoo = 200 ether;
         uint256 expectedMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(2);
         assertEq(gobblers.gooBalance(vault), expectedGoo);
@@ -309,12 +330,10 @@ contract GooberOtherTest is Test {
         assertEq(vaultLastTimestamp, TIME0 + 1 days);
         // and the protocol admin accrues XYZ Goo in management fees. (management fee is 2% of total deposit) 
 
-        // 5. Vault accrues Goo for 1 hour (receives XYZ GBR in emissions from Gobblers)
+        // 5. Vault accrues Goo for 1 hour, receiving XYZ GBR in emissions from 2 Gobblers with multiple 17
         vm.warp(TIME0 + 1 days + 1 hours);
 
-        // Check TODO
-        expectedGoo = 200 ether + 2_436_941_761_741_097_378; // TODO sqrt(vaultMult * vaultGoo * vaultGobblers)
-        expectedMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(2);
+        expectedGoo += 2_436_941_761_741_097_378;
         assertEq(gobblers.gooBalance(vault), expectedGoo);
         assertEq(gobblers.balanceOf(vault), 2);
         assertEq(gobblers.balanceOf(alice), 1);
@@ -327,20 +346,26 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, expectedMult);
         assertEq(vaultLastTimestamp, TIME0 + 1 days);
 
-        // 6. Bob swaps in Gobbler 9 for 500 Goo and Gobbler 6 out (costs additional XYZ GBR, Vault accrues XYZ Goo as fee)
+        // 6. Bob swaps in a Gobbler 9 for some Goo and a Gobbler 8 out (Vault receives XYZ Goo as swap fee)
+        bobSwapIn = new uint256[](1);
+        bobSwapIn[0] = 4; // Bob's gobbler
         bobSwapOut = new uint256[](1);
-        bobSwapOut[0] = aliceGobblers[1];
+        bobSwapOut[0] = 2; // Alice's 2nd gobbler
         vm.startPrank(bob);
-        IGoober.SwapParams memory swap =
-            IGoober.SwapParams(bobSwapOut, 0, bobGobblers, 500 ether, bob, "");
-        goober.swap(swap);
+
+        int256 bobErroneousGoo = goober.previewSwap(bobSwapIn, 0, bobSwapOut, 0);
+        assertEq(bobErroneousGoo, -10_992_257_043_437_332_960); // Bob will get ~10.9 Goo back before swap fee
+
+        IGoober.SwapParams memory bobSwap =
+            IGoober.SwapParams(bobSwapOut, 10 ether, bobSwapIn, 0, bob, "");
+        goober.swap(bobSwap);
         vm.stopPrank();
 
-        // Check TODO
-        expectedGoo = 200 ether + 500 ether + 2_436_941_761_741_097_378; // TODO
-        expectedMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(4); // alice's gobbler swapped for bob's
+        expectedGoo = 200 ether - 10 ether + 2_436_941_761_741_097_378; // Bob receives ~7.5 Goo back, after ~2.5 swap fee // Bob receives 7_563_058_238_258_902_622, after 2_436_941_761_741_097_378 swap fee
+        expectedMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(4); // new vault multiple after swap
         assertEq(gobblers.gooBalance(vault), expectedGoo);
-        // TODO bob goo balance
+        assertEq(goo.balanceOf(bob), 1500 ether + 10 ether);
+        // TODO check Bob goober balance
         assertEq(gobblers.balanceOf(vault), 2);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
@@ -355,9 +380,7 @@ contract GooberOtherTest is Test {
         // 7. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)
         vm.warp(TIME0 + 1 days + 2 hours);
 
-        // Check TODO
-        expectedGoo = 200 ether + 500 ether + 7_129_960_172_910_254_154; // TODO
-        expectedMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(4);
+        expectedGoo += 2_460_087_857_714_628_484; // vault receives ~2.4 Goo in emissions
         assertEq(gobblers.gooBalance(vault), expectedGoo);
         assertEq(gobblers.balanceOf(vault), 2);
         assertEq(gobblers.balanceOf(alice), 1);
@@ -370,15 +393,14 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, expectedMult);
         assertEq(vaultLastTimestamp, TIME0 + 1 days + 1 hours);
 
-        // 8. Vault mints 1 Gobbler
+        // 8. Vault mints 1 Gobbler for ~59.7 Goo
         vm.prank(minter);
         goober.mintGobbler();
-
-         // Check TODO
-        expectedGoo = 200 ether + 500 ether + 7_129_960_172_910_254_154; // TODO
-        expectedMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(4) + gobblers.getGobblerEmissionMultiple(5); // new multiplier
+        
+        expectedGoo -= 59_772_562_115_376_111_594; // new balance, after paying ~59.7 Goo to mint
+        expectedMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(4);
         assertEq(gobblers.gooBalance(vault), expectedGoo);
-        assertEq(gobblers.balanceOf(vault), 2); // don't count yet, bc not revealed
+        assertEq(gobblers.balanceOf(vault), 3);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGoo, vaultMult) = goober.totalAssets();
@@ -389,89 +411,175 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, expectedMult);
         assertEq(vaultLastTimestamp, TIME0 + 1 days + 2 hours); // new time
 
-        // Bot takes out Goo
-        // Adds back Gobbler with mult 0
-        // This decreases k, so we track in kDebt
-        // Things happen
-        // Reveal happens
-        // Now mult increases
-        // When the next deposit/withdraw happens, we offset any growth against the existing kDebt, 
-        // then take the 10% performance fee 
+        // 9. Alice swaps in a Gobbler 6 and XYZ Goo for a Gobbler 9 out
+        // (Vault receives XYZ Goo as swap fee, Vault records kDebt)
+        aliceSwapIn = new uint256[](1);
+        aliceSwapIn[0] = 3; // Alice's Gobbler 6
+        aliceSwapOut = new uint256[](1);
+        aliceSwapOut[0] = 4; // Bob's Gobbler 9
 
-        // 9. Alice swaps Gobbler 6 for Goo (gets a small fee)
+        int256 aliceErroneousGoo = goober.previewSwap(aliceSwapIn, 0, aliceSwapOut, 0);
+        assertEq(aliceErroneousGoo, 27_301_611_343_663_367_346); // Alice will need to swap in at least ~27.3 Goo, before swap fee
 
+        vm.startPrank(alice);
+        IGoober.SwapParams memory aliceSwap =
+            IGoober.SwapParams(aliceSwapOut, 0, aliceSwapIn, 30 ether, alice, "");
+        goober.swap(aliceSwap);
+        vm.stopPrank();
 
+        expectedGoo += 30 ether;
+        expectedMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3); // new vault multiple after swap
+        assertEq(gobblers.gooBalance(vault), expectedGoo);
+        assertEq(goo.balanceOf(alice), 800 ether - 30 ether);
+        // TODO check Alice goober balance
+        assertEq(gobblers.balanceOf(vault), 3);
+        assertEq(gobblers.balanceOf(alice), 1);
+        assertEq(gobblers.balanceOf(bob), 1);
+        (vaultGoo, vaultMult) = goober.totalAssets();
+        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultMult, expectedMult);
+        (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
+        assertEq(vaultGooReserve, expectedGoo);
+        assertEq(vaultGobblersReserve, expectedMult);
+        assertEq(vaultLastTimestamp, TIME0 + 1 days + 2 hours);
 
+        // 10. Bob deposits 10 Goo, minting him ~17.0487 GBR fractions
+        // (This triggers a small performance fee, but not enough to fully offset the kDebt so no performance fee)
+        vm.prank(bob);
+        emptyGobblers = new uint256[](0);
+        uint256 bobFractions = goober.deposit(emptyGobblers, 10 ether, bob);
+
+        expectedGoo += 10 ether;
+        assertEq(gobblers.gooBalance(vault), expectedGoo);
+        assertEq(goober.balanceOf(bob), bobFractions); // Bob is minted ~17 GBR fractions
+        assertEq(gobblers.balanceOf(vault), 3);
+        assertEq(gobblers.balanceOf(alice), 1);
+        assertEq(gobblers.balanceOf(bob), 1);
+        (vaultGoo, vaultMult) = goober.totalAssets();
+        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultMult, expectedMult);
+        (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
+        assertEq(vaultGooReserve, expectedGoo);
+        assertEq(vaultGobblersReserve, expectedMult);
+        assertEq(vaultLastTimestamp, TIME0 + 1 days + 2 hours);
+
+        // 11. Gobblers reveal – Vault gets a Gobbler 6, plus ~55 Goo in emissions for the 1 day which elapsed
+        vm.warp(TIME0 + 1 days + 2 hours + 1 days);
+        _setRandomnessAndReveal(1, "seed2");
+
+        assertEq(gobblers.getGobblerEmissionMultiple(5), 6);
+        expectedGoo += 55_002_970_768_153_471_144; // Goo emissions
+        expectedMult += gobblers.getGobblerEmissionMultiple(5); // new vault multiple after reveal
+        assertEq(gobblers.gooBalance(vault), expectedGoo);
+        assertEq(gobblers.balanceOf(vault), 3);
+        assertEq(gobblers.balanceOf(alice), 1);
+        assertEq(gobblers.balanceOf(bob), 1);
+        (vaultGoo, vaultMult) = goober.totalAssets();
+        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultMult, expectedMult);
+        (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
+        assertEq(vaultGooReserve, expectedGoo);
+        assertEq(vaultGobblersReserve, expectedMult);
+        assertEq(vaultLastTimestamp, TIME0 + 1 days + 2 hours);
         
-        // and the protocol admin accrues XYZ Goo in management fees.
-        // (performance fee is 10% of the dilution in k beyond kLast)
-        // TODO        
+        // 12. Bob deposits 10 more Goo, minting him XYZ GBR fractions
+        // (Between the swap fee and the mint, there's now enough to offset the kDebt so a performance fee is assessed)
+        vm.prank(bob);
+        bobFractions += goober.deposit(emptyGobblers, 10 ether, bob);
 
-        // 10. Small deposit – triggers a small fee, but not enough to fully offset the debt
+        expectedGoo += 10 ether;
+        assertEq(gobblers.gooBalance(vault), expectedGoo);
+        assertEq(goober.balanceOf(bob), bobFractions); // Bob is only minted ~2 GBR fractions, after performance fee is assessed
+        assertEq(gobblers.balanceOf(vault), 3);
+        assertEq(gobblers.balanceOf(alice), 1);
+        assertEq(gobblers.balanceOf(bob), 1);
+        (vaultGoo, vaultMult) = goober.totalAssets();
+        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultMult, expectedMult);
+        (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
+        assertEq(vaultGooReserve, expectedGoo);
+        assertEq(vaultGobblersReserve, expectedMult);
+        assertEq(vaultLastTimestamp, TIME0 + 1 days + 2 hours + 1 days); // new time
 
-        // 11. Gobblers reveal – Vault gets a XYZ
+        // 13. Vault accrues Goo for 1 hour, receiving ~2.9679 GBR in emissions from 3 Gobblers with multiple 21
+        vm.warp(TIME0 + 1 days + 2 hours + 1 days + 1 hours);
 
-        // vm.warp(TIME0 + 1 days + 1 hours + 1 days);
-        // _setRandomnessAndReveal(1, "seed2");
+        expectedGoo += 2_967_939_719_600_851_528;
+        assertEq(gobblers.gooBalance(vault), expectedGoo);
+        assertEq(gobblers.balanceOf(vault), 3);
+        assertEq(gobblers.balanceOf(alice), 1);
+        assertEq(gobblers.balanceOf(bob), 1);
+        (vaultGoo, vaultMult) = goober.totalAssets();
+        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultMult, expectedMult);
+        (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
+        assertEq(vaultGooReserve, expectedGoo);
+        assertEq(vaultGobblersReserve, expectedMult);
+        assertEq(vaultLastTimestamp, TIME0 + 1 days + 2 hours + 1 days);
 
-        // 
+        // 14. Bob withdraws 20 Goo for ~0.3670 GBR fractions (FeeTo accrues XYZ Goo as fee)
+        vm.prank(bob);
+        uint256 fractionsWithdrawn = goober.withdraw(emptyGobblers, 20 ether, bob, bob);
 
-        // 
+        expectedGoo -= 20 ether;
+        assertEq(gobblers.gooBalance(vault), expectedGoo);
+        assertEq(goo.balanceOf(bob), 1500 ether + 10 ether);
+        // TODO assertEq(goober.balanceOf(bob), 666 ether); // now ~0.3670 GRB fractions less
+        assertEq(gobblers.balanceOf(vault), 3);
+        assertEq(gobblers.balanceOf(alice), 1);
+        assertEq(gobblers.balanceOf(bob), 1);
+        (vaultGoo, vaultMult) = goober.totalAssets();
+        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultMult, expectedMult);
+        (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
+        assertEq(vaultGooReserve, expectedGoo);
+        assertEq(vaultGobblersReserve, expectedMult);
+        assertEq(vaultLastTimestamp, TIME0 + 1 days + 2 hours + 1 days + 1 hours); // new time
 
-        // 12. Deposit – between the swap fee and the mint, there's now enough to offset the debt
+        // 15. Alice withdraws 10 Goo and 2 Gobbler 6s for ~35.5816 GBR fractions (FeeTo accrues XYZ Goo as fee)
+        vm.prank(alice);
+        aliceWithdraw = new uint256[](2);
+        aliceWithdraw[0] = 3; // Alice's Gobbler 6
+        aliceWithdraw[1] = 5; // Gobbler 6 which the Vault minted
+        fractionsWithdrawn = goober.withdraw(aliceWithdraw, 10 ether, alice, alice);
 
-        // 
-
-        // 13. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)
-
-        // 14. Bob withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
-        // and the protocol admin accrues XYZ Goo in management fees.
-        // (performance fee is 10% of the dilution in k beyond kLast)
-        // TODO        
-
-        // 15. Alice withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
-        // and the protocol admin accrues XYZ Goo in management fees.
-        // (performance fee is 10% of the dilution in k beyond kLast)
-        // TODO        
-
+        expectedGoo -= 10 ether;
+        expectedMult = gobblers.getGobblerEmissionMultiple(1);
+        assertEq(gobblers.gooBalance(vault), expectedGoo);
+        assertEq(goo.balanceOf(alice), 800 ether - 30 ether + 10 ether);
+        // TODO assertEq(goober.balanceOf(alice), 777 ether); // now ~35.5816 GRB fractions less // 35_581_634_925
+        assertEq(gobblers.balanceOf(vault), 1); // 2 Gobblers less
+        assertEq(gobblers.balanceOf(alice), 3); // 2 Gobblers more
+        assertEq(gobblers.getUserEmissionMultiple(alice), 21); // multipliers 9, 6, and 6
+        assertEq(gobblers.balanceOf(bob), 1);
+        (vaultGoo, vaultMult) = goober.totalAssets();
+        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultMult, expectedMult);
+        (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
+        assertEq(vaultGooReserve, expectedGoo);
+        assertEq(vaultGobblersReserve, expectedMult);
+        assertEq(vaultLastTimestamp, TIME0 + 1 days + 2 hours + 1 days + 1 hours);
     }
 
+    // emit log_named_uint("Alice before", goober.balanceOf(alice));
+    // emit log_named_uint("Alice after", goober.balanceOf(alice));
 
-
+    // emit log_named_uint("Goo before", gobblers.gooBalance(vault));
+    // emit log_named_uint("Goo after", gobblers.gooBalance(vault));
         
-  
+    // and the protocol admin accrues XYZ Goo in management fees.
+    // (performance fee is 10% of the dilution in k beyond kLast)
+    // TODO 
 
-
-
-        // 
-        // Goober Vault GBR balance = xyz
-        // Goober Vault Mult = Σ depositor Gobbler multipliers
-        // Goober Vault Goo reserve = Σ depositor Goo balances + Goo emissions + Swap fees accrued
-        // Goober Vault Gobblers reserve = Σ depositor Gobbler balances
-        // Goober Admin xyz
-  
-        // | 1. Alice and Bob have a starting balance of 500 Goo and 0 Gobblers                     |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-        // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-
-
-
-        // | 1. Alice and Bob have a starting balance of 500 Goo and 0 Gobblers                     |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-        // |     0 |      0 |     0 |     0 |        0 |      0 |     0 |     0 |        0 |      0 |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-
-
-
-        // | 1. Alice mints 2000 shares (costs 2000 tokens)                              |
-        // |-----------|---------|---------|------------|---------|---------|------------|
-        // |         0 |       0 |       0 |          0 |       0 |       0 |          0 
-        // |-----------|---------|---------|------------|---------|---------|------------|
-
+    // TODO Invariant ideas
+    // Goober Vault GBR balance = xyz
+    // Goober Vault Mult = Σ depositor Gobbler multipliers
+    // Goober Vault Goo reserve = Σ depositor Goo balances + Goo emissions + Swap fees accrued
+    // Goober Vault Gobblers reserve = Σ depositor Gobbler balances
+    // Goober Admin xyz
 
     // TODO
-    // function testDepositIntegration(
+    // function testFuzzDeposit(
     //     uint256 gooAmount1,
     //     uint256 gobblerAmount1,
     //     uint256 gooAmount2,
