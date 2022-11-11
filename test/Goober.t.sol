@@ -221,13 +221,13 @@ contract GooberTest is Test {
 
         // Deposit 2 gobblers and 200 goo
         uint256 fractions = goober.deposit(artGobblers, gooToDeposit, users[1]);
-        // Check all the goo tokens were burned 
+        // Check all the goo tokens were burned
         // Since initial supply = 0, we can just use local vars.
         // TODO(Find a way to call gobblers.gooBalance() for the definition below
-        // without stack too deep. 
+        // without stack too deep.
         // uint256 finalSupply =  (300) + gobblers.gooBalance(address(this));
         // TODO(Find a way to call goo.totalSupply for the assert below
-        // without stack too deep. 
+        // without stack too deep.
         // assertEq(finalSupply, goo.totalSupply());
         vm.stopPrank();
 
@@ -253,7 +253,7 @@ contract GooberTest is Test {
         assertEq(blockTimestampLastAfter, TIME0 + 1 days);
     }
 
-    // Total initial supply of Goo is zero. 
+    // Total initial supply of Goo is zero.
     // function testTotalSupply() public {
     // uint256 gooSupply = goo.totalSupply();
     // assertEq(gooSupply, 0);
@@ -703,9 +703,7 @@ contract GooberTest is Test {
         // Mint a gobbler, and check we return 1 (gobbler) minted.
         // NOTE(Updates K, reserves and VRGDA in the process.)
         vm.prank(MINTER);
-        assertEq(goober.mintGobbler(), 1);
-        // Check contract owns second minted gobbler.
-        assertEq(gobblers.ownerOf(2), address(goober));
+        goober.mintGobbler();
 
         // Check our Goo balance went down from minting: 81 - 52.99 ~= 28.01.
         (uint112 _GooReserve, uint112 _GobblerReserve,) = goober.getReserves();
@@ -715,6 +713,8 @@ contract GooberTest is Test {
         vm.warp(block.timestamp + 1 days);
         // Changing the seed string changes the randomness, and thus the rolled mult.
         _setRandomnessAndReveal(1, "seed2");
+        // Check we own the second minted gobbler.
+        assertEq(gobblers.ownerOf(2), address(goober));
         (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
         // Check we have 15 total mult including the previous 9, since we minted a 6.
         assertEq(_newGobblerReserve, 15);
