@@ -1032,7 +1032,7 @@ contract GooberTest is Test {
         actual = goober.withdraw(artGobblersTwo, 100 ether, users[1], users[1]);
         uint256[] memory artGobblersFour = new uint256[](1);
         artGobblersFour[0] = gobblers.mintFromGoo(100 ether, true);
-        vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, 4));
+        vm.expectRevert(IGoober.InvalidNFT.selector);
         goober.previewWithdraw(artGobblersFour, 100 ether);
         assertEq(expected, actual);
     }
@@ -1075,6 +1075,10 @@ contract GooberTest is Test {
         IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn, users[2], data);
         int256 erroneousGoo = goober.swap(swap);
         assertEq(erroneousGoo, int256(0));
+        uint256[] memory gobblersInNew = new uint256[](1);
+        gobblersInNew[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.expectRevert(IGoober.InvalidNFT.selector);
+        goober.previewSwap(gobblersInNew, 0, gobblersOut, gooOut);
         vm.stopPrank();
     }
 
