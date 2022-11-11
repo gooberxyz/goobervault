@@ -43,6 +43,8 @@ interface IGoober is IERC721Receiver {
 
     // Events
 
+    event VaultMint(address indexed minter, uint112 gooConsumed, uint112 gobblersMinted, bool balanceTerminated);
+
     event Deposit(
         address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
     );
@@ -105,5 +107,5 @@ interface IGoober is IERC721Receiver {
         external
         returns (uint256 fractions);
 
-    function swap(SwapParams calldata params) external;
+    function swap(SwapParams calldata params) external returns (int256 erroneousGoo);
 }

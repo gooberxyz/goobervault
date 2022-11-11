@@ -111,6 +111,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _;
     }
 
+    /// @notice This modifier ensures the transaction is included before a specified deadline.
+    /// @param deadline - Unix timestamp after which the transaction will revert.
+    modifier ensure(uint256 deadline) {
+        require(deadline >= block.timestamp, "Goober: EXPIRED");
+        _;
+    }
+
     /*//////////////////////////////////////////////////////////////
     // Internal: Non-Mutating
     //////////////////////////////////////////////////////////////*/
@@ -309,9 +316,34 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @return gobblerMult the total multiple of all gobblers owned
     function totalAssets() public view returns (uint256 gooTokens, uint256 gobblerMult) {
         gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
-        gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
+        gooTokens = artGobblers.gooBalance(address(this));
     }
 
+    function convertToFractions(uint256 gooTokens, uint256 gobblerMult) public view returns (uint256 fractions) {
+        uint256 _totalSupply = totalSupply;
+        uint256 kInput = FixedPointMathLib.sqrt(gooTokens * gobblerMult);
+        if (_totalSupply > 0) {
+            (uint256 gooBalance, uint256 gobblerMultBalance) = totalAssets();
+            uint256 kBalance = FixedPointMathLib.sqrt(gooBalance * gobblerMultBalance);
+            uint256 kDelta = FixedPointMathLib.divWadDown(kInput, kBalance);
+            fractions = FixedPointMathLib.mulWadDown(_totalSupply, kDelta);
+        } else {
+            fractions = kInput;
+        }
+    }
+
+    function convertToAssets(uint256 fractions) public view virtual returns (uint256 gooTokens, uint256 gobblerMult) {
+        uint256 _totalSupply = totalSupply;
+        if (_totalSupply > 0) {
+            (gooTokens, gobblerMult) = totalAssets();
+            gooTokens = fractions.mulDivDown(gooTokens, _totalSupply);
+            gobblerMult = fractions.mulDivDown(gobblerMult, _totalSupply);
+        }
+    }
+
+    /// @notice get the vault reserves of goo and gobbler multiplier, along with the last update time
+    /// @dev This can be used to calculate slippage on a swap of certain sizes
+    ///      using uni-v2 style liquidity math.
     /// @return _gooReserve the total amount of goo in the tank for all owned gobblers
     /// @return _gobblerReserve the total multiplier of all gobblers owned
     /// @return _blockTimestampLast the last time that the reserves were updated
@@ -327,12 +359,11 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Mutating external/public functions
 
-    /// @notice Previews a deposit of the supplied gobblers goo.
+    /// @notice Previews a deposit of the supplied gobblers and goo.
     /// @param gobblers - array of gobbler ids
-    /// @param gooTokens - amount of goo to withdraw
+    /// @param gooTokens - amount of goo to deposit
     /// @return fractions - amount of GBR minted
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) external view returns (uint256 fractions) {
-        fractions = 0;
         // Collect a virtual performance fee
         (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
         uint256 _totalSupply = totalSupply;
@@ -380,12 +411,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         uint112 _gobblerBalanceMult = _gobblerReserveMult;
         uint256 gobblerMult;
         for (uint256 i = 0; i < gobblers.length; i++) {
+            if (artGobblers.ownerOf(gobblers[i]) != address(this)) {
+                revert InvalidNFT();
+            }
             gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblers[i]);
             if (gobblerMult < 6) {
                 revert InvalidMultiplier(gobblers[i]);
-            }
-            if (artGobblers.ownerOf(gobblers[i]) != address(this)) {
-                revert InvalidNFT();
             }
             _gobblerBalanceMult -= uint112(gobblerMult);
         }
@@ -404,59 +435,66 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         }
     }
 
-    /// TODO NatSpec
-    // function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
-    //     external
-    //     view
-    //     returns (uint256 additionalGooRequired) {
-
-    //     // Collect a virtual performance fee
-    //     (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
-    //     uint256 _totalSupply = totalSupply;
-    //     (uint256 pFee,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
-
-    //     // Increment virtual total supply
-    //     _totalSupply += pFee;
-
-    //     // Simulate transfers in
-    //     uint256 _gooBalance = gooIn + _gooReserve;
-    //     uint256 _gobblerBalanceMult = _gobblerReserveMult;
-    //     for (uint256 i = 0; i < gobblersIn.length; i++) {
-    //         _gobblerBalanceMult += artGobblers.getGobblerEmissionMultiple(gobblersIn[i]);
-    //     }
-    //     uint256 gobblerAmountMultIn = _gobblerBalanceMult - _gobblerReserveMult;
-
-    //     // Simulate transfers out
-    //     uint256 gobblerAmountMultOut;
-    //     _gooBalance = _gooReserve - uint112(gooOut);
-    //     for (uint256 i = 0; i < gobblersOut.length; i++) {
-    //         gobblerAmountMultOut = artGobblers.getGobblerEmissionMultiple(gobblersOut[i]);
-    //         if (gobblerAmountMultOut < 6) {
-    //             revert InvalidMultiplier(gobblersOut[i]);
-    //         }
-    //         if (artGobblers.ownerOf(gobblersOut[i]) != address(this)) {
-    //             revert InvalidNFT();
-    //         }
-    //         _gobblerBalanceMult -= gobblerAmountMultOut;
-    //     }
-    //     gobblerAmountMultOut = _gobblerReserveMult - _gobblerBalanceMult;
-    //     require(gobblerAmountMultOut > 0 || gooOut > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
-
-    //     // Calculate amounts required // TODO definitely wrong
-    //     uint256 amount0In =
-    //         _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
-    //     uint256 amount1In =
-    //         _gobblerBalanceMult > _gobblerReserveMult - gobblerAmountMultOut ? _gobblerBalanceMult - (_gobblerReserveMult - gobblerAmountMultOut) : 0;
-    //     require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
-    //     {
-    //         uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
-    //         uint256 balance1Adjusted = (_gobblerBalanceMult * 1000) - (amount1In * 3);
-    //         require((balance0Adjusted * balance1Adjusted) >= ((_gooReserve * _gobblerReserveMult) * 1000 ** 2), "Goober: K");
-    //     }
-
-    //     // Calculate any additional Goo required for the swap (gooRequired - gooIn)
-    //     additionalGooRequired = 999999999999;
-    // }
+    function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
+        external
+        view
+        returns (int256 erroneousGoo)
+    {
+        erroneousGoo = 0;
+        (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves();
+        // Simulate transfers out
+        uint112 _gooBalance = _gooReserve - uint112(gooOut);
+        uint112 _gobblerBalance = _gobblerReserve;
+        uint112 multOut = 0;
+        for (uint256 i = 0; i < gobblersOut.length; i++) {
+            if (artGobblers.ownerOf(gobblersOut[i]) != address(this)) {
+                revert InvalidNFT();
+            }
+            uint112 gobblerMult = uint112(artGobblers.getGobblerEmissionMultiple(gobblersOut[i]));
+            if (gobblerMult < 6) {
+                revert InvalidMultiplier(gobblersOut[i]);
+            }
+            _gobblerBalance -= gobblerMult;
+            multOut += gobblerMult;
+        }
+        // Simulate transfers in
+        _gooBalance += uint112(gooIn);
+        for (uint256 i = 0; i < gobblersIn.length; i++) {
+            uint112 gobblerMult = uint112(artGobblers.getGobblerEmissionMultiple(gobblersIn[i]));
+            if (gobblerMult < 6) {
+                revert InvalidMultiplier(gobblersIn[i]);
+            }
+            _gobblerBalance += gobblerMult;
+        }
+        {
+            // Calculate additionalGooRequired
+            uint256 amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
+            uint256 amount1In =
+                _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
+            require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
+            {
+                uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
+                uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
+                uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
+                uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
+                if (adjustedBalanceK <= expectedK) {
+                    erroneousGoo = erroneousGoo
+                        + int256(
+                            FixedPointMathLib.mulWadUp(
+                                FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
+                            )
+                        );
+                } else {
+                    erroneousGoo = erroneousGoo
+                        - int256(
+                            FixedPointMathLib.mulWadDown(
+                                FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 997), 1
+                            )
+                        );
+                }
+            }
+        }
+    }
 
     /*//////////////////////////////////////////////////////////////
     // External: Mutating, Admin
@@ -482,34 +520,45 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Other Privileged Functions
 
-    // @notice Mints Gobblers using the vault's virtual reserves of Goo if the pool's goo per mult is lower than VRGDA goo per mult.
+    /// @notice Mints as many Gobblers as possible using the vault's
+    /// @notice virtual reserves of Goo, if specific curve balancing conditions
+    /// @notice are met and the vault can afford to mint.
     function mintGobbler() public nonReentrant onlyMinter {
-        // This function is restricted to onlyMinter because we don't want
-        // the general public to use it to manipulate the goo price.
+        /// @dev Restricted to onlyMinter to prevent Goo price manipulation
+        /// @dev Prevent reentrancy in case onlyMinter address/keeper is compromised.
 
         // Get the mint price
-        uint256 mintPrice = artGobblers.gobblerPrice();
+        uint112 mintPrice = uint112(artGobblers.gobblerPrice());
         // We get the reserves directly here to save some gas
         uint112 gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        uint256 gooBalance = gooReserve;
+        uint112 gooBalance = gooReserve;
         uint112 gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
 
         // Should we mint?
-        bool mint = (gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
-        // Mint Gobblers to pool when our Goo per Mult < Auction Goo per Mult.
-        while (mint) {
-            if (gooBalance >= mintPrice) {
-                gooBalance -= mintPrice;
-                artGobblers.mintFromGoo(mintPrice, true);
-                // TODO(Can we calculate the increase without an sload here?)
-                mintPrice = artGobblers.gobblerPrice();
-                mint = (gooBalance / gobblerReserve) <= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
-            } else {
-                mint = false;
+        bool mint = (gooBalance / gobblerReserve) >= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
+        // Mint counter
+        uint16 minted = 0;
+        if (mint == false) {
+            revert("Pool Goo per Mult lower than Auction's");
+        } else {
+            // Mint Gobblers to pool when our Goo per Mult < Auction (VRGDA) Goo per Mult
+            while (mint) {
+                if (gooBalance >= mintPrice) {
+                    gooBalance -= mintPrice;
+                    artGobblers.mintFromGoo(mintPrice, true);
+                    // TODO(Can we calculate the increase without an sload here?)
+                    mintPrice = uint112(artGobblers.gobblerPrice());
+                    mint = (gooBalance / gobblerReserve) >= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
+                    minted++;
+                } else {
+                    mint = false;
+                    emit VaultMint(msg.sender, gooReserve - gooBalance, minted, true);
+                }
             }
         }
         // Update accumulators, kLast, kDebt
         _update(uint112(gooBalance), gobblerReserve, gooReserve, gobblerReserve, true, true);
+        emit VaultMint(msg.sender, gooReserve - gooBalance, minted, false);
     }
 
     /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.
@@ -542,11 +591,11 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver
     /// @param gobblers - array of gobbler ids
-    /// @param gooTokens - amount of goo to withdraw
+    /// @param gooTokens - amount of goo to deposit
     /// @param receiver - address to receive GBR
     /// @return fractions - amount of GBR minted
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
-        external
+        public
         nonReentrant
         returns (uint256 fractions)
     {
@@ -596,6 +645,25 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, fractions);
     }
 
+    /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver while ensuring a deadline and minimum amount of fractions were minted
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
+    /// @param receiver - address to receive GBR
+    /// @param minFractionsOut - minimum amount of GBR to be minted
+    /// @param deadline - Unix timestamp after which the transaction will revert.
+    /// @return fractions - amount of GBR minted
+    function safeDeposit(
+        uint256[] calldata gobblers,
+        uint256 gooTokens,
+        address receiver,
+        uint256 minFractionsOut,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256 fractions) {
+        fractions = deposit(gobblers, gooTokens, receiver);
+
+        require(fractions >= minFractionsOut, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+    }
+
     /// @notice Withdraws the requested gobblers and goo tokens from the vault.
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
@@ -603,7 +671,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param owner - owner of the fractions to be withdrawn
     /// @return fractions - amount of fractions that have been withdrawn
     function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
-        external
+        public
         nonReentrant
         returns (uint256 fractions)
     {
@@ -671,9 +739,31 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, fractions);
     }
 
+    /// @notice Withdraws the requested gobblers and goo tokens from the vault.
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
+    /// @param receiver - address to receive the goo and gobblers
+    /// @param owner - owner of the fractions to be withdrawn
+    /// @param maxFractionsIn - maximum amount of GBR to be burned
+    /// @param deadline - Unix timestamp after which the transaction will revert.
+    /// @return fractions - amount of fractions that have been withdrawn
+    function safeWithdraw(
+        uint256[] calldata gobblers,
+        uint256 gooTokens,
+        address receiver,
+        address owner,
+        uint256 maxFractionsIn,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256 fractions) {
+        fractions = withdraw(gobblers, gooTokens, receiver, owner);
+
+        require(fractions <= maxFractionsIn, "Goober: BURN_ABOVE_LIMIT");
+    }
+
     // TODO(Get rid of the struct here if possible by getting clever with the stack)
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool
-    function swap(SwapParams calldata parameters) external nonReentrant {
+    function swap(SwapParams calldata parameters) public nonReentrant returns (int256 erroneousGoo) {
+        erroneousGoo = 0;
         require(parameters.gooOut > 0 || parameters.gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
         uint112 multOut = 0;
         (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
@@ -686,7 +776,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             // Transfer out
 
             // Optimistically transfer goo if any
-            if (parameters.gooOut >= 0) {
+            if (parameters.gooOut > 0) {
                 artGobblers.removeGoo(parameters.gooOut);
                 goo.safeTransfer(parameters.receiver, parameters.gooOut);
             }
@@ -694,7 +784,11 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             // Optimistically transfer gobblers if any
             if (parameters.gobblersOut.length > 0) {
                 for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
-                    multOut += uint112(artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i]));
+                    uint256 gobblerMult = artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i]);
+                    if (gobblerMult < 6) {
+                        revert InvalidMultiplier(parameters.gobblersOut[i]);
+                    }
+                    multOut += uint112(gobblerMult);
                     artGobblers.transferFrom(address(this), parameters.receiver, parameters.gobblersOut[i]);
                 }
             }
@@ -706,17 +800,14 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         {
             // Transfer in
 
-            // Transfer goo if any
+            // Transfer in goo if any
             if (parameters.gooIn > 0) {
                 goo.safeTransferFrom(msg.sender, address(this), parameters.gooIn);
                 artGobblers.addGoo(parameters.gooIn);
             }
 
-            // Transfer gobblers if any
+            // Transfer in gobblers if any
             for (uint256 i = 0; i < parameters.gobblersIn.length; i++) {
-                if (artGobblers.getGobblerEmissionMultiple(parameters.gobblersIn[i]) < 6) {
-                    revert InvalidMultiplier(parameters.gobblersIn[i]);
-                }
                 artGobblers.safeTransferFrom(msg.sender, address(this), parameters.gobblersIn[i]);
             }
         }
@@ -731,10 +822,34 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         {
             uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-            require((balance0Adjusted * balance1Adjusted) >= ((_gooReserve * _gobblerReserve) * 1000 ** 2), "Goober: K");
+            uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
+            uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
+            if (adjustedBalanceK <= expectedK) {
+                revert("Goober: K");
+            } else {
+                erroneousGoo = erroneousGoo
+                    - int256(
+                        FixedPointMathLib.mulWadDown(
+                            FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 997), 1
+                        )
+                    );
+            }
         }
         // Update oracle
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
         emit Swap(msg.sender, parameters.receiver, amount0In, amount1In, parameters.gooOut, multOut);
+    }
+
+    /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool
+    function safeSwap(SwapParams calldata parameters, uint256 erroneousGooAbs, uint256 deadline)
+        external
+        ensure(deadline)
+        returns (int256 erroneousGoo)
+    {
+        erroneousGoo = swap(parameters);
+
+        if ((erroneousGoo < 0) && (-erroneousGoo > int256(erroneousGooAbs))) {
+            revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        }
     }
 }
