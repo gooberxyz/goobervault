@@ -1106,7 +1106,7 @@ contract GooberTest is Test {
         uint256[] memory gobblerOut = new uint256[](1);
         gobblerOut[0] = gobblersDeposit[0];
 
-        goober.deposit(gobblersDeposit, 100 ether, users[1]);
+        goober.deposit(gobblersDeposit, 1 ether, users[1]);
 
         int256 previewAdditionalGooRequired = goober.previewSwap(gobblerIn, 0, gobblerOut, 0);
 
@@ -1115,8 +1115,8 @@ contract GooberTest is Test {
             uint256 excessGoo = uint256(-previewAdditionalGooRequired);
             IGoober.SwapParams memory swap = IGoober.SwapParams(gobblerOut, excessGoo, gobblerIn, 0, users[1], data);
             // TODO(This should be 0, but is 17527667426067333)
-            //int256 erroneousGoo = goober.swap(swap);
-            //assertEq(erroneousGoo, int256(0));
+            int256 erroneousGoo = goober.swap(swap);
+            assertEq(erroneousGoo, int256(0));
         } else {
             uint256 additionalGoo = uint256(previewAdditionalGooRequired);
             IGoober.SwapParams memory swap = IGoober.SwapParams(gobblerOut, 0, gobblerIn, additionalGoo, users[1], data);
