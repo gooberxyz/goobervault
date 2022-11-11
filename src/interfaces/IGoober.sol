@@ -43,7 +43,7 @@ interface IGoober is IERC721Receiver {
 
     // Events
 
-    event VaultMint(address indexed minter, uint112 gooConsumed, uint112 gobblersMinted, bool priceOrBalanceTerminated);
+    event VaultMint(address indexed minter, uint112 gooConsumed, uint112 gobblersMinted, bool BalanceTerminated);
 
     event Deposit(
         address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
