@@ -127,6 +127,40 @@ contract GooberIntegrationTest is Test {
         vault = address(goober);
     }
 
+    // User Story ////////////////////////////////////////////////////////////////////////////////////////////////////
+    // 
+    // As a Goober,
+    // I want to pool my Goo and Gobblers with my fellow Goober community,
+    // so that we each receive more Goo emissions together than we would on our own.
+    // 
+    // Acceptance Criteria
+    // - Should be able to deposit Goo and/or Gobblers in exchange for minting GBR vault fractions
+    // - Should be able to withdraw Goo and/or Gobblers in exchange for burning GBR vault fractions
+    // - Should be able to swap Goo and/or Gobblers in exchange for Goo and/or Gobblers, with a
+    //   potential surplus or debt of Goo required
+    // - Should be able to preview a deposit (not inclusive of any fees)
+    // - Should be able to preview a withdraw (not inclusive of any fees)
+    // - Should be able to preview a swap (not inclusive of any fees)
+    // - Should be able to preview how many GBR fractions would be minted for depositing a given amount of Goo
+    // - Should be able to preview how much Goo would be withdrawn for burning a given amount of GBR fractions
+    // - Should be able to safe deposit, which ensures a deadline after which the tx will revert,
+    //   and minimum amount of GBR fractions to be minted
+    // - Should be able to safe withdraw, which ensures a deadline after which the tx will revert,
+    //   and maximum amount of GBR fractioned to be burned
+    // - Should be able to safe swap, which ensures a deadline after which the tx will revert, and
+    //   a maximum amount of potential surplus or debt of Goo required
+    // - Should be able to check total assets of the Goober vault
+    // - Should be able to check reserves of the Goober vault
+    // - Management fee of 2% should be assessed on all deposits and withdraws, paid in Goo to Vault Admin
+    // - Performance fee of 10% should be assessed on all deposits and withdraws, if the growth
+    //   in k is sufficient to offset any accrued kDebt, paid in Goo to Vault Admin address
+    // - Swap fee of 3% should be assessed on all swaps, paid in GBR to the Vault itself
+    // - Vault Minter should be able to mint Gobblers using Goo from the Vault
+    // - Vault Admin should be able to flag/unflag a Gobbler, disallowing deposit into the Vault
+    // - Vault Admin should be able to skim any erroneously accrued Goo from the Vault
+    // - Vault Admin should be able to set new Vault Admin
+    // - Vault Admin should be able to set new Vault Minter
+
     // Scenario //////////////////////////////////////////////////////////////////////////////////////////////////////
     //
     // V = Vault, A = Alice, B = Bob, F = FeeTo
@@ -135,12 +169,6 @@ contract GooberIntegrationTest is Test {
     // goo = physically held Goo tokens
     // gbbl = physically held Gobbler NFTs
     // mult = Gobbler multiplier for account
-    //
-    // Token ID 1 will have Multiplier 9
-    // Token ID 2 will have Multiplier 8
-    // Token ID 3 will have Multiplier 6
-    // Token ID 4 will have Multiplier 9
-    // Token ID 5 will have Multiplier 6
     //
     //  _____________________________________________________________________________________________________________
     // | V gbr | V goo | V gbbl | V mult | A gbr | A goo | A gbbl | A mult | B gbr | B goo | B gbbl | B mult | F goo |
@@ -568,6 +596,19 @@ contract GooberIntegrationTest is Test {
 
     // and the protocol admin accrues XYZ Goo in management fees.
     // (performance fee is 10% of the dilution in k beyond kLast)
+
+
+
+    //
+    // Alice will mint IDs 1-3, Bob will mint ID 4, Vault will mint ID 5
+    //
+    // Token ID 1 will have Multiplier 9
+    // Token ID 2 will have Multiplier 8
+    // Token ID 3 will have Multiplier 6
+    // Token ID 4 will have Multiplier 9
+    // Token ID 5 will have Multiplier 6
+
+
 
     // TODO Invariant ideas
     // Goober Vault GBR balance = xyz
