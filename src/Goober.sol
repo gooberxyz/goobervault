@@ -495,18 +495,18 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     // Other Privileged Functions
 
-    /// @notice Mints Gobblers using the vault's virtual reserves of Goo
-    /// @notice if specific curve balancing conditions are met
-    /// TODO(Add a revert return to allow for an initally simple keeper)
-    function mintGobbler() public nonReentrant onlyMinter returns (uint16) {
+    /// @notice Mints as many Gobblers as possible using the vault's
+    /// @notice virtual reserves of Goo, if specific curve balancing conditions
+    /// @notice are met and the vault can afford to mint.
+    function mintGobbler() public nonReentrant onlyMinter {
         /// @dev Restricted to onlyMinter to prevent Goo price manipulation
         /// @dev Prevent reentrancy in case onlyMinter address/keeper is compromised.
 
         // Get the mint price
-        uint256 mintPrice = artGobblers.gobblerPrice();
+        uint112 mintPrice = uint112(artGobblers.gobblerPrice());
         // We get the reserves directly here to save some gas
         uint112 gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        uint256 gooBalance = gooReserve;
+        uint112 gooBalance = gooReserve;
         uint112 gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
 
         // Should we mint?
@@ -522,18 +522,18 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                     gooBalance -= mintPrice;
                     artGobblers.mintFromGoo(mintPrice, true);
                     // TODO(Can we calculate the increase without an sload here?)
-                    mintPrice = artGobblers.gobblerPrice();
+                    mintPrice = uint112(artGobblers.gobblerPrice());
                     mint = (gooBalance / gobblerReserve) >= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
                     minted++;
                 } else {
                     mint = false;
-                    // TODO(Emit a custom event here to know we didn't have enough goo to mint)
+                    emit VaultMint(msg.sender, gooReserve - gooBalance, minted, true);
                 }
             }
         }
         // Update accumulators, kLast, kDebt
         _update(uint112(gooBalance), gobblerReserve, gooReserve, gobblerReserve, true, true);
-        return minted;
+        emit VaultMint(msg.sender, gooReserve - gooBalance, minted, false);
     }
 
     /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.
