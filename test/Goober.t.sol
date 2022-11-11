@@ -1101,7 +1101,7 @@ contract GooberTest is Test {
         bytes memory data;
         IGoober.SwapParams memory swapFail =
             IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn - 1, users[1], data);
-        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientGoo.selector, 1));
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientGoo.selector, 1, ));
         goober.swap(swapFail);
         vm.stopPrank();
     }

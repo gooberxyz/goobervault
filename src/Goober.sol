@@ -857,11 +857,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
 
             if (adjustedBalanceK < expectedK) {
-                revert InsufficientGoo(
-                    FixedPointMathLib.mulWadUp(
-                        FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
-                    )
+                uint256 insufficientGoo = FixedPointMathLib.mulWadUp(
+                    FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
                 );
+                if (!(insufficientGoo == 0)) {
+                    revert InsufficientGoo(insufficientGoo, adjustedBalanceK, expectedK);
+                }
             } else if (adjustedBalanceK > expectedK) {
                 erroneousGoo = erroneousGoo
                     - int256(
