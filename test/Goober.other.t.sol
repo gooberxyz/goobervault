@@ -45,17 +45,15 @@ contract GooberOtherTest is Test {
     uint256 internal constant TIME0 = 2_000_000_000;
 
     function setUp() public {
+        // Start from TIME0
         vm.warp(TIME0);
 
+        // Deploy Art Gobblers contracts
         utils = new Utilities();
         linkToken = new LinkToken();
         vrfCoordinator = new VRFCoordinatorMock(address(linkToken));
-
-        // Deploy Art Gobblers contracts
-        // Gobblers contract will be deployed after 4 contract deploys, and pages after 5.
         address gobblerAddress = utils.predictContractAddress(address(this), 4);
         address pagesAddress = utils.predictContractAddress(address(this), 5);
-
         team = new GobblerReserve(ArtGobblers(gobblerAddress), address(this));
         community = new GobblerReserve(ArtGobblers(gobblerAddress), address(this));
         randProvider = new ChainlinkV1RandProvider({
@@ -89,7 +87,7 @@ contract GooberOtherTest is Test {
             _baseUri: ""
         });
 
-        // Deploy Goober
+        // Deploy Goober contract
         goober = new Goober({
             _gobblersAddress: address(gobblers),
             _gooAddress: address(goo),
@@ -98,8 +96,83 @@ contract GooberOtherTest is Test {
         });
     }
 
-    function testMultipleDepositSwapWithdraw() public {
-        // 1. Vault, Alice, Bob starting balances
+    // Scenario:
+    // 
+    // Vault = V, A = Alice, B = Bob
+    // 
+    //  ________________________________________________________________________________________
+    // | V gbr | V mult | A gbr | A goo | A gbblrs | A mult | B gbr | B goo | B gbblrs | B mult |
+    // |========================================================================================|
+    // | 0. Vault, Alice, Bob starting balances
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |     0 |      0 |     0 |  2000 |        0 |      0 |     0 |  2000 |        0 |      0 |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 1. Alice adds 1000 Goo and mints 3 Gobblers
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |     0 |      0 |     0 |  1000 |        3 |      0 |     0 |     0 |        0 |      0 |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 2. Bob adds 500 Goo and mints 1 Gobbler
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |     0 |      0 |     0 |  1000 |        3 |      0 |     0 |  1500 |        1 |      0 |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 3. Gobblers reveal – Alice gets a 9, 8, 6 and Bob gets a 9
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |     0 |      0 |     0 |  1000 |        3 |     23 |     0 |  1500 |        1 |      9 |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 4. Alice deposits 200 Goo and Gobblers 9, 8
+    // | (Mints ~57.1433 GBR, No performance fee bc no growth in k since lastK as initial deposit)
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   200 |     17 |   ~57 |   800 |        1 |      6 |     0 |  1500 |        1 |      9 |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 5. Vault accrues Goo for 1 hour (receives XYZ GBR in emissions from Gobblers)
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   200 |     17 |   ~57 |   800 |        1 |      6 |     0 |  1500 |        1 |      9 | TODO add V goo and gbblrs
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 6. Bob swaps in Gobbler 9 for 500 Goo and Gobbler 6 out
+    // | (Swap requires additional XYZ GOO, Vault accrues XYZ Goo as swap fee)
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   200 |     20 |   ~57 |   800 |        1 |      6 |     0 |  2000 |        1 |      6 | TODO check the actual in previewSwap() -- won't Bob get some Goo back?
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 7. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ | TODO add V
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 8. Vault mints 1 Gobbler
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   200 |     20 |   ~57 |   800 |        1 |      6 |     0 |  2000 |        1 |      6 | TODO add V
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 9. Alice swaps Gobbler 6 for 
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 10. Small deposit – triggers a small fee, but not enough to fully offset the debt
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 11. Gobblers reveal – Vault gets a XYZ
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 12. Deposit
+    // | (Between the swap fee and the mint, there's now enough to offset the debt so a performance fee is assessed)
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 13. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 14. Bob withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // | 15. Alice withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+    // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
+    // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
+
+    function testMultipleDepositSwapMintWithdraw() public {
+        // 0. Vault, Alice, Bob starting balances
         address vault = address(goober);
         address alice = address(0xAAAA);
         address bob = address(0xBBBB);
@@ -133,7 +206,7 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, 0);
         assertEq(vaultLastTimestamp, 0);
 
-        // 2. Alice adds 1000 Goo and mints 3 Gobblers
+        // 1. Alice adds 1000 Goo and mints 3 Gobblers
         vm.startPrank(alice);
         gobblers.addGoo(1000 ether);
         aliceGobblers = new uint256[](3);
@@ -158,7 +231,7 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, 0);
         assertEq(vaultLastTimestamp, 0);
 
-        // 3. Bob adds 500 Goo and mints 1 Gobbler
+        // 2. Bob adds 500 Goo and mints 1 Gobbler
         vm.startPrank(bob);
         gobblers.addGoo(500 ether);
         bobGobblers = new uint256[](1);
@@ -181,7 +254,7 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, 0);
         assertEq(vaultLastTimestamp, 0);
 
-        // 4. Gobblers reveal – Alice gets a 9, 8, 6 and Bob gets a 9
+        // 3. Gobblers reveal – Alice gets a 9, 8, 6 and Bob gets a 9
         vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(4, "seed");
 
@@ -195,7 +268,7 @@ contract GooberOtherTest is Test {
         assertEq(gobblers.ownerOf(4), bob);
         assertEq(gobblers.getGobblerEmissionMultiple(4), 9);
 
-        // 5. Alice deposits 200 Goo and Gobblers 9, 8 (mints 57.1433 GBR, No performance fee because no growth in k since lastK on initial deposit)
+        // 4. Alice deposits 200 Goo and Gobblers 9, 8 (mints 57.1433 GBR, No performance fee because no growth in k since lastK on initial deposit)
         aliceGobblersOnlyTwo = new uint256[](2);
         aliceGobblersOnlyTwo[0] = aliceGobblers[0];
         aliceGobblersOnlyTwo[1] = aliceGobblers[1];
@@ -222,7 +295,7 @@ contract GooberOtherTest is Test {
         assertEq(vaultLastTimestamp, TIME0 + 1 days);
         // and the protocol admin accrues XYZ Goo in management fees. (management fee is 2% of total deposit) 
 
-        // 6. Vault accrues Goo for 1 hour (receives XYZ GBR in emissions from Gobblers)
+        // 5. Vault accrues Goo for 1 hour (receives XYZ GBR in emissions from Gobblers)
         vm.warp(TIME0 + 1 days + 1 hours);
 
         // Check TODO
@@ -240,7 +313,7 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, expectedMult);
         assertEq(vaultLastTimestamp, TIME0 + 1 days);
 
-        // 7. Bob swaps 500 Goo and Gobbler 6 for Gobbler 8 (costs additional XYZ GBR, Vault accrues XYZ Goo as fee)
+        // 6. Bob swaps in Gobbler 9 for 500 Goo and Gobbler 6 out (costs additional XYZ GBR, Vault accrues XYZ Goo as fee)
         bobSwapOut = new uint256[](1);
         bobSwapOut[0] = aliceGobblers[1];
         vm.startPrank(bob);
@@ -265,7 +338,7 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, expectedMult);
         assertEq(vaultLastTimestamp, TIME0 + 1 days + 1 hours); // new time
 
-        // 8. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)        
+        // 7. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)
         vm.warp(TIME0 + 1 days + 2 hours);
 
         // Check TODO
@@ -283,7 +356,7 @@ contract GooberOtherTest is Test {
         assertEq(vaultGobblersReserve, expectedMult);
         assertEq(vaultLastTimestamp, TIME0 + 1 days + 1 hours);
 
-        // 9. Vault mints 1 Gobbler
+        // 8. Vault mints 1 Gobbler
         vm.prank(minter);
         goober.mintGobbler();
 
@@ -311,7 +384,7 @@ contract GooberOtherTest is Test {
         // When the next deposit/withdraw happens, we offset any growth against the existing kDebt, 
         // then take the 10% performance fee 
 
-        // 10. Alice swaps Gobbler 6 for Goo (gets a small fee)
+        // 9. Alice swaps Gobbler 6 for Goo (gets a small fee)
 
 
 
@@ -320,9 +393,9 @@ contract GooberOtherTest is Test {
         // (performance fee is 10% of the dilution in k beyond kLast)
         // TODO        
 
-        // 11. Small deposit – triggers a small fee, but not enough to fully offset the debt
+        // 10. Small deposit – triggers a small fee, but not enough to fully offset the debt
 
-        // 12. Gobblers reveal – Vault gets a XYZ
+        // 11. Gobblers reveal – Vault gets a XYZ
 
         // vm.warp(TIME0 + 1 days + 1 hours + 1 days);
         // _setRandomnessAndReveal(1, "seed2");
@@ -331,18 +404,18 @@ contract GooberOtherTest is Test {
 
         // 
 
-        // 13. Deposit – between the swap fee and the mint, there's now enough to offset the debt
+        // 12. Deposit – between the swap fee and the mint, there's now enough to offset the debt
 
         // 
 
-        // 14. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)
+        // 13. Vault accrues Goo (receives XYZ GBR in emissions from Gobblers)
 
-        // 15. Bob withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
+        // 14. Bob withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
         // and the protocol admin accrues XYZ Goo in management fees.
         // (performance fee is 10% of the dilution in k beyond kLast)
         // TODO        
 
-        // 16. Alice withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
+        // 15. Alice withdraws XYZ Goo and XYZ Gobblers for XYZ fractions (Admin accrues XYZ Goo as fee)
         // and the protocol admin accrues XYZ Goo in management fees.
         // (performance fee is 10% of the dilution in k beyond kLast)
         // TODO        
@@ -351,36 +424,17 @@ contract GooberOtherTest is Test {
 
 
 
-        // Scenario:
-        // Vault = V, A = Alice, B = Bob
+        
+  
+
+
+
         // 
         // Goober Vault GBR balance = xyz
         // Goober Vault Mult = Σ depositor Gobbler multipliers
         // Goober Vault Goo reserve = Σ depositor Goo balances + Goo emissions + Swap fees accrued
         // Goober Vault Gobblers reserve = Σ depositor Gobbler balances
         // Goober Admin xyz
-        // 
-        //  ________________________________________________________________________________________
-        // | V gbr | V mult | A gbr | A goo | A gbblrs | A mult | B gbr | B goo | B gbblrs | B mult |
-        // |========================================================================================|
-        // | 1. Alice and Bob have starting balances of 500 Goo and 0 Gobblers                      |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-        // |     0 |      0 |     0 |     0 |        0 |        |     0 |     0 |        0 |      0 |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-        // | 2. Alice adds 500 Goo and mints 2 Gobblers                               |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-        // |     0 |      0 |     0 |   500 |        2 |      0 |     0 |     0 |      500 |      0 |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-        // | 1. Bob adds 1000 Goo and mints 1 Gobbler                  |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-        // |     0 |      0 |     0 |   500 |        2 |      0 |     0 |   XYZ |      XYZ |    XYZ |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-        // | 1. Alice and Bob have a starting balance of 500 Goo and 0 Gobblers                     |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-        // |   XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |   XYZ |   XYZ |      XYZ |    XYZ |
-        // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
-  
-
   
         // | 1. Alice and Bob have a starting balance of 500 Goo and 0 Gobblers                     |
         // |-------|--------|-------|-------|----------|--------|-------|-------|----------|--------|
@@ -447,12 +501,6 @@ contract GooberOtherTest is Test {
 
     //     emit log_string("hello world");
     // }
-
-    // TODO testWithdrawIntegration
-
-    // TODO testSwapIntegration
-
-    // TODO testMintGobblerIntegration (probably can't work with fuzz test)
 
     /*//////////////////////////////////////////////////////////////
                         Test Helpers
