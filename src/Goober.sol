@@ -316,9 +316,34 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @return gobblerMult the total multiple of all gobblers owned
     function totalAssets() public view returns (uint256 gooTokens, uint256 gobblerMult) {
         gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
-        gooTokens = goo.balanceOf(address(this)) + artGobblers.gooBalance(address(this));
+        gooTokens = artGobblers.gooBalance(address(this));
     }
 
+    function convertToFractions(uint256 gooTokens, uint256 gobblerMult) public view returns (uint256 fractions) {
+        uint256 _totalSupply = totalSupply;
+        uint256 kInput = FixedPointMathLib.sqrt(gooTokens * gobblerMult);
+        if (_totalSupply > 0) {
+            (uint256 gooBalance, uint256 gobblerMultBalance) = totalAssets();
+            uint256 kBalance = FixedPointMathLib.sqrt(gooBalance * gobblerMultBalance);
+            uint256 kDelta = FixedPointMathLib.divWadDown(kInput, kBalance);
+            fractions = FixedPointMathLib.mulWadDown(_totalSupply, kDelta);
+        } else {
+            fractions = kInput;
+        }
+    }
+
+    function convertToAssets(uint256 fractions) public view virtual returns (uint256 gooTokens, uint256 gobblerMult) {
+        uint256 _totalSupply = totalSupply;
+        if (_totalSupply > 0) {
+            (gooTokens, gobblerMult) = totalAssets();
+            gooTokens = fractions.mulDivDown(gooTokens, _totalSupply);
+            gobblerMult = fractions.mulDivDown(gobblerMult, _totalSupply);
+        }
+    }
+
+    /// @notice get the vault reserves of goo and gobbler multiplier, along with the last update time
+    /// @dev This can be used to calculate slippage on a swap of certain sizes
+    ///      using uni-v2 style liquidity math.
     /// @return _gooReserve the total amount of goo in the tank for all owned gobblers
     /// @return _gobblerReserve the total multiplier of all gobblers owned
     /// @return _blockTimestampLast the last time that the reserves were updated

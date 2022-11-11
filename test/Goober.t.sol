@@ -941,9 +941,55 @@ contract GooberTest is Test {
         assertEq(actualGobblerMult, expectedGobblerMult);
     }
 
-    // getReserves
-    // convertToFractions
-    // convertToAssets
+    function testGetReserves() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory artGobblers = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(1, "seed");
+        uint256 expectedGooTokens = 100 ether;
+        uint256 expectedGobblerMult = gobblers.getUserEmissionMultiple(users[1]);
+        goober.deposit(artGobblers, expectedGooTokens, users[1]);
+        (uint112 gooReserves, uint112 gobblerReserves, uint32 lastBlockTimestamp) = goober.getReserves();
+        assertEq(gooReserves, expectedGooTokens);
+        assertEq(gobblerReserves, expectedGobblerMult);
+        assertEq(uint256(lastBlockTimestamp), block.timestamp);
+    }
+
+    function testConvertToFractions() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory artGobblers = new uint256[](1);
+        uint256[] memory artGobblersTwo = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
+        artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
+
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(2, "seed");
+        uint256 noSlippageFractions = goober.convertToFractions(100, 100);
+        assertEq(noSlippageFractions, 100);
+        goober.deposit(artGobblers, 100 ether, users[1]);
+        noSlippageFractions = goober.convertToFractions(9, 100 ether);
+        assertEq(noSlippageFractions, 29999999000);
+    }
+
+    function testConvertToAssets() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory artGobblers = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
+
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(1, "seed");
+        (uint256 gooToken, uint256 gobblerMult) = goober.convertToAssets(100);
+        assertEq(gooToken, 0);
+        assertEq(gobblerMult, 0);
+        goober.deposit(artGobblers, 100 ether, users[1]);
+        (gooToken, gobblerMult) = goober.convertToAssets(29999999000);
+        assertEq(gooToken, 100 ether);
+        assertEq(gobblerMult, 9);
+    }
 
     function testPreviewDeposit() public {
         vm.startPrank(users[1]);
