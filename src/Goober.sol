@@ -509,7 +509,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 if (adjustedBalanceK < expectedK) {
                     // TODO(Reduces the scalars here)
                     // (expectedK / balance1Adjusted) - balance0Adjusted) / 997)
-                    expectedK /
                     erroneousGoo = erroneousGoo
                         + int256(
                             FixedPointMathLib.mulWadUp(
