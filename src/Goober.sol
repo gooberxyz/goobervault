@@ -411,6 +411,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         uint112 _gobblerBalanceMult = _gobblerReserveMult;
         uint256 gobblerMult;
         for (uint256 i = 0; i < gobblers.length; i++) {
+            if (artGobblers.ownerOf(gobblers[i]) != address(this)) {
+                revert InvalidNFT();
+            }
             gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblers[i]);
             if (gobblerMult < 6) {
                 revert InvalidMultiplier(gobblers[i]);
@@ -444,12 +447,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         uint112 _gobblerBalance = _gobblerReserve;
         uint112 multOut = 0;
         for (uint256 i = 0; i < gobblersOut.length; i++) {
+            if (artGobblers.ownerOf(gobblersOut[i]) != address(this)) {
+                revert InvalidNFT();
+            }
             uint112 gobblerMult = uint112(artGobblers.getGobblerEmissionMultiple(gobblersOut[i]));
             if (gobblerMult < 6) {
                 revert InvalidMultiplier(gobblersOut[i]);
-            }
-            if (artGobblers.ownerOf(gobblersOut[i]) != address(this)) {
-                revert InvalidNFT();
             }
             _gobblerBalance -= gobblerMult;
             multOut += gobblerMult;

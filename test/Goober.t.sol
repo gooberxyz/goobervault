@@ -1032,7 +1032,7 @@ contract GooberTest is Test {
         actual = goober.withdraw(artGobblersTwo, 100 ether, users[1], users[1]);
         uint256[] memory artGobblersFour = new uint256[](1);
         artGobblersFour[0] = gobblers.mintFromGoo(100 ether, true);
-        vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, 4));
+        vm.expectRevert(IGoober.InvalidNFT.selector);
         goober.previewWithdraw(artGobblersFour, 100 ether);
         assertEq(expected, actual);
     }
@@ -1075,6 +1075,10 @@ contract GooberTest is Test {
         IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn, users[2], data);
         int256 erroneousGoo = goober.swap(swap);
         assertEq(erroneousGoo, int256(0));
+        uint256[] memory gobblersInNew = new uint256[](1);
+        gobblersInNew[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.expectRevert(IGoober.InvalidNFT.selector);
+        goober.previewSwap(gobblersInNew, 0, gobblersOut, gooOut);
         vm.stopPrank();
     }
 
@@ -1167,8 +1171,35 @@ contract GooberTest is Test {
         assertEq(_newGobblerReserve, 15);
         // Check our goo balance updated from emission.
         assertEq(_newGooReserve, 46140671657193055549);
+    }
 
-        // NOTE(Checking k uneeded since _update() handles all of that
+    function testCantUnrevealedCantEscapeVault() public {
+        vm.startPrank(users[1]);
+        uint256[] memory artGobbler = new uint256[](1);
+        artGobbler[0] = gobblers.mintFromGoo(100 ether, false);
+        // Warp a day ahead until we can reveal Gobbler 1.
+        vm.warp(block.timestamp + 86400);
+        _setRandomnessAndReveal(1, "seed");
+        goober.deposit(artGobbler, 100 ether, users[1]);
+        // Let's make sure we can't withdraw or swap the unrevealed gobbler
+        uint256[] memory artGobblerUnrevealed = new uint256[](1);
+        artGobblerUnrevealed[0] = gobblers.mintFromGoo(100 ether, false);
+        gobblers.transferFrom(users[1], address(goober), artGobblerUnrevealed[0]);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, artGobblerUnrevealed[0]));
+        goober.previewWithdraw(artGobblerUnrevealed, 0);
+
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, artGobblerUnrevealed[0]));
+        goober.withdraw(artGobblerUnrevealed, 0, users[1], users[1]);
+
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, artGobblerUnrevealed[0]));
+        goober.previewSwap(artGobblerUnrevealed, 0, artGobbler, 0 ether);
+
+        bytes memory data;
+        IGoober.SwapParams memory swap =
+            IGoober.SwapParams(artGobblerUnrevealed, 0, artGobbler, 100 ether, users[1], data);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, 2));
+        goober.swap(swap);
+        vm.stopPrank();
     }
 
     function testWithdrawMinted() public {
