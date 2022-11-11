@@ -111,6 +111,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _;
     }
 
+    /// @notice This modifier ensures the transaction is included before a specified deadline.
+    /// @param deadline - Unix timestamp after which the transaction will revert.
+    modifier ensure(uint256 deadline) {
+        require(deadline >= block.timestamp, "Goober: EXPIRED");
+        _;
+    }
+
     /*//////////////////////////////////////////////////////////////
     // Internal: Non-Mutating
     //////////////////////////////////////////////////////////////*/
@@ -588,7 +595,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param receiver - address to receive GBR
     /// @return fractions - amount of GBR minted
     function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
-        external
+        public
         nonReentrant
         returns (uint256 fractions)
     {
@@ -638,6 +645,25 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, fractions);
     }
 
+    /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the receiver while ensuring a deadline and minimum amount of fractions were minted
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
+    /// @param receiver - address to receive GBR
+    /// @param minFractionsOut - minimum amount of GBR to be minted
+    /// @param deadline - Unix timestamp after which the transaction will revert.
+    /// @return fractions - amount of GBR minted
+    function safeDeposit(
+        uint256[] calldata gobblers,
+        uint256 gooTokens,
+        address receiver,
+        uint256 minFractionsOut,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256 fractions) {
+        fractions = deposit(gobblers, gooTokens, receiver);
+
+        require(fractions >= minFractionsOut, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+    }
+
     /// @notice Withdraws the requested gobblers and goo tokens from the vault.
     /// @param gobblers - array of gobbler ids
     /// @param gooTokens - amount of goo to withdraw
@@ -645,7 +671,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param owner - owner of the fractions to be withdrawn
     /// @return fractions - amount of fractions that have been withdrawn
     function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
-        external
+        public
         nonReentrant
         returns (uint256 fractions)
     {
@@ -713,9 +739,30 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, fractions);
     }
 
+    /// @notice Withdraws the requested gobblers and goo tokens from the vault.
+    /// @param gobblers - array of gobbler ids
+    /// @param gooTokens - amount of goo to withdraw
+    /// @param receiver - address to receive the goo and gobblers
+    /// @param owner - owner of the fractions to be withdrawn
+    /// @param maxFractionsIn - maximum amount of GBR to be burned
+    /// @param deadline - Unix timestamp after which the transaction will revert.
+    /// @return fractions - amount of fractions that have been withdrawn
+    function safeWithdraw(
+        uint256[] calldata gobblers,
+        uint256 gooTokens,
+        address receiver,
+        address owner,
+        uint256 maxFractionsIn,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256 fractions) {
+        fractions = withdraw(gobblers, gooTokens, receiver, owner);
+
+        require(fractions <= maxFractionsIn, "Goober: BURN_ABOVE_LIMIT");
+    }
+
     // TODO(Get rid of the struct here if possible by getting clever with the stack)
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool
-    function swap(SwapParams calldata parameters) external nonReentrant returns (int256 erroneousGoo) {
+    function swap(SwapParams calldata parameters) public nonReentrant returns (int256 erroneousGoo) {
         erroneousGoo = 0;
         require(parameters.gooOut > 0 || parameters.gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
         uint112 multOut = 0;
@@ -791,5 +838,18 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Update oracle
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
         emit Swap(msg.sender, parameters.receiver, amount0In, amount1In, parameters.gooOut, multOut);
+    }
+
+    /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool
+    function safeSwap(SwapParams calldata parameters, uint256 erroneousGooAbs, uint256 deadline)
+        external
+        ensure(deadline)
+        returns (int256 erroneousGoo)
+    {
+        erroneousGoo = swap(parameters);
+
+        if ((erroneousGoo < 0) && (-erroneousGoo > int256(erroneousGooAbs))) {
+            revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        }
     }
 }
