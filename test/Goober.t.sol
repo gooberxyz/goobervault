@@ -282,20 +282,24 @@ contract GooberTest is Test {
       vm.warp(TIME0 + 1 days);
       _setRandomnessAndReveal(2, "seed");
 
-      // TODO fix event tests
       // Check Deposit event
       vm.expectEmit(true, true, false, true, address(goober));
       emit Deposit(users[1], users[1], artGobblers, gooToDeposit, 57143327590);
 
-      // event Deposit(
-      //     address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
-      // );
-
+      // TODO
       // Check FeesAccrued events
-      // vm.expectEmit(true, true, true, false);
+      // (uint112 _gooBalance, uint112 _gobblerBalanceMult,) = goober.getReserves();
+      // (uint256 fee, uint112 kDebtChange, uint256 deltaK) = goober._previewPerformanceFee(_gooBalance, _gobblerBalanceMult);
+      // assertEq(fee,0);
+      // assertEq(deltaK,0);
+      // vm.expectEmit(true, false, false, true, address(goober));
       // emit FeesAccrued(FEE_TO, 0, true, 0); // no performance fee assessed
-      // vm.expectEmit(true, true, true, false);
-      // emit FeesAccrued(FEE_TO, 0, false, 0); // management fee
+
+      // vm.expectEmit(true, false, false, true, address(goober));
+      // emit FeesAccrued(FEE_TO, 57143327590, false, 0); // management fee
+
+      // event FeesAccrued(address indexed feeTo, uint256 fractions, bool performanceFee, uint256 _deltaK);
+
 
       // Deposit 2 gobblers and 200 goo
       uint256 fractions = goober.deposit(artGobblers, gooToDeposit, users[1]);
@@ -513,7 +517,53 @@ contract GooberTest is Test {
 
     // test withdraw when owner != receiver
 
-    // testEventWithdraw
+    function testEventWithdraw() public {
+      // Add Goo and mint Gobblers
+      vm.startPrank(users[1]);
+      uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 2);
+      uint256[] memory artGobblersToWithdraw = new uint256[](1);
+
+      artGobblersToWithdraw[0] = artGobblers[0];
+
+      uint256 gooToDeposit = 200 ether;
+
+      // Reveal
+      vm.warp(TIME0 + 1 days);
+      _setRandomnessAndReveal(2, "seed");
+
+      // Deposit 2 gobblers and 200 goo
+      uint256 expectedFractionsOut = goober.previewDeposit(artGobblers, gooToDeposit);
+
+      goober.safeDeposit(artGobblers, gooToDeposit, users[1], expectedFractionsOut, block.timestamp + 1);
+
+      vm.warp(block.timestamp + 7 days);
+
+      uint256 userGooBefore = goo.balanceOf(users[1]);
+      uint256 gooToWithdraw = 10 ether;
+
+      uint256 expectedFractionsIn = goober.previewWithdraw(artGobblersToWithdraw, gooToWithdraw);
+
+      assertEq(goober.balanceOf(users[1]),expectedFractionsOut);
+
+      vm.expectEmit(true, true, true, true, address(goober));
+      emit Withdraw(users[1],users[1],users[1], artGobblersToWithdraw, gooToWithdraw, expectedFractionsIn);
+
+      uint256 fractionsIn = goober.safeWithdraw(
+          artGobblersToWithdraw, gooToWithdraw, users[1], users[1], expectedFractionsIn, block.timestamp + 1
+      );
+
+      assertEq(fractionsIn, expectedFractionsIn);
+
+      uint256 userGooAfter = goo.balanceOf(users[1]);
+
+      // The users GOO balance should have changed by the same amount as gooToWithdraw.
+      assertEq(userGooAfter - userGooBefore, gooToWithdraw);
+
+      // The owner of the Gobbler should now be the user again.
+      assertEq(gobblers.ownerOf(artGobblersToWithdraw[0]), users[1]);
+      vm.stopPrank();
+
+    }
 
     // Goober: INSUFFICIENT LIQUIDITY WITHDRAW edge cases
 
