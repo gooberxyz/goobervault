@@ -528,7 +528,16 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 } else if (adjustedBalanceK > expectedK) {
                     erroneousGoo -= int256(
                         FixedPointMathLib.mulWadDown(
-                            FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 1000), 1
+                            FixedPointMathLib.divWadDown(
+                                (
+                                    balance0Adjusted
+                                        - FixedPointMathLib.mulWadUp(
+                                            FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1
+                                        )
+                                ),
+                                1000
+                            ),
+                            1
                         )
                     );
                 }
@@ -870,9 +879,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 uint256 insufficientGoo = FixedPointMathLib.mulWadUp(
                     FixedPointMathLib.divWadUp(
                         (
-                        FixedPointMathLib.mulWadUp(
-                            FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1
-                        ) - balance0Adjusted
+                            FixedPointMathLib.mulWadUp(FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1)
+                                - balance0Adjusted
                         ),
                         997
                     ),
@@ -880,12 +888,18 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 );
                 revert InsufficientGoo(insufficientGoo, adjustedBalanceK, expectedK);
             } else if (adjustedBalanceK > expectedK) {
-                erroneousGoo = erroneousGoo
-                    - int256(
-                        FixedPointMathLib.mulWadDown(
-                            FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 1000), 1
-                        )
-                    );
+                erroneousGoo = int256(
+                    FixedPointMathLib.mulWadDown(
+                        FixedPointMathLib.divWadDown(
+                            (
+                                balance0Adjusted
+                                    - FixedPointMathLib.mulWadUp(FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1)
+                            ),
+                            1000
+                        ),
+                        1
+                    )
+                );
             }
             // Otherwise return 0
         }
@@ -895,14 +909,15 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool, with slippage and deadline control.
-    function safeSwap(SwapParams calldata parameters, uint256 erroneousGooAbs, uint256 deadline)
+    function safeSwap(SwapParams calldata parameters, uint256 erroneousGooAllowed, uint256 deadline)
         external
         ensure(deadline)
         returns (int256 erroneousGoo)
     {
         erroneousGoo = swap(parameters);
 
-        if ((erroneousGoo < 0) && (-erroneousGoo > int256(erroneousGooAbs))) {
+        // ErroneousGoo will always be positive or revert
+        if (uint256(erroneousGoo) > erroneousGooAllowed) {
             revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
         }
     }

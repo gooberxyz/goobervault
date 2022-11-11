@@ -904,11 +904,16 @@ contract GooberTest is Test {
         goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
 
         bytes memory data;
-        IGoober.SwapParams memory swap =
-            IGoober.SwapParams(artGobblersOut, 0, artGobblersToSwap, 235765844523515265, users[1], data);
+        IGoober.SwapParams memory swap = IGoober.SwapParams(
+            artGobblersOut,
+            0,
+            artGobblersToSwap,
+            uint256(goober.previewSwap(artGobblersToSwap, 0, artGobblersOut, 1)),
+            users[1],
+            data
+        );
 
         vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
-
         goober.safeSwap(swap, 0, block.timestamp + 1);
     }
 
@@ -1101,7 +1106,11 @@ contract GooberTest is Test {
         bytes memory data;
         IGoober.SwapParams memory swapFail =
             IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn - 1, users[1], data);
-        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientGoo.selector, 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGoober.InsufficientGoo.selector, 1, 699999999999999999998840968, 700000000000000000000000000
+            )
+        );
         goober.swap(swapFail);
         vm.stopPrank();
     }
