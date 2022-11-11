@@ -496,6 +496,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             _gobblerBalance += gobblerMult;
         }
         {
+            // We could rewrite all this just to isolate the change in _gooBalance needed to balance the inequality
             // Calculate additionalGooRequired
             uint256 amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
             uint256 amount1In =
@@ -506,21 +507,22 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
                 uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
                 uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
-                if (adjustedBalanceK <= expectedK) {
+                if (adjustedBalanceK < expectedK) {
                     erroneousGoo = erroneousGoo
                         + int256(
                             FixedPointMathLib.mulWadUp(
                                 FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
                             )
                         );
-                } else {
+                } else if (adjustedBalanceK > expectedK) {
                     erroneousGoo = erroneousGoo
                         - int256(
                             FixedPointMathLib.mulWadDown(
-                                FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 997), 1
+                                FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 1000), 1
                             )
                         );
                 }
+                // Otherwise, return 0
             }
         }
     }
@@ -853,16 +855,22 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
             uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
             uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
-            if (adjustedBalanceK <= expectedK) {
-                revert("Goober: K");
-            } else {
+
+            if (adjustedBalanceK < expectedK) {
+                revert InsufficientGoo(
+                    FixedPointMathLib.mulWadUp(
+                        FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
+                    )
+                );
+            } else if (adjustedBalanceK > expectedK) {
                 erroneousGoo = erroneousGoo
                     - int256(
                         FixedPointMathLib.mulWadDown(
-                            FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 997), 1
+                            FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 1000), 1
                         )
                     );
             }
+            // Otherwise return 0
         }
         // Update oracle.
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);

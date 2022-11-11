@@ -16,6 +16,7 @@ interface IGoober is IERC721Receiver {
     error NoSkim();
     error MustLeaveLiquidity();
     error InsufficientAllowance();
+    error InsufficientGoo(uint256 amount);
 
     /**
      * @notice The caller doesn't have permission to access that function.
