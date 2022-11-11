@@ -253,9 +253,57 @@ contract GooberTest is Test {
 
     // }
 
-    // function testEventDeposit() public {
+    function testEventDeposit() public {
+      // Add Goo and mint Gobblers
+      vm.startPrank(users[1]);
+      uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 2);
 
-    // }
+      uint256 gooToDeposit = 200 ether;
+
+      // Precondition checks
+      // Goo ownership
+      uint256 userGooBalance = gobblers.gooBalance(users[1]);
+      assertEq(gobblers.gooBalance(address(goober)), 0);
+      // Gobbler ownership
+      assertEq(gobblers.ownerOf(artGobblers[0]), users[1]);
+      assertEq(gobblers.ownerOf(artGobblers[1]), users[1]);
+      // Fractions of depositor
+      assertEq(goober.balanceOf(users[1]), 0);
+      // Total assets and Reserve balances
+      (uint256 gooTokens, uint256 gobblerMult) = goober.totalAssets();
+      assertEq(gooTokens, 0);
+      assertEq(gobblerMult, 0);
+      (uint112 gooReserve, uint112 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
+      assertEq(gooReserve, 0);
+      assertEq(gobblerReserve, 0);
+      assertEq(blockTimestampLast, 0);
+
+      // Reveal
+      vm.warp(TIME0 + 1 days);
+      _setRandomnessAndReveal(2, "seed");
+
+      // TODO fix event tests
+      // Check Deposit event
+      vm.expectEmit(true, true, false, true, address(goober));
+      emit Deposit(users[1], users[1], artGobblers, gooToDeposit, 57143327590);
+
+      // event Deposit(
+      //     address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
+      // );
+
+      // Check FeesAccrued events
+      // vm.expectEmit(true, true, true, false);
+      // emit FeesAccrued(FEE_TO, 0, true, 0); // no performance fee assessed
+      // vm.expectEmit(true, true, true, false);
+      // emit FeesAccrued(FEE_TO, 0, false, 0); // management fee
+
+      // Deposit 2 gobblers and 200 goo
+      uint256 fractions = goober.deposit(artGobblers, gooToDeposit, users[1]);
+      vm.stopPrank();
+
+      assertEq(fractions,57143327590);
+
+    }
 
     // function testRevertDepositWhenInsufficientLiquidityMined() public {
     //     // Goober: INSUFFICIENT_LIQUIDITY_MINTED
