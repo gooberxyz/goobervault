@@ -17,6 +17,7 @@ import "../src/interfaces/IGoober.sol";
 // TODO Spot check data table and fill in any outstanding XYZs
 // TODO Improve tracking on aliceGooBalance, bobGooBalance, aliceGooberBalance, bobGooberBalance
 // TODO Add numerical assertions for management and performance fees accruing to FeeTo account
+
 // TODO Bring in LibGOO for actual emission amounts
 // TODO Use previewDeposit, previewWithdraw, previewSwap for asserting actual results
 // TODO Consider forking mainnet and running against deployed Goo / ArtGobblers contracts
@@ -53,12 +54,20 @@ contract GooberIntegrationTest is Test {
     address internal constant bob = address(0xBBBB);
     address internal constant feeTo = address(0xFFFF1);
     address internal constant minter = address(0xFFFF2);
-
+    
     // Goo
     uint256 internal aliceGooBalance;
     uint256 internal bobGooBalance;
+    uint256 internal vaultGooBalance;
+    uint256 internal feeToGooBalance;
 
     // Gobblers (in storage to avoid stack too deep)
+    uint256 internal aliceGobblerBalance;
+    uint256 internal bobGobblerBalance;
+    uint256 internal vaultGobblerBalance;
+    uint256 internal aliceMult;
+    uint256 internal bobMult;
+    uint256 internal vaultMult;
     uint256[] internal aliceGobblers;
     uint256[] internal aliceGobblersOnlyTwo;
     uint256[] internal aliceSwapOut;
@@ -150,6 +159,8 @@ contract GooberIntegrationTest is Test {
     //   potential surplus or debt of Goo required
     // - Should be able to safe swap, which ensures a deadline after which the tx will revert, and
     //   a maximum amount of potential surplus or debt of Goo required
+    // ### Flash Loans
+    // - Should be able to xyz TODO
     // ### Vault Accounting
     // - Should be able to check total assets of the Goober vault
     // - Should be able to check reserves of the Goober vault
@@ -160,7 +171,7 @@ contract GooberIntegrationTest is Test {
     // ### Vault Fees
     // - Management fee of 2% should be assessed on all deposits and withdraws, paid in Goo to Vault Admin
     // - Performance fee of 10% should be assessed on all deposits and withdraws, if the growth
-    //   in k is sufficient to offset any accrued kDebt, paid in Goo to Vault Admin address
+    //   in k since kLast is sufficient to offset any accrued kDebt, paid in Goo to Vault Admin address
     // - Swap fee of 3% should be assessed on all swaps, paid in GBR to the Vault itself
     // ### Vault Admin
     // - Vault Admin should be able to flag/unflag a Gobbler, disallowing deposit into the Vault
@@ -205,7 +216,7 @@ contract GooberIntegrationTest is Test {
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   200 |   XYZ |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 6. Bob swaps in a Gobbler 9 for 500 Goo and a Gobbler 8 out (Vault receives XYZ Goo as swap fee)            |
+    // | 6. Bob swaps in a Gobbler 9 for 500 Goo and a Gobbler 8 out (Vault receives XYZ GBR as swap fee)            |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   200 |   XYZ |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  2000 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
@@ -262,16 +273,31 @@ contract GooberIntegrationTest is Test {
         gobblers.setApprovalForAll(vault, true);
         vm.stopPrank();
 
+        vaultGooberBalance = 0;
+        vaultGooBalance = 0;
+        vaultGobblerBalance = 0;
+        vaultMult = 0;
+        aliceGooberBalance = 0;
+        aliceGooBalance = 0;
+        aliceGobblerBalance = 0;
+        aliceMult = 0;
+        bobGooberBalance = 0;
+        bobGooBalance = 0;
+        bobGobblerBalance = 0;
+        bobMult = 0;
+        feeToGooBalance = 0;
+
         assertEq(goo.balanceOf(vault), 0);
         assertEq(goo.balanceOf(alice), 2000 ether);
         assertEq(goo.balanceOf(bob), 2000 ether);
+        assertEq(goo.balanceOf(feeTo), 0);
         assertEq(gobblers.gooBalance(vault), 0);
         assertEq(gobblers.gooBalance(alice), 0);
         assertEq(gobblers.gooBalance(bob), 0);
         assertEq(gobblers.balanceOf(vault), 0);
         assertEq(gobblers.balanceOf(alice), 0);
         assertEq(gobblers.balanceOf(bob), 0);
-        (uint256 vaultGoo, uint256 vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, 0);
         assertEq(vaultMult, 0);
         (uint112 vaultGooReserve, uint112 vaultGobblersReserve, uint32 vaultLastTimestamp) = goober.getReserves();
@@ -288,6 +314,15 @@ contract GooberIntegrationTest is Test {
         aliceGobblers[2] = gobblers.mintFromGoo(100 ether, true);
         vm.stopPrank();
 
+        aliceGooBalance = 0;
+        bobGooBalance = 0;
+        aliceGooberBalance = 0;
+        bobGooberBalance = 0;
+        assertEq(goo.balanceOf(alice), aliceGooBalance);
+        assertEq(goo.balanceOf(bob), bobGooBalance);
+        assertEq(goober.balanceOf(alice), aliceGooberBalance);
+        assertEq(goober.balanceOf(bob), bobGooberBalance);
+
         assertEq(goo.balanceOf(vault), 0);
         assertEq(goo.balanceOf(alice), 1000 ether);
         assertEq(goo.balanceOf(bob), 2000 ether);
@@ -295,7 +330,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 0);
         assertEq(gobblers.balanceOf(alice), 3);
         assertEq(gobblers.balanceOf(bob), 0);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, 0);
         assertEq(vaultMult, 0);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -317,7 +352,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 0);
         assertEq(gobblers.balanceOf(alice), 3);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, 0);
         assertEq(vaultMult, 0);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -357,7 +392,7 @@ contract GooberIntegrationTest is Test {
         // Fractions are minted to depositor,
         assertEq(goober.balanceOf(alice), aliceFractions);
         // Total assets and reserve balances are updated,
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -374,7 +409,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 2);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -404,7 +439,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 2);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -420,7 +455,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 2);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -438,7 +473,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 3);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -469,7 +504,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 3);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -489,7 +524,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 3);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -508,7 +543,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 3);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -527,7 +562,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 3);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -543,7 +578,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 3);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -562,7 +597,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(vault), 3);
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
@@ -586,7 +621,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 3); // 2 Gobblers more
         assertEq(gobblers.getUserEmissionMultiple(alice), 21); // multipliers 9, 6, and 6
         assertEq(gobblers.balanceOf(bob), 1);
-        (vaultGoo, vaultMult) = goober.totalAssets();
+        (vaultGooBalance, vaultMult) = goober.totalAssets();
         assertEq(vaultGoo, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
