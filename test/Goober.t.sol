@@ -1101,7 +1101,7 @@ contract GooberTest is Test {
         bytes memory data;
         IGoober.SwapParams memory swapFail =
             IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn - 1, users[1], data);
-        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientGoo.selector, 1, ));
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientGoo.selector, 1));
         goober.swap(swapFail);
         vm.stopPrank();
     }
@@ -1114,6 +1114,7 @@ contract GooberTest is Test {
         bool gobblerGobbler,
         bool gobblerInOut
     ) public {
+        _writeTokenBalance(users[1], address(goo), type(uint112).max);
         vm.startPrank(users[1]);
         gobblers.addGoo(800 ether);
 
@@ -1137,7 +1138,7 @@ contract GooberTest is Test {
         vm.warp(block.timestamp + 1 days);
         _setRandomnessAndReveal(4, "SecondSeed");
 
-        goober.deposit(gobblersDeposit, 432.123456789 ether, users[1]);
+        goober.deposit(gobblersDeposit, 5000 ether, users[1]);
         bytes memory data;
 
         // Gobbler in

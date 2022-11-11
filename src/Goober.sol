@@ -511,16 +511,26 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                     erroneousGoo = erroneousGoo
                         + int256(
                             FixedPointMathLib.mulWadUp(
-                                FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
+                                FixedPointMathLib.divWadUp(
+                                    (
+                                        FixedPointMathLib.mulWadUp(
+                                            FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1
+                                        ) - balance0Adjusted
+                                    ),
+                                    997
+                                ),
+                                1
                             )
                         );
+                    //uint256 additionalGoo = (((expectedK / (balance1Adjusted)) - (balance0Adjusted)));
+                    //erroneousGoo = int256(((additionalGoo * 1000) - (additionalGoo * 3)) / (1000 ** 2));
+                    //erroneousGoo += int256((((expectedK / balance1Adjusted) - balance0Adjusted) / 997));
                 } else if (adjustedBalanceK > expectedK) {
-                    erroneousGoo = erroneousGoo
-                        - int256(
-                            FixedPointMathLib.mulWadDown(
-                                FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 1000), 1
-                            )
-                        );
+                    erroneousGoo -= int256(
+                        FixedPointMathLib.mulWadDown(
+                            FixedPointMathLib.divWadDown((balance0Adjusted - (expectedK / balance1Adjusted)), 1000), 1
+                        )
+                    );
                 }
                 // Otherwise, return 0
             }
@@ -858,11 +868,17 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
             if (adjustedBalanceK < expectedK) {
                 uint256 insufficientGoo = FixedPointMathLib.mulWadUp(
-                    FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
+                    FixedPointMathLib.divWadUp(
+                        (
+                        FixedPointMathLib.mulWadUp(
+                            FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1
+                        ) - balance0Adjusted
+                        ),
+                        997
+                    ),
+                    1
                 );
-                if (!(insufficientGoo == 0)) {
-                    revert InsufficientGoo(insufficientGoo, adjustedBalanceK, expectedK);
-                }
+                revert InsufficientGoo(insufficientGoo, adjustedBalanceK, expectedK);
             } else if (adjustedBalanceK > expectedK) {
                 erroneousGoo = erroneousGoo
                     - int256(
