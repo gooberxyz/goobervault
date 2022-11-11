@@ -1042,23 +1042,18 @@ contract GooberTest is Test {
         gobblers.addGoo(500 ether);
         uint256[] memory gobblersOut = new uint256[](1);
         gobblersOut[0] = gobblers.mintFromGoo(100 ether, true);
-        vm.stopPrank();
 
         vm.warp(block.timestamp + 1 days);
         _setRandomnessAndReveal(1, "1");
 
-        vm.startPrank(users[2]);
         gobblers.addGoo(500 ether);
         uint256[] memory gobblersIn = new uint256[](1);
         gobblersIn[0] = gobblers.mintFromGoo(100 ether, true);
-        vm.stopPrank();
 
         vm.warp(block.timestamp + 1 days);
         _setRandomnessAndReveal(1, "1");
 
-        vm.startPrank(users[1]);
         goober.deposit(gobblersOut, 100 ether, users[1]);
-        vm.stopPrank();
 
         uint256 gooIn = 301808132521938937;
         uint256 gooOut = 0 ether;
@@ -1067,15 +1062,47 @@ contract GooberTest is Test {
         int256 previewAdditionalGooRequired = goober.previewSwap(gobblersIn, 0, gobblersOut, gooOut);
         assertEq(previewAdditionalGooRequired, expectedAdditionalGooRequired);
         assertEq(goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut), 0);
-        vm.startPrank(users[2]);
         bytes memory data;
-        IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn, users[2], data);
+        IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn, users[1], data);
         int256 erroneousGoo = goober.swap(swap);
         assertEq(erroneousGoo, int256(0));
         uint256[] memory gobblersInNew = new uint256[](1);
         gobblersInNew[0] = gobblers.mintFromGoo(100 ether, true);
         vm.expectRevert(IGoober.InvalidNFT.selector);
         goober.previewSwap(gobblersInNew, 0, gobblersOut, gooOut);
+        vm.stopPrank();
+    }
+
+    function testPreviewSwapFail() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory gobblersOut = new uint256[](1);
+        gobblersOut[0] = gobblers.mintFromGoo(100 ether, true);
+
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(1, "1");
+
+        gobblers.addGoo(500 ether);
+        uint256[] memory gobblersIn = new uint256[](1);
+        gobblersIn[0] = gobblers.mintFromGoo(100 ether, true);
+
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(1, "1");
+
+        goober.deposit(gobblersOut, 100 ether, users[1]);
+
+        uint256 gooIn = 301808132521938937;
+        uint256 gooOut = 0 ether;
+
+        int256 expectedAdditionalGooRequired = 301808132521938937;
+        int256 previewAdditionalGooRequired = goober.previewSwap(gobblersIn, 0, gobblersOut, gooOut);
+        assertEq(previewAdditionalGooRequired, expectedAdditionalGooRequired);
+        assertEq(goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut), 0);
+        bytes memory data;
+        IGoober.SwapParams memory swapFail =
+            IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn - 1, users[1], data);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientGoo.selector, 1));
+        goober.swap(swapFail);
         vm.stopPrank();
     }
 
