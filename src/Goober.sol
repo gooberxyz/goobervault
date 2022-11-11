@@ -415,9 +415,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             if (gobblerMult < 6) {
                 revert InvalidMultiplier(gobblers[i]);
             }
-            if (artGobblers.ownerOf(gobblers[i]) != address(this)) {
-                revert InvalidNFT();
-            }
             _gobblerBalanceMult -= uint112(gobblerMult);
         }
         uint112 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;

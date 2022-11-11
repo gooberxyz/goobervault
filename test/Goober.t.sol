@@ -1030,6 +1030,10 @@ contract GooberTest is Test {
         uint256 actual = goober.withdraw(artGobblersThree, 100 ether, users[1], users[1]);
         expected = goober.previewWithdraw(artGobblersTwo, 100 ether);
         actual = goober.withdraw(artGobblersTwo, 100 ether, users[1], users[1]);
+        uint256[] memory artGobblersFour = new uint256[](1);
+        artGobblersFour[0] = gobblers.mintFromGoo(100 ether, true);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, 4));
+        goober.previewWithdraw(artGobblersFour, 100 ether);
         assertEq(expected, actual);
     }
 
