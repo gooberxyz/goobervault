@@ -1,5 +1,5 @@
 GooberTest:testDepositBoth() (gas: 510687)
-GooberTest:testEmitMintLowGoo() (gas: 232)
+GooberTest:testEmitMintLowGoo() (gas: 448264)
 GooberTest:testFlagGobbler() (gas: 585763)
 GooberTest:testInitial() (gas: 27559)
 GooberTest:testMint() (gas: 542096)

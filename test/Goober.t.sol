@@ -663,7 +663,7 @@ contract GooberTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     // function setupPoolForMint() public {
-        // TODO(Make this usable boilerplate for other mint functions.)
+    // TODO(Make this usable boilerplate for other mint functions.)
     //     // Safety check to verify starting gobblerPrice is correct.
     //     assertEq(gobblers.gobblerPrice(), 73013654753028651285);
 
@@ -812,7 +812,7 @@ contract GooberTest is Test {
     }
 
     function testEmitMintLowGoo() public {
-         // Safety check to verify starting gobblerPrice is correct.
+        // Safety check to verify starting gobblerPrice is correct.
         assertEq(gobblers.gobblerPrice(), 73013654753028651285);
 
         /// Add enough Goo to vault to mint a single Gobbler.
@@ -842,9 +842,9 @@ contract GooberTest is Test {
         vm.stopPrank();
 
         // Tries to mint a gobbler and expects emit, since
-        // we do not have enough goo to mint a gobbler. 
-        // Though we do have enough goo per gobbler to satisfy the 
-        // initial boolean. 
+        // we do not have enough goo to mint a gobbler.
+        // Though we do have enough goo per gobbler to satisfy the
+        // initial boolean.
         vm.prank(MINTER);
         vm.expectEmit(true, false, false, true);
         emit VaultMint(MINTER, 0, 0, true);
@@ -1080,7 +1080,6 @@ contract GooberTest is Test {
 
     event VaultMint(address indexed minter, uint112 gooConsumed, uint112 gobblersMinted, bool BalanceTerminated);
 
-
     event Deposit(
         address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
     );
@@ -1106,5 +1105,4 @@ contract GooberTest is Test {
     );
 
     event Sync(uint112 gooBalance, uint112 multBalance);
-
 }

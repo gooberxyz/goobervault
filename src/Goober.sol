@@ -528,7 +528,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _update(uint112(gooBalance), gobblerReserve, gooReserve, gobblerReserve, true, true);
         // emit VaultMint(msg.sender, gooReserve - gooBalance, minted, false);
     }
-    
 
     /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.
     function skimGoo() public nonReentrant onlyFeeTo {
