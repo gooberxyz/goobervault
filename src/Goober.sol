@@ -513,8 +513,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                                 FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
                             )
                         );
-                }
-                else if (adjustedBalanceK > expectedK) {
+                } else if (adjustedBalanceK > expectedK) {
                     erroneousGoo = erroneousGoo
                         - int256(
                             FixedPointMathLib.mulWadDown(
@@ -856,8 +855,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
 
             if (adjustedBalanceK < expectedK) {
-                revert("Goober: K");
-            } else {
+                erroneousGoo = erroneousGoo
+                    + int256(
+                        FixedPointMathLib.mulWadUp(
+                            FixedPointMathLib.divWadUp(((expectedK / balance1Adjusted) - balance0Adjusted), 997), 1
+                        )
+                    );
+            } else if (adjustedBalanceK > expectedK) {
                 erroneousGoo = erroneousGoo
                     - int256(
                         FixedPointMathLib.mulWadDown(
@@ -865,6 +869,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                         )
                     );
             }
+            // Otherwise return 0
         }
         // Update oracle.
         _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
