@@ -823,10 +823,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     {
         erroneousGoo = swap(parameters);
 
-        if (erroneousGoo < 0) {
-            erroneousGoo = -erroneousGoo;
-        }
-        if (erroneousGoo > int256(erroneousGooAbs)) {
+        if ((erroneousGoo < 0) && (-erroneousGoo > int256(erroneousGooAbs))) {
             revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
         }
     }
