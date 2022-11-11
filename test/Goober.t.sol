@@ -937,31 +937,30 @@ contract GooberTest is Test {
     // Mint Gobbler
     //////////////////////////////////////////////////////////////*/
 
-    // function setupPoolForMint() public {
-    // TODO(Make this usable boilerplate for other mint functions.)
-    //     // Safety check to verify starting gobblerPrice is correct.
-    //     assertEq(gobblers.gobblerPrice(), 73013654753028651285);
+    function setupPoolForMint() public {
+        // TODO(Make this usable boilerplate for other mint functions.)
+        //     // Safety check to verify starting gobblerPrice is correct.
+        //     assertEq(gobblers.gobblerPrice(), 73013654753028651285);
 
-    //     /// Add enough Goo to vault to mint a single Gobbler.
-    //     _writeTokenBalance(users[10], address(goo), 1000 ether);
+        //     /// Add enough Goo to vault to mint a single Gobbler.
+        //     _writeTokenBalance(users[10], address(goo), 1000 ether);
 
-    //     // Mint the first gobbler
-    //     vm.startPrank(users[10]);
-    //     uint256[] memory artGobbler = new uint256[](1);
-    //     artGobbler[0] = gobblers.mintFromGoo(75 ether, false);
-    //     // Check to see we own the first Gobbler.
-    //     assertEq(gobblers.ownerOf(1), users[10]);
-    //     // Warp a day ahead until we can reveal Gobbler 1.
-    //     vm.warp(block.timestamp + 86400);
-    //     _setRandomnessAndReveal(1, "seed");
-    //     uint256 gobblerMult = (gobblers.getGobblerEmissionMultiple(artGobbler[0]));
-    //     // Based on our seed, we get a mult of 9 here.
-    //     assertEq(gobblerMult, 9);
+        //     // Mint the first gobbler
+        //     vm.startPrank(users[10]);
+        //     uint256[] memory artGobbler = new uint256[](1);
+        //     artGobbler[0] = gobblers.mintFromGoo(75 ether, false);
+        //     // Check to see we own the first Gobbler.
+        //     assertEq(gobblers.ownerOf(1), users[10]);
+        //     // Warp a day ahead until we can reveal Gobbler 1.
+        //     vm.warp(block.timestamp + 86400);
+        //     _setRandomnessAndReveal(1, "seed");
+        //     uint256 gobblerMult = (gobblers.getGobblerEmissionMultiple(artGobbler[0]));
+        //     // Based on our seed, we get a mult of 9 here.
+        //     assertEq(gobblerMult, 9);
 
-    //     // Safety check to verify new mint price after warp and mint.
-    //     assertEq(gobblers.gobblerPrice(), 52987405899699731484);
-
-    // }
+        //     // Safety check to verify new mint price after warp and mint.
+        //     assertEq(gobblers.gobblerPrice(), 52987405899699731484);
+    }
 
     function testMint() public {
         // Safety check to verify starting gobblerPrice is correct.
@@ -1001,9 +1000,11 @@ contract GooberTest is Test {
         // balance, especially tricky if you want to test minting
         // more than 1 gobbler here.)
 
-        // Mint a gobbler, and check we return 1 (gobbler) minted.
-        // NOTE(Updates K, reserves and VRGDA in the process.)
+        // Mint a gobbler, and check emitted event matches.
+        // NOTE(Updates K, reserves and VRGDA in the process)
         vm.prank(MINTER);
+        vm.expectEmit(true, false, false, true);
+        emit VaultMint(MINTER, 52987405899699731484, 1, false);
         goober.mintGobbler();
 
         // Check our Goo balance went down from minting: 81 - 52.99 ~= 28.01.
@@ -1025,14 +1026,14 @@ contract GooberTest is Test {
         // NOTE(Checking k uneeded since _update() handles all of that
     }
 
-    // function test_withdraw_minted() public {
-    // Test if we can pull a minted Gobbler out of pool)
-    //     uint256[] memory artGobblerFromMint = new uint256[](1);
-    //     artGobblerFromMint[0] = 2; //Gobbler with tokenId = 2.
-    //     vm.prank(users[10]);
-    //     goober.withdraw(artGobblerFromMint, 0, users[10], users[10]); //Withdraw Gobbler minted from Goober based on shares minted from kDebt.
-    //     assertEq(gobblers.ownerOf(2), users[10]); //Check if we own the Gobbler now.
-    // }
+    function testWithdrawMinted() public {
+        // TODO(Test if we can pull a minted Gobbler out of pool)
+        //     uint256[] memory artGobblerFromMint = new uint256[](1);
+        //     artGobblerFromMint[0] = 2; //Gobbler with tokenId = 2.
+        //     vm.prank(users[10]);
+        //     goober.withdraw(artGobblerFromMint, 0, users[10], users[10]); //Withdraw Gobbler minted from Goober based on shares minted from kDebt.
+        //     assertEq(gobblers.ownerOf(2), users[10]); //Check if we own the Gobbler now.
+    }
 
     function testMintRevertRatio() public {
         // Safety check to verify starting gobblerPrice is correct.
