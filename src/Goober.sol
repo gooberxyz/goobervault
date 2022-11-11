@@ -496,7 +496,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             _gobblerBalance += gobblerMult;
         }
         {
-            // We could rewrite all this just to isolate the change in _gooBalance needed to balance the inequality
             // Calculate additionalGooRequired
             uint256 amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
             uint256 amount1In =
@@ -508,6 +507,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
                 uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
                 if (adjustedBalanceK < expectedK) {
+                    // TODO(Reduces the scalars here)
+                    // (expectedK / balance1Adjusted) - balance0Adjusted) / 997)
+                    expectedK /
                     erroneousGoo = erroneousGoo
                         + int256(
                             FixedPointMathLib.mulWadUp(
@@ -523,6 +525,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                             )
                         );
                 } else if (adjustedBalanceK > expectedK) {
+                    // (balance0Adjusted - (expectedK / balance1Adjusted)) / 1000)
                     erroneousGoo -= int256(
                         FixedPointMathLib.mulWadDown(
                             FixedPointMathLib.divWadDown(
