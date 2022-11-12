@@ -12,7 +12,9 @@ A special flavor of Uniswap V2 meets EIP-4626 to form a yield optimized goo/gobb
 
 Start anvil:
 
-anvil --fork-url ETH_RPC --fork-block-number 15900776 --chain-id 31337
+anvil --fork-url ETH_RPC --fork-block-number 15900776 --chain-id 31337 --block-time 1
+
+*Note*: block-time is needed for goo emissions to work
 
 Run bash script:
 
