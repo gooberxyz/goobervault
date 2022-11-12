@@ -1080,7 +1080,7 @@ contract GooberTest is Test {
         assertEq(expected, actual);
     }
 
-    function testPreviewSwapExact() public {
+    function testPreviewSwapExactGobbler() public {
         vm.startPrank(users[1]);
         gobblers.addGoo(500 ether);
         uint256[] memory gobblersOut = new uint256[](1);
@@ -1116,50 +1116,34 @@ contract GooberTest is Test {
         vm.stopPrank();
     }
 
-    function testPreviewSwapThal() public {
+    function testPreviewSwapExactGoo() public {
         vm.startPrank(users[1]);
-        gobblers.addGoo(500 ether);
-        uint256[] memory gobblersDeposit = new uint256[](2);
-        gobblersDeposit[0] = gobblers.mintFromGoo(100 ether, true);
-        gobblersDeposit[1] = gobblers.mintFromGoo(100 ether, true);
-
-        vm.warp(block.timestamp + 1 days);
-        _setRandomnessAndReveal(2, "seed");
-
-        gobblers.addGoo(500 ether);
         uint256[] memory gobblersOut = new uint256[](1);
-        gobblersOut[0] = gobblersDeposit[0];
-
-        uint256[] memory gobblersIn = new uint256[](1);
-        gobblersIn[0] = gobblers.mintFromGoo(100 ether, true);
+        gobblersOut[0] = gobblers.mintFromGoo(100 ether, false);
+        uint256[] memory gobblersZero = new uint256[](0);
 
         vm.warp(block.timestamp + 1 days);
         _setRandomnessAndReveal(1, "1");
 
-        uint256[] memory gobblersInEmpty = new uint256[](0);
+        goober.deposit(gobblersOut, 100 ether, users[1]);
 
-        goober.deposit(gobblersDeposit, 2000000000000000000, users[1]);
+        // Fee = 150451354062186560 based on erroneous goo calc for 100 ether in the pool
+        // and a swap of 50 ether.
+        // TODO(Express how to do that calc here based on other vars)
+        uint256 fee = 150451354062186560;
+        uint256 gooOut = 50 ether;
+        uint256 gooIn = gooOut + fee;
+        assertEq(goober.previewSwap(gobblersZero, gooIn, gobblersZero, gooOut), 0);
 
-        uint256 gooOut = 0;
-        uint256 gooIn = 1;
+        // Check we can swap.
+        IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersZero, gooOut, gobblersZero, gooIn, users[1], "");
+        int256 erroneousGoo = goober.swap(swap);
+        assertEq(erroneousGoo, int256(0));
 
-        int256 previewAdditionalGooRequired = goober.previewSwap(gobblersInEmpty, 1, gobblersOut, gooOut);
-        bytes memory data;
-        if (previewAdditionalGooRequired < 0) {
-            IGoober.SwapParams memory swap = IGoober.SwapParams(
-                gobblersOut, gooOut + uint256(-previewAdditionalGooRequired), gobblersInEmpty, gooIn, users[1], data
-            );
-            assertEq(goober.swap(swap), int256(0));
-        } else if (previewAdditionalGooRequired > 0) {
-            IGoober.SwapParams memory swap = IGoober.SwapParams(
-                gobblersOut, gooOut, gobblersInEmpty, gooIn + uint256(previewAdditionalGooRequired), users[1], data
-            );
-            assertEq(goober.swap(swap), int256(0));
-        } else {
-            IGoober.SwapParams memory swap =
-                IGoober.SwapParams(gobblersOut, gooOut, gobblersInEmpty, gooIn, users[1], data);
-            assertEq(goober.swap(swap), int256(0));
-        }
+        // Check we got received the fee from the banal goo swap.
+        (uint112 _GooReserve,,) = goober.getReserves();
+        assertEq(_GooReserve, (100 ether + (gooIn - gooOut)));
+
         vm.stopPrank();
     }
 
