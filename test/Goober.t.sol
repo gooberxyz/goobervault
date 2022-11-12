@@ -53,6 +53,15 @@ contract GooberTest is Test {
     uint256 internal constant START_BAL = 2000 ether;
     uint256 internal constant TIME0 = 2_000_000_000; // now-ish unix timestamp
 
+    struct SwapParams {
+        uint256[] gobblersOut;
+        uint256 gooOut;
+        uint256[] gobblersIn;
+        uint256 gooIn;
+        address receiver;
+        bytes data;
+    }
+
     function setUp() public {
         vm.warp(TIME0);
 
@@ -826,9 +835,8 @@ contract GooberTest is Test {
         // TODO
 
         bytes memory data;
-        IGoober.SwapParams memory swap =
-            IGoober.SwapParams(artGobblersThree, 0 ether, artGobblersTwo, 100 ether, users[1], data);
-        goober.swap(swap);
+
+        goober.swap(artGobblersTwo, 100 ether, artGobblersThree, 0 ether, users[1], data);
 
         fractions = goober.withdraw(artGobblersTwo, 100 ether, users[1], users[1]);
 
@@ -1108,8 +1116,7 @@ contract GooberTest is Test {
         assertEq(previewAdditionalGooRequired, expectedAdditionalGooRequired);
         assertEq(goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut), 0);
         bytes memory data;
-        IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn, users[1], data);
-        int256 erroneousGoo = goober.swap(swap);
+        int256 erroneousGoo = goober.swap(gobblersIn, gooIn, gobblersOut, gooOut, users[1], data);
         assertEq(erroneousGoo, int256(0));
         uint256[] memory gobblersInNew = new uint256[](1);
         gobblersInNew[0] = gobblers.mintFromGoo(100 ether, true);
@@ -1138,8 +1145,7 @@ contract GooberTest is Test {
         assertEq(goober.previewSwap(gobblersZero, gooIn, gobblersZero, gooOut), 0);
 
         // Check we can swap.
-        IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersZero, gooOut, gobblersZero, gooIn, users[1], "");
-        int256 erroneousGoo = goober.swap(swap);
+        int256 erroneousGoo = goober.swap(gobblersZero, gooIn, gobblersZero, gooOut, users[1], "");
         assertEq(erroneousGoo, int256(0));
 
         // Check we got received the fee from the banal goo swap.
@@ -1175,14 +1181,12 @@ contract GooberTest is Test {
         assertEq(previewAdditionalGooRequired, expectedAdditionalGooRequired);
         assertEq(goober.previewSwap(gobblersIn, gooIn, gobblersOut, gooOut), 0);
         bytes memory data;
-        IGoober.SwapParams memory swapFail =
-            IGoober.SwapParams(gobblersOut, gooOut, gobblersIn, gooIn - 1, users[1], data);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IGoober.InsufficientGoo.selector, 1, 699999999999999999998840968, 700000000000000000000000000
             )
         );
-        goober.swap(swapFail);
+        goober.swap(gobblersIn, gooIn - 1, gobblersOut, gooOut, users[1], data);
         vm.stopPrank();
     }
 
@@ -1221,35 +1225,44 @@ contract GooberTest is Test {
 
         // Deposit overflows at uint112 as expected
         goober.deposit(gobblersDeposit, type(uint80).max, users[1]);
-        bytes memory data;
+
+        SwapParams memory params = SwapParams(gobblersDeposit, gooIn, gobblersWallet, gooOut, msg.sender, "");
 
         // Gobbler in
         if (multiGobbler) {
-            int256 previewAdditionalGooRequired = goober.previewSwap(gobblersWallet, gooIn, gobblersDeposit, gooOut);
+            int256 previewAdditionalGooRequired =
+                goober.previewSwap(params.gobblersIn, params.gooIn, params.gobblersOut, params.gooOut);
             if (previewAdditionalGooRequired < 0) {
-                IGoober.SwapParams memory swap = IGoober.SwapParams(
-                    gobblersDeposit,
-                    gooOut + uint256(-previewAdditionalGooRequired),
-                    gobblersWallet,
-                    gooIn,
-                    users[1],
-                    data
+                assertEq(
+                    goober.swap(
+                        params.gobblersIn,
+                        params.gooIn,
+                        params.gobblersOut,
+                        params.gooOut + uint256(-previewAdditionalGooRequired),
+                        users[1],
+                        params.data
+                    ),
+                    int256(0)
                 );
-                assertEq(goober.swap(swap), int256(0));
             } else if (previewAdditionalGooRequired > 0) {
-                IGoober.SwapParams memory swap = IGoober.SwapParams(
-                    gobblersDeposit,
-                    gooOut,
-                    gobblersWallet,
-                    gooIn + uint256(previewAdditionalGooRequired),
-                    users[1],
-                    data
+                assertEq(
+                    goober.swap(
+                        params.gobblersIn,
+                        params.gooIn + uint256(previewAdditionalGooRequired),
+                        params.gobblersOut,
+                        params.gooOut,
+                        users[1],
+                        params.data
+                    ),
+                    int256(0)
                 );
-                assertEq(goober.swap(swap), int256(0));
             } else {
-                IGoober.SwapParams memory swap =
-                    IGoober.SwapParams(gobblersDeposit, gooOut, gobblersWallet, gooIn, users[1], data);
-                assertEq(goober.swap(swap), int256(0));
+                assertEq(
+                    goober.swap(
+                        params.gobblersIn, params.gooIn, params.gobblersOut, params.gooOut, users[1], params.data
+                    ),
+                    int256(0)
+                );
             }
         } else {
             if (gobblerGobbler) {
@@ -1259,21 +1272,37 @@ contract GooberTest is Test {
                 uint256[] memory gobblerOut = new uint256[](1);
                 gobblerOut[0] = gobblersDeposit[idx % 4];
 
-                int256 previewAdditionalGooRequired = goober.previewSwap(gobblerIn, gooIn, gobblerOut, gooOut);
+                int256 previewAdditionalGooRequired =
+                    goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
                 if (previewAdditionalGooRequired < 0) {
-                    IGoober.SwapParams memory swap = IGoober.SwapParams(
-                        gobblerOut, gooOut + uint256(-previewAdditionalGooRequired), gobblerIn, gooIn, users[1], data
+                    assertEq(
+                        goober.swap(
+                            gobblerIn,
+                            params.gooIn,
+                            gobblerOut,
+                            params.gooOut + uint256(-previewAdditionalGooRequired),
+                            users[1],
+                            params.data
+                        ),
+                        int256(0)
                     );
-                    assertEq(goober.swap(swap), int256(0));
                 } else if (previewAdditionalGooRequired > 0) {
-                    IGoober.SwapParams memory swap = IGoober.SwapParams(
-                        gobblerOut, gooOut, gobblerIn, gooIn + uint256(previewAdditionalGooRequired), users[1], data
+                    assertEq(
+                        goober.swap(
+                            gobblerIn,
+                            params.gooIn + uint256(previewAdditionalGooRequired),
+                            gobblerOut,
+                            params.gooOut,
+                            users[1],
+                            params.data
+                        ),
+                        int256(0)
                     );
-                    assertEq(goober.swap(swap), int256(0));
                 } else {
-                    IGoober.SwapParams memory swap =
-                        IGoober.SwapParams(gobblerOut, gooOut, gobblerIn, gooIn, users[1], data);
-                    assertEq(goober.swap(swap), int256(0));
+                    assertEq(
+                        goober.swap(gobblerIn, params.gooIn, gobblerOut, params.gooOut, users[1], params.data),
+                        int256(0)
+                    );
                 }
             } else {
                 if (gobblerInOut) {
@@ -1282,26 +1311,37 @@ contract GooberTest is Test {
 
                     uint256[] memory gobblerOut = new uint256[](0);
 
-                    int256 previewAdditionalGooRequired = goober.previewSwap(gobblerIn, gooIn, gobblerOut, gooOut);
+                    int256 previewAdditionalGooRequired =
+                        goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
                     if (previewAdditionalGooRequired < 0) {
-                        IGoober.SwapParams memory swap = IGoober.SwapParams(
-                            gobblerOut,
-                            gooOut + uint256(-previewAdditionalGooRequired),
-                            gobblerIn,
-                            gooIn,
-                            users[1],
-                            data
+                        assertEq(
+                            goober.swap(
+                                gobblerIn,
+                                params.gooIn,
+                                gobblerOut,
+                                params.gooOut + uint256(-previewAdditionalGooRequired),
+                                users[1],
+                                params.data
+                            ),
+                            int256(0)
                         );
-                        assertEq(goober.swap(swap), int256(0));
                     } else if (previewAdditionalGooRequired > 0) {
-                        IGoober.SwapParams memory swap = IGoober.SwapParams(
-                            gobblerOut, gooOut, gobblerIn, gooIn + uint256(previewAdditionalGooRequired), users[1], data
+                        assertEq(
+                            goober.swap(
+                                gobblerIn,
+                                params.gooIn + uint256(previewAdditionalGooRequired),
+                                gobblerOut,
+                                params.gooOut,
+                                users[1],
+                                params.data
+                            ),
+                            int256(0)
                         );
-                        assertEq(goober.swap(swap), int256(0));
                     } else {
-                        IGoober.SwapParams memory swap =
-                            IGoober.SwapParams(gobblerOut, gooOut, gobblerIn, gooIn, users[1], data);
-                        assertEq(goober.swap(swap), int256(0));
+                        assertEq(
+                            goober.swap(gobblerIn, params.gooIn, gobblerOut, params.gooOut, users[1], params.data),
+                            int256(0)
+                        );
                     }
                 } else {
                     uint256[] memory gobblerIn = new uint256[](0);
@@ -1311,37 +1351,41 @@ contract GooberTest is Test {
 
                     if (gooIn == 0) {
                         vm.expectRevert("Goober: INSUFFICIENT_INPUT_AMOUNT");
-                        goober.previewSwap(gobblerIn, gooIn, gobblerOut, gooOut);
-                        IGoober.SwapParams memory swap =
-                            IGoober.SwapParams(gobblerOut, gooOut, gobblerIn, gooIn, users[1], data);
+                        goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
                         vm.expectRevert("Goober: INSUFFICIENT_INPUT_AMOUNT");
-                        goober.swap(swap);
+                        goober.swap(gobblerIn, params.gooIn, gobblerOut, params.gooOut, users[1], params.data);
                     } else {
-                        int256 previewAdditionalGooRequired = goober.previewSwap(gobblerIn, gooIn, gobblerOut, gooOut);
+                        int256 previewAdditionalGooRequired =
+                            goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
                         if (previewAdditionalGooRequired < 0) {
-                            IGoober.SwapParams memory swap = IGoober.SwapParams(
-                                gobblerOut,
-                                gooOut + uint256(-previewAdditionalGooRequired),
-                                gobblerIn,
-                                gooIn,
-                                users[1],
-                                data
+                            assertEq(
+                                goober.swap(
+                                    gobblerIn,
+                                    params.gooIn,
+                                    gobblerOut,
+                                    params.gooOut + uint256(-previewAdditionalGooRequired),
+                                    users[1],
+                                    params.data
+                                ),
+                                int256(0)
                             );
-                            assertEq(goober.swap(swap), int256(0));
                         } else if (previewAdditionalGooRequired > 0) {
-                            IGoober.SwapParams memory swap = IGoober.SwapParams(
-                                gobblerOut,
-                                gooOut,
-                                gobblerIn,
-                                gooIn + uint256(previewAdditionalGooRequired),
-                                users[1],
-                                data
+                            assertEq(
+                                goober.swap(
+                                    gobblerIn,
+                                    params.gooIn + uint256(previewAdditionalGooRequired),
+                                    gobblerOut,
+                                    params.gooOut,
+                                    users[1],
+                                    params.data
+                                ),
+                                int256(0)
                             );
-                            assertEq(goober.swap(swap), int256(0));
                         } else {
-                            IGoober.SwapParams memory swap =
-                                IGoober.SwapParams(gobblerOut, gooOut, gobblerIn, gooIn, users[1], data);
-                            assertEq(goober.swap(swap), int256(0));
+                            assertEq(
+                                goober.swap(gobblerIn, params.gooIn, gobblerOut, params.gooOut, users[1], params.data),
+                                int256(0)
+                            );
                         }
                     }
                 }
@@ -1466,10 +1510,8 @@ contract GooberTest is Test {
         goober.previewSwap(artGobbler, 0, artGobblerUnrevealed, 0 ether);
 
         bytes memory data;
-        IGoober.SwapParams memory swap =
-            IGoober.SwapParams(artGobblerUnrevealed, 0, artGobbler, 100 ether, users[1], data);
         vm.expectRevert(abi.encodeWithSelector(IGoober.InvalidMultiplier.selector, 2));
-        goober.swap(swap);
+        goober.swap(artGobbler, 100 ether, artGobblerUnrevealed, 0, users[1], data);
         vm.stopPrank();
     }
 
