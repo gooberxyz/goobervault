@@ -126,6 +126,59 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // Internal: Non-Mutating
     //////////////////////////////////////////////////////////////*/
 
+    function _swapCalculations(
+        uint256 _gooReserve,
+        uint256 _gobblerReserve,
+        uint256 _gooBalance,
+        uint256 _gobblerBalance,
+        uint256 gooOut,
+        uint256 multOut,
+        bool revertInsufficient
+    ) internal pure returns (int256 erroneousGoo, uint256 amount0In, uint256 amount1In) {
+        erroneousGoo = 0;
+        amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
+        amount1In = _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
+        require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
+        {
+            uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
+            uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
+            uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
+            uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
+
+            if (adjustedBalanceK < expectedK) {
+                erroneousGoo += int256(
+                    FixedPointMathLib.mulWadUp(
+                        FixedPointMathLib.divWadUp(
+                            (
+                                FixedPointMathLib.mulWadUp(FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1)
+                                    - balance0Adjusted
+                            ),
+                            997
+                        ),
+                        1
+                    )
+                );
+                if (revertInsufficient) {
+                    revert InsufficientGoo(uint256(erroneousGoo), adjustedBalanceK, expectedK);
+                }
+            } else if (adjustedBalanceK > expectedK) {
+                erroneousGoo -= int256(
+                    FixedPointMathLib.mulWadDown(
+                        FixedPointMathLib.divWadDown(
+                            (
+                                balance0Adjusted
+                                    - FixedPointMathLib.mulWadUp(FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1)
+                            ),
+                            1000
+                        ),
+                        1
+                    )
+                );
+            }
+            // Otherwise return 0
+        }
+    }
+
     /// @notice Returns various calculations about the value of K.
     function _kCalculations(uint112 _gooBalance, uint112 _gobblerBalance, uint112 _kLast, uint112 _kDebt, bool _roundUp)
         internal
@@ -459,13 +512,13 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @notice Simulates a swap.
-    /// @param gobblersIn - array of gobbler ids to swap ine
+    /// @param gobblersIn - array of gobbler ids to swap in.
     /// @param gooIn - amount of goo to swap in.
     /// @param gobblersOut - array of gobbler ids to swap out.
     /// @param gooOut - amount of goo to swap out.
     /// @return erroneousGoo - the amount in wei by which to increase or decreas gooIn/out to balance the swap.
     function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
-        external
+        public
         view
         returns (int256 erroneousGoo)
     {
@@ -495,54 +548,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             }
             _gobblerBalance += gobblerMult;
         }
-        {
-            // Calculate additionalGooRequired
-            uint256 amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
-            uint256 amount1In =
-                _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
-            require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
-            {
-                uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
-                uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-                uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
-                uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
-                if (adjustedBalanceK < expectedK) {
-                    // TODO(Reduces the scalars here)
-                    // (expectedK / balance1Adjusted) - balance0Adjusted) / 997)
-                    erroneousGoo = erroneousGoo
-                        + int256(
-                            FixedPointMathLib.mulWadUp(
-                                FixedPointMathLib.divWadUp(
-                                    (
-                                        FixedPointMathLib.mulWadUp(
-                                            FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1
-                                        ) - balance0Adjusted
-                                    ),
-                                    997
-                                ),
-                                1
-                            )
-                        );
-                } else if (adjustedBalanceK > expectedK) {
-                    // (balance0Adjusted - (expectedK / balance1Adjusted)) / 1000)
-                    erroneousGoo -= int256(
-                        FixedPointMathLib.mulWadDown(
-                            FixedPointMathLib.divWadDown(
-                                (
-                                    balance0Adjusted
-                                        - FixedPointMathLib.mulWadUp(
-                                            FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1
-                                        )
-                                ),
-                                1000
-                            ),
-                            1
-                        )
-                    );
-                }
-                // Otherwise, return 0
-            }
-        }
+        (erroneousGoo,,) =
+            _swapCalculations(_gooReserve, _gobblerReserve, _gooBalance, _gobblerBalance, gooOut, multOut, false);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -811,113 +818,108 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool.
-    function swap(SwapParams calldata parameters) public nonReentrant returns (int256 erroneousGoo) {
-        erroneousGoo = 0;
-        require(parameters.gooOut > 0 || parameters.gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
-        uint112 multOut = 0;
-        (uint112 _gooReserve, uint112 _gobblerReserve,) = getReserves(); // gas savings
+    function swap(
+        uint256[] calldata gobblersIn,
+        uint256 gooIn,
+        uint256[] calldata gobblersOut,
+        uint256 gooOut,
+        address receiver,
+        bytes calldata data
+    ) public nonReentrant returns (int256) {
+        require(gooOut > 0 || gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(receiver != address(goo) && receiver != address(artGobblers), "Goober: INVALID_TO");
+        SwapData memory internalData;
 
-        {
-            require(
-                parameters.receiver != address(goo) && parameters.receiver != address(artGobblers), "Goober: INVALID_TO"
-            );
+        (internalData.gooReserve, internalData.gobblerReserve,) = getReserves(); // gas savings
 
-            // Transfer out
+        // Transfer out
 
-            // Optimistically transfer goo if any
-            if (parameters.gooOut > 0) {
-                artGobblers.removeGoo(parameters.gooOut);
-                goo.safeTransfer(parameters.receiver, parameters.gooOut);
-            }
+        // Optimistically transfer goo if any
+        if (gooOut > 0) {
+            // This will underflow if we don't have enough goo, by design
+            artGobblers.removeGoo(gooOut);
+            goo.safeTransfer(receiver, gooOut);
+        }
 
-            // Optimistically transfer gobblers if any
-            if (parameters.gobblersOut.length > 0) {
-                for (uint256 i = 0; i < parameters.gobblersOut.length; i++) {
-                    uint256 gobblerMult = artGobblers.getGobblerEmissionMultiple(parameters.gobblersOut[i]);
-                    if (gobblerMult < 6) {
-                        revert InvalidMultiplier(parameters.gobblersOut[i]);
-                    }
-                    multOut += uint112(gobblerMult);
-                    artGobblers.transferFrom(address(this), parameters.receiver, parameters.gobblersOut[i]);
+        // Optimistically transfer gobblers if any
+        if (gobblersOut.length > 0) {
+            for (uint256 i = 0; i < gobblersOut.length; i++) {
+                uint256 gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblersOut[i]);
+                if (gobblerMult < 6) {
+                    revert InvalidMultiplier(gobblersOut[i]);
                 }
+                internalData.multOut += uint112(gobblerMult);
+                artGobblers.transferFrom(address(this), receiver, gobblersOut[i]);
             }
         }
 
         // Flash loan call out
-        if (parameters.data.length > 0) IGooberCallee(parameters.receiver).gooberCall(parameters);
+        // We only need to send the data, because all the other action happens here.
+        if (data.length > 0) IGooberCallee(receiver).gooberCall(data);
 
-        {
-            // Transfer in
+        // Transfer in
 
-            // Transfer in goo if any
-            if (parameters.gooIn > 0) {
-                goo.safeTransferFrom(msg.sender, address(this), parameters.gooIn);
-                artGobblers.addGoo(parameters.gooIn);
-            }
-
-            // Transfer in gobblers if any
-            for (uint256 i = 0; i < parameters.gobblersIn.length; i++) {
-                artGobblers.safeTransferFrom(msg.sender, address(this), parameters.gobblersIn[i]);
-            }
+        // Transfer in goo if any
+        if (gooIn > 0) {
+            goo.safeTransferFrom(msg.sender, address(this), gooIn);
+            artGobblers.addGoo(gooIn);
         }
 
-        (uint112 _gooBalance, uint112 _gobblerBalance,) = getReserves();
-
-        uint256 amount0In =
-            _gooBalance > _gooReserve - parameters.gooOut ? _gooBalance - (_gooReserve - parameters.gooOut) : 0;
-        uint256 amount1In =
-            _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
-        require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
-        {
-            uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
-            uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
-            uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
-            uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
-
-            if (adjustedBalanceK < expectedK) {
-                uint256 insufficientGoo = FixedPointMathLib.mulWadUp(
-                    FixedPointMathLib.divWadUp(
-                        (
-                            FixedPointMathLib.mulWadUp(FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1)
-                                - balance0Adjusted
-                        ),
-                        997
-                    ),
-                    1
-                );
-                revert InsufficientGoo(insufficientGoo, adjustedBalanceK, expectedK);
-            } else if (adjustedBalanceK > expectedK) {
-                erroneousGoo = int256(
-                    FixedPointMathLib.mulWadDown(
-                        FixedPointMathLib.divWadDown(
-                            (
-                                balance0Adjusted
-                                    - FixedPointMathLib.mulWadUp(FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1)
-                            ),
-                            1000
-                        ),
-                        1
-                    )
-                );
-            }
-            // Otherwise return 0
+        // Transfer in gobblers if any
+        for (uint256 i = 0; i < gobblersIn.length; i++) {
+            artGobblers.safeTransferFrom(msg.sender, address(this), gobblersIn[i]);
         }
+
+        (internalData.gooBalance, internalData.gobblerBalance,) = getReserves();
+
+        (internalData.erroneousGoo, internalData.amount0In, internalData.amount1In) = _swapCalculations(
+            internalData.gooReserve,
+            internalData.gobblerReserve,
+            internalData.gooBalance,
+            internalData.gobblerBalance,
+            gooOut,
+            internalData.multOut,
+            true
+        );
         // Update oracle.
-        _update(_gooBalance, _gobblerBalance, _gooReserve, _gobblerReserve, false, false);
-        emit Swap(msg.sender, parameters.receiver, amount0In, amount1In, parameters.gooOut, multOut);
+        _update(
+            internalData.gooBalance,
+            internalData.gobblerBalance,
+            internalData.gooReserve,
+            internalData.gobblerReserve,
+            false,
+            false
+        );
+        emit Swap(msg.sender, receiver, internalData.amount0In, internalData.amount1In, gooOut, internalData.multOut);
+        return internalData.erroneousGoo;
     }
 
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool, with slippage and deadline control.
-    function safeSwap(SwapParams calldata parameters, uint256 erroneousGooAllowed, uint256 deadline)
-        external
-        ensure(deadline)
-        returns (int256 erroneousGoo)
-    {
-        erroneousGoo = swap(parameters);
-
-        // ErroneousGoo will always be positive or revert
-        if (uint256(erroneousGoo) > erroneousGooAllowed) {
-            revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+    function safeSwap(
+        uint256 erroneousGooAbs,
+        uint256 deadline,
+        uint256[] calldata gobblersIn,
+        uint256 gooIn,
+        uint256[] calldata gobblersOut,
+        uint256 gooOut,
+        address receiver,
+        bytes calldata data
+    ) external ensure(deadline) returns (int256 erroneousGoo) {
+        erroneousGoo = previewSwap(gobblersIn, gooIn, gobblersOut, gooOut);
+        if (erroneousGoo < 0) {
+            uint256 additionalGooOut = uint256(-erroneousGoo);
+            if (additionalGooOut > erroneousGooAbs) {
+                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+            }
+            gooOut += additionalGooOut;
+        } else if (erroneousGoo > 0) {
+            uint256 additionalGooIn = uint256(erroneousGoo);
+            if (additionalGooIn > erroneousGooAbs) {
+                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+            }
+            gooIn += additionalGooIn;
         }
+
+        erroneousGoo = swap(gobblersIn, gooIn, gobblersOut, gooOut, receiver, data);
     }
 }

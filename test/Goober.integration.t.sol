@@ -55,7 +55,7 @@ contract GooberIntegrationTest is Test {
     address internal constant bob = address(0xBBBB);
     address internal constant feeTo = address(0xFFFF1);
     address internal constant minter = address(0xFFFF2);
-    
+
     // Goo
     uint256 internal aliceGooBalance;
     uint256 internal bobGooBalance;
@@ -353,7 +353,8 @@ contract GooberIntegrationTest is Test {
         _setRandomnessAndReveal(4, "seed");
 
         // Check reveals
-        aliceMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(2) + gobblers.getGobblerEmissionMultiple(3);
+        aliceMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(2)
+            + gobblers.getGobblerEmissionMultiple(3);
         bobMult = gobblers.getGobblerEmissionMultiple(4);
         assertEq(gobblers.ownerOf(1), alice);
         assertEq(gobblers.ownerOf(2), alice);
@@ -444,8 +445,7 @@ contract GooberIntegrationTest is Test {
         int256 bobErroneousGoo = goober.previewSwap(bobSwapIn, 0, bobSwapOut, 0);
         assertEq(bobErroneousGoo, -10_959_280_272_307_020_961); // Bob should get ~10.9 Goo back
 
-        IGoober.SwapParams memory bobSwap = IGoober.SwapParams(bobSwapOut, 10 ether, bobSwapIn, 0, bob, "");
-        goober.swap(bobSwap);
+        goober.swap(bobSwapIn, 0, bobSwapOut, 10 ether, bob, "");
         vm.stopPrank();
 
         // Check balances
@@ -480,7 +480,7 @@ contract GooberIntegrationTest is Test {
         // FeeTo
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
 
-        // 7. Vault accrues Goo for 1 hour, receiving ~sqrt(18 * 700) in emissions   
+        // 7. Vault accrues Goo for 1 hour, receiving ~sqrt(18 * 700) in emissions
         vm.warp(TIME0 + 1 days + 2 hours);
 
         // Check balances
@@ -552,8 +552,7 @@ contract GooberIntegrationTest is Test {
         assertEq(aliceErroneousGoo, 27_301_611_343_663_367_346); // Alice will need to swap in at least ~27.3 Goo
 
         vm.startPrank(alice);
-        IGoober.SwapParams memory aliceSwap = IGoober.SwapParams(aliceSwapOut, 0, aliceSwapIn, 30 ether, alice, "");
-        goober.swap(aliceSwap);
+        goober.swap(aliceSwapIn, 30 ether, aliceSwapOut, 0, alice, "");
         vm.stopPrank();
 
         // Check balances
@@ -636,7 +635,8 @@ contract GooberIntegrationTest is Test {
         totalVaultGooberBalance = 60_049_189_486;
         vaultGooBalance += 55_002_970_768_153_471_144; // Goo emissions
         vaultGobblerBalance = 2;
-        vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3) + gobblers.getGobblerEmissionMultiple(5); // new multiple
+        vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
+            + gobblers.getGobblerEmissionMultiple(5); // new multiple
         feeToGooberBalance = 1_200_983_788;
         vaultLastTimestamp = TIME0 + 1 days + 2 hours;
         // Vault
@@ -670,7 +670,8 @@ contract GooberIntegrationTest is Test {
         totalVaultGooberBalance += 2_400_586_916; // ~2.4 more fractions minted
         vaultGooBalance += 10 ether; // 10 more Goo from Bob
         vaultGobblerBalance = 2;
-        vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3) + gobblers.getGobblerEmissionMultiple(5); // new multiple
+        vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
+            + gobblers.getGobblerEmissionMultiple(5); // new multiple
         bobGooberBalance = bobFractions; // Bob is only minted ~2 GBR fractions, after performance fee is assessed
         bobGooBalance -= 10 ether; // 10 less Goo
         bobGobblerBalance = 1;
@@ -699,14 +700,15 @@ contract GooberIntegrationTest is Test {
         // FeeTo
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
 
-        // 13. Vault accrues Goo for 1 hour, receiving ~sqrt(18 * 700) in emissions  
+        // 13. Vault accrues Goo for 1 hour, receiving ~sqrt(18 * 700) in emissions
         vm.warp(TIME0 + 1 days + 2 hours + 1 days + 1 hours);
 
         // Check balances
-        totalVaultGooberBalance = 62_449_776_402; 
+        totalVaultGooberBalance = 62_449_776_402;
         vaultGooBalance += 2_967_939_719_600_851_528; // ~2.9 Goo in emissions
         vaultGobblerBalance = 2;
-        vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3) + gobblers.getGobblerEmissionMultiple(5);
+        vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
+            + gobblers.getGobblerEmissionMultiple(5);
         feeToGooberBalance = 2_313_680_112;
         vaultLastTimestamp = TIME0 + 1 days + 2 hours + 1 days;
         // Vault
@@ -739,7 +741,8 @@ contract GooberIntegrationTest is Test {
         totalVaultGooberBalance -= 2_587_213_346; // less total supply of GBR fractions
         vaultGooBalance -= 20 ether; // 20 less Goo
         vaultGobblerBalance = 2;
-        vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3) + gobblers.getGobblerEmissionMultiple(5);
+        vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
+            + gobblers.getGobblerEmissionMultiple(5);
         bobGooberBalance -= fractionsWithdrawn; // less 2_587_213_346 GBR
         bobGooBalance += 20 ether; // 20 more Goo
         bobGobblerBalance = 1;

@@ -33,13 +33,15 @@ interface IGoober is IERC721Receiver {
 
     // Structs
 
-    struct SwapParams {
-        uint256[] gobblersOut;
-        uint256 gooOut;
-        uint256[] gobblersIn;
-        uint256 gooIn;
-        address receiver;
-        bytes data;
+    struct SwapData {
+        uint112 gooReserve;
+        uint112 gobblerReserve;
+        uint112 gooBalance;
+        uint112 gobblerBalance;
+        uint112 multOut;
+        uint256 amount0In;
+        uint256 amount1In;
+        int256 erroneousGoo;
     }
 
     // Events
@@ -59,8 +61,10 @@ interface IGoober is IERC721Receiver {
         uint256 fractions
     );
 
+    // TODO(Test this)
     event FeesAccrued(address indexed feeTo, uint256 fractions, bool performanceFee, uint256 _deltaK);
 
+    // TODO(Test this)
     event Swap(
         address indexed caller,
         address indexed receiver,
@@ -70,12 +74,15 @@ interface IGoober is IERC721Receiver {
         uint256 gobblerMultOut
     );
 
+    // TODO(Test this)
     event Sync(uint112 gooBalance, uint112 multBalance);
 
     // Functions, Non-Mutating
 
+    // TODO(Test this)
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) external view returns (uint256 fractions);
 
+    // TODO(Test this)
     function previewWithdraw(uint256[] calldata gobblers, uint256 gooTokens)
         external
         view
@@ -108,5 +115,12 @@ interface IGoober is IERC721Receiver {
         external
         returns (uint256 fractions);
 
-    function swap(SwapParams calldata params) external returns (int256 erroneousGoo);
+    function swap(
+        uint256[] calldata gobblersIn,
+        uint256 gooIn,
+        uint256[] calldata gobblersOut,
+        uint256 gooOut,
+        address receiver,
+        bytes calldata data
+    ) external returns (int256 erroneousGoo);
 }
