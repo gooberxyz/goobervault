@@ -1119,7 +1119,7 @@ contract GooberTest is Test {
             assertEq(goober.swap(swap), int256(0));
         } else {
             IGoober.SwapParams memory swap =
-            IGoober.SwapParams(gobblersOut, gooOut, gobblersInEmpty, gooIn, users[1], data);
+                IGoober.SwapParams(gobblersOut, gooOut, gobblersInEmpty, gooIn, users[1], data);
             assertEq(goober.swap(swap), int256(0));
         }
         vm.stopPrank();
