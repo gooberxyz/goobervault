@@ -1,3 +1,4 @@
+GooberIntegrationTest:testMultipleDepositSwapMintWithdraw() (gas: 2564459)
 GooberTest:testCantUnrevealedCantEscapeVault() (gas: 496597)
 GooberTest:testConvertToAssets() (gas: 403335)
 GooberTest:testConvertToFractions() (gas: 462398)
