@@ -811,7 +811,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool.
-    function swap(SwapParams calldata parameters) public nonReentrant returns (int256 erroneousGoo) {
+    function swap(SwapParams memory parameters) public nonReentrant returns (int256 erroneousGoo) {
         erroneousGoo = 0;
         require(parameters.gooOut > 0 || parameters.gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
         uint112 multOut = 0;
@@ -908,25 +908,31 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool, with slippage and deadline control.
-    function safeSwap(SwapParams calldata parameters, uint256 erroneousGooAbs, uint256 deadline)
-        external
-        ensure(deadline)
-        returns (int256 erroneousGoo)
-    {
-        erroneousGoo = previewSwap(parameters.gobblersIn, parameters.gooIn, parameters.gobblersOut, parameters.gooOut);
-        uint256 additionalGooIn = 0;
-        uint256 additionalGooOut = 0;
-        if (erroneousGoo > 0) {
-            additionalGooIn = uint256(erroneousGoo);
-            if (additionalGooIn > erroneousGooAbs) {
-                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
-            }
-        } else {
-            additionalGooOut = uint256(-erroneousGoo);
+    function safeSwap(
+        uint256 erroneousGooAbs,
+        uint256 deadline,
+        uint256[] calldata gobblersIn,
+        uint256 gooIn,
+        uint256[] calldata gobblersOut,
+        uint256 gooOut,
+        address receiver,
+        bytes calldata data
+    ) external ensure(deadline) returns (int256 erroneousGoo) {
+        erroneousGoo = previewSwap(gobblersIn, gooIn, gobblersOut, gooOut);
+        if (erroneousGoo < 0) {
+            uint256 additionalGooOut = uint256(-erroneousGoo);
             if (additionalGooOut > erroneousGooAbs) {
                 revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
             }
+            gooOut += additionalGooOut;
+        } else if (erroneousGoo > 0) {
+            uint256 additionalGooIn = uint256(erroneousGoo);
+            if (additionalGooIn > erroneousGooAbs) {
+                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+            }
+            gooIn += additionalGooIn;
         }
-        erroneousGoo = swap(parameters);
+
+        erroneousGoo = swap(SwapParams(gobblersOut, gooOut, gobblersIn, gooIn, receiver, data));
     }
 }

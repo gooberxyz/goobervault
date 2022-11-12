@@ -868,12 +868,12 @@ contract GooberTest is Test {
         goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
 
         bytes memory data;
-        IGoober.SwapParams memory swap =
-            IGoober.SwapParams(artGobblersOut, 0, artGobblersToSwap, 235765844523515264, users[1], data);
 
         int256 expectedErroneousGoo = goober.previewSwap(artGobblersToSwap, 235765844523515264, artGobblersOut, 0);
 
-        int256 erroneousGoo = goober.safeSwap(swap, 0, block.timestamp + 1);
+        int256 erroneousGoo = goober.safeSwap(
+            0, block.timestamp + 1, artGobblersToSwap, 235765844523515264, artGobblersOut, 0, users[1], data
+        );
 
         assertEq(expectedErroneousGoo, erroneousGoo);
 
@@ -907,12 +907,12 @@ contract GooberTest is Test {
         goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
 
         bytes memory data;
-        IGoober.SwapParams memory swap =
-            IGoober.SwapParams(artGobblersOut, 0, artGobblersToSwap, 235765844523515264, users[1], data);
 
         vm.expectRevert("Goober: EXPIRED");
 
-        goober.safeSwap(swap, 0, block.timestamp - 1);
+        goober.safeSwap(
+            0, block.timestamp - 1, artGobblersToSwap, 235765844523515264, artGobblersOut, 0, users[1], data
+        );
     }
 
     function testSafeSwapRevertsWhenErroneousGooIsTooLarge() public {
@@ -942,17 +942,19 @@ contract GooberTest is Test {
         goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
 
         bytes memory data;
-        IGoober.SwapParams memory swap = IGoober.SwapParams(
-            artGobblersOut,
-            0,
-            artGobblersToSwap,
-            uint256(goober.previewSwap(artGobblersToSwap, 0, artGobblersOut, 1)),
-            users[1],
-            data
-        );
 
-        vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
-        goober.safeSwap(swap, 0, block.timestamp + 1);
+        // TODO(Push the price around with a trade/sandwich and check that it reverts)
+        //vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        //goober.safeSwap(
+        //    0,
+        //    block.timestamp + 1,
+        //    artGobblersToSwap,
+        //    uint256(goober.previewSwap(artGobblersToSwap, 0, artGobblersOut, 1)),
+        //    artGobblersOut,
+        //    0,
+        //    users[1],
+        //    data
+        //);
     }
 
     /*//////////////////////////////////////////////////////////////
