@@ -439,8 +439,9 @@ contract GooberTest is Test {
         uint112 newK = (_GooReserve1 * _GobblerReserve1);
         assertEq(newK, 32094380310921470254575);
 
-        (,, uint112 kDelta) = goober._previewPerformanceFee(_GooReserve1, _GobblerReserve1);
-        assertEq(kDelta, 414531353282231156);
+        //(,, uint112 kDelta) = goober._previewPerformanceFee(_GooReserve1, _GobblerReserve1);
+        // kDelta is 414531353282231156 here (we make the above function public to calc)
+        uint112 kDelta = 414531353282231156;
         vm.stopPrank();
 
         // Check to see user 1 can withdraw as much as they can.
@@ -449,7 +450,7 @@ contract GooberTest is Test {
         vm.expectEmit(true, false, false, true);
         // The summed 'fractions' that FeesAccrued emits minus fes are
         // equal to how many fractions total have been accrued by the user.
-        emit FeesAccrued(FEE_TO, 4952963124, true, 414531353282231156);
+        emit FeesAccrued(FEE_TO, 4952963124, true, kDelta);
         emit FeesAccrued(FEE_TO, 1039027993, false, 0);
         // TODO(Calc how much are lost to fees below with the 30bps)
         uint256 fractionsNew = goober.withdraw(artGobblers1, 500 ether, users[1], users[1]);
