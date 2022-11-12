@@ -924,7 +924,8 @@ contract GooberTest is Test {
     }
 
     function testSafeSwapRevertsWhenErroneousGooIsTooLarge() public {
-        vm.startPrank(users[1]);
+        // A user sets up the vault
+        vm.startPrank(users[3]);
         uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 4);
 
         uint256[] memory artGobblersToDeposit = new uint256[](3);
@@ -932,37 +933,83 @@ contract GooberTest is Test {
         artGobblersToDeposit[1] = artGobblers[1];
         artGobblersToDeposit[2] = artGobblers[2];
 
+        // Reveal
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(4, "seed");
+
+        uint256 gooToDeposit = 300 ether;
+
+        // Deposit 3 gobblers and 300 goo
+        uint256 expectedFractions = goober.previewDeposit(artGobblersToDeposit, gooToDeposit);
+
+        goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
+
+        // Then sends a gobbler to a friend
+
+        gobblers.transferFrom(users[3], users[1], artGobblers[3]);
+
+        vm.stopPrank();
+
+        uint256[] memory noGobblers = new uint256[](0);
+
+        // That friend decides they want goo.
+        vm.startPrank(users[1]);
+
         uint256[] memory artGobblersToSwap = new uint256[](1);
         artGobblersToSwap[0] = artGobblers[3];
 
         uint256[] memory artGobblersOut = new uint256[](1);
         artGobblersOut[0] = artGobblers[0];
 
-        uint256 gooToDeposit = 200 ether;
+        uint256 swapPreview = uint256(-goober.previewSwap(artGobblersToSwap, 0, noGobblers, 0));
+        vm.stopPrank();
 
-        // Reveal
-        vm.warp(TIME0 + 1 days);
-        _setRandomnessAndReveal(4, "seed");
+        // As they are about to sell the gobbler, somebody frontruns them and buys a gobbler
+        vm.startPrank(users[2]);
 
-        // Deposit 2 gobblers and 200 goo
-        uint256 expectedFractions = goober.previewDeposit(artGobblersToDeposit, gooToDeposit);
+        uint256[] memory artGobblersOutTwo = new uint256[](1);
+        artGobblersOutTwo[0] = artGobblers[1];
 
-        goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
+        goober.swap(
+            noGobblers,
+            uint256(goober.previewSwap(noGobblers, 1, artGobblersOutTwo, 0)) + 1,
+            artGobblersOutTwo,
+            0,
+            users[2],
+            ""
+        );
 
-        //bytes memory data;
+        vm.stopPrank();
 
-        // TODO(Push the price around with a trade/sandwich and check that it reverts)
-        //vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
-        //goober.safeSwap(
-        //    0,
-        //    block.timestamp + 1,
-        //    artGobblersToSwap,
-        //    uint256(goober.previewSwap(artGobblersToSwap, 0, artGobblersOut, 1)),
-        //    artGobblersOut,
-        //    0,
-        //    users[1],
-        //    data
-        //);
+        // But, they used safeSwap, so they don't loose money.
+        vm.startPrank(users[1]);
+
+        // This tests the case of too much goo out
+        // TODO(Think, is this something safe swap should prevent? Or only too much goo in?)
+        vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        goober.safeSwap(1, block.timestamp + 1, artGobblersToSwap, 0, noGobblers, swapPreview, users[1], "");
+
+        // So the user decides to make a trade anyway at this better price
+        swapPreview = uint256(-goober.previewSwap(artGobblersToSwap, 0, noGobblers, 0));
+        vm.stopPrank();
+
+        // But that pesky frontrunner decides to sell back the gobbler, he didn't like it
+        vm.startPrank(users[2]);
+        goober.swap(
+            artGobblersOutTwo,
+            0,
+            noGobblers,
+            uint256(-goober.previewSwap(artGobblersOutTwo, 0, noGobblers, 0)),
+            users[2],
+            ""
+        );
+        vm.stopPrank();
+
+        // Our slower trader is still protected though, because they are using safeSwap
+        vm.startPrank(users[1]);
+        vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        goober.safeSwap(1, block.timestamp + 1, artGobblersToSwap, 0, noGobblers, swapPreview, users[1], "");
+        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
