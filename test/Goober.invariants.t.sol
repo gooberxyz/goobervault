@@ -87,15 +87,7 @@ contract InvariantSwapper is InvariantActor {
 
         _writeTokenBalance(address(this), address(goo), gooIn);
 
-        IGoober.SwapParams memory swapParams = IGoober.SwapParams({
-            gobblersOut: gobblersOut,
-            gooOut: gooOut,
-            gobblersIn: gobblersIn,
-            gooIn: gooIn,
-            receiver: address(this),
-            data: bytes("")
-        });
-        goober.swap(swapParams);
+        goober.swap(gobblersOut, gooOut, gobblersIn, gooIn, address(this), bytes(""));
     }
 }
 
