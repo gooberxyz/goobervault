@@ -400,31 +400,69 @@ contract GooberTest is Test {
     // Update reserves
     // Emit event
 
-    function testWithdrawBoth() public {
+    function testWithdrawBothAll() public {
+        // Tests depositing goo and gobbler and withdrawing
+        // after 7 days of K growth (increased by a later depositor).
+
+        // User 1 adds gobbler and goo, leaves it in pool.
         vm.startPrank(users[1]);
-        gobblers.addGoo(500 ether);
-        uint256[] memory artGobblers = new uint256[](2);
-        uint256[] memory artGobblersHold = new uint256[](1);
-        uint256[] memory artGobblersToWithdraw = new uint256[](1);
-
-        artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
-        artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
-        artGobblersHold[0] = gobblers.mintFromGoo(100 ether, true);
-        artGobblersToWithdraw[0] = artGobblers[0];
-
+        uint256[] memory artGobblers1 = new uint256[](1);
+        artGobblers1[0] = gobblers.mintFromGoo(100 ether, false);
         vm.warp(TIME0 + 1 days);
-        _setRandomnessAndReveal(3, "seed");
+        _setRandomnessAndReveal(1, "seed");
+        uint256 mult1 = gobblers.getGobblerEmissionMultiple(1);
+        assertEq(mult1, 9);
 
-        /*uint256 fractions = */
-        goober.deposit(artGobblers, 500 ether, users[1]);
+        // Check how many fractions we receive.
+        uint256 fractions = goober.deposit(artGobblers1, 500 ether, users[1]);
+        assertEq(fractions, 65740397558);
+        vm.stopPrank();
+        // K should be 4500 here, we check.
+        (uint112 _GooReserve0, uint112 _GobblerReserve0,) = goober.getReserves();
+        uint112 oldK = (_GooReserve0 * _GobblerReserve0);
+        assertEq(oldK, 4500 ether);
 
-        // TODO
+        // User 2 adds gobbler and goo, tries to withdraw it
+        // after time has elapsed (and K has increased).
+        vm.startPrank(users[2]);
+        uint256[] memory artGobblers2 = new uint256[](1);
+        artGobblers2[0] = gobblers.mintFromGoo(100 ether, false);
+        vm.warp(TIME0 + 2 days);
+        _setRandomnessAndReveal(1, "seed2");
+        uint256 mult2 = gobblers.getGobblerEmissionMultiple(2);
+        assertEq(mult2, 6);
+        goober.deposit(artGobblers2, 500 ether, users[2]);
 
+        // We warp ahead to grow K.
         vm.warp(block.timestamp + 7 days);
+        (uint112 _GooReserve1, uint112 _GobblerReserve1,) = goober.getReserves();
+        uint112 newK = (_GooReserve1 * _GobblerReserve1);
+        assertEq(newK, 32094380310921470254575);
 
-        goober.withdraw(artGobblersToWithdraw, 10 ether, users[1], users[1]);
+        //(,, uint112 kDelta) = goober._previewPerformanceFee(_GooReserve1, _GobblerReserve1);
+        // kDelta is 414531353282231156 here (we make the above function public to calc)
+        uint112 kDelta = 414531353282231156;
+        vm.stopPrank();
 
-        // TODO
+        // Check to see user 1 can withdraw as much as they can.
+        // K has grown from 4500 ether to ~ 32094 ether, around 7132%.
+        vm.startPrank(users[1]);
+        vm.expectEmit(true, false, false, true);
+        // The summed 'fractions' that FeesAccrued emits minus fes are
+        // equal to how many fractions total have been accrued by the user.
+        emit FeesAccrued(FEE_TO, 4952963124, true, kDelta);
+        emit FeesAccrued(FEE_TO, 1039027993, false, 0);
+        // TODO(Calc how much are lost to fees below with the 30bps)
+        uint256 fractionsNew = goober.withdraw(artGobblers1, 500 ether, users[1], users[1]);
+        // We withdrew everything we put in, and still own 10197914272 shares,
+        // in other words we grew our position by 10197914272 shares.
+        assertEq(fractionsNew, 55542483286);
+        uint256 fractionsLeft = goober.balanceOf(users[1]);
+        assertEq(fractionsLeft, fractions - fractionsNew);
+        // We have 10197914272 shares left.
+        assertEq(fractionsLeft, 10197914272);
+
+        vm.stopPrank();
     }
 
     // function testWithdrawWhenDepositedOnlyGoo() public {}
