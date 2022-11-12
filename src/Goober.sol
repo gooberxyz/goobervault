@@ -459,7 +459,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @notice Simulates a swap.
-    /// @param gobblersIn - array of gobbler ids to swap ine
+    /// @param gobblersIn - array of gobbler ids to swap in.
     /// @param gooIn - amount of goo to swap in.
     /// @param gobblersOut - array of gobbler ids to swap out.
     /// @param gooOut - amount of goo to swap out.
