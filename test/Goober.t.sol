@@ -1078,6 +1078,53 @@ contract GooberTest is Test {
         vm.stopPrank();
     }
 
+    function testPreviewSwapThal() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+        uint256[] memory gobblersDeposit = new uint256[](2);
+        gobblersDeposit[0] = gobblers.mintFromGoo(100 ether, true);
+        gobblersDeposit[1] = gobblers.mintFromGoo(100 ether, true);
+
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(2, "seed");
+
+        gobblers.addGoo(500 ether);
+        uint256[] memory gobblersOut = new uint256[](1);
+        gobblersOut[0] = gobblersDeposit[0];
+
+        uint256[] memory gobblersIn = new uint256[](1);
+        gobblersIn[0] = gobblers.mintFromGoo(100 ether, true);
+
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(1, "1");
+
+        uint256[] memory gobblersInEmpty = new uint256[](0);
+
+        goober.deposit(gobblersDeposit, 2000000000000000000, users[1]);
+
+        uint256 gooOut = 0;
+        uint256 gooIn = 1;
+
+        int256 previewAdditionalGooRequired = goober.previewSwap(gobblersInEmpty, 1, gobblersOut, gooOut);
+        bytes memory data;
+        if (previewAdditionalGooRequired < 0) {
+            IGoober.SwapParams memory swap = IGoober.SwapParams(
+                gobblersOut, gooOut + uint256(-previewAdditionalGooRequired), gobblersInEmpty, gooIn, users[1], data
+            );
+            assertEq(goober.swap(swap), int256(0));
+        } else if (previewAdditionalGooRequired > 0) {
+            IGoober.SwapParams memory swap = IGoober.SwapParams(
+                gobblersOut, gooOut, gobblersInEmpty, gooIn + uint256(previewAdditionalGooRequired), users[1], data
+            );
+            assertEq(goober.swap(swap), int256(0));
+        } else {
+            IGoober.SwapParams memory swap =
+            IGoober.SwapParams(gobblersOut, gooOut, gobblersInEmpty, gooIn, users[1], data);
+            assertEq(goober.swap(swap), int256(0));
+        }
+        vm.stopPrank();
+    }
+
     function testPreviewSwapFail() public {
         vm.startPrank(users[1]);
         gobblers.addGoo(500 ether);
