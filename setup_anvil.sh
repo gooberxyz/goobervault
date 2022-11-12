@@ -1,0 +1,35 @@
+#! /bin/bash
+
+# Transfer GOO to Goober deployer
+cast rpc anvil_impersonateAccount 0x628BC4fB3976De56036aE7C8Ef95A96fFbd5fa98
+
+cast send 0x600000000a36F3cD48407e35eB7C5c910dc1f7a8 --from 0x628BC4fB3976De56036aE7C8Ef95A96fFbd5fa98 "transfer(address,uint256)(bool)" 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 1000000000000000000
+
+# Transfer Gobbler to Goober deployer
+cast rpc anvil_impersonateAccount 0x41bfc4b8c5765f0bee49322003fcda7382f2d311
+
+cast send 0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769 --from 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 "transferFrom(address,address,uint256)" 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 1002
+
+# Transfer GOO to user
+cast rpc anvil_impersonateAccount 0x628BC4fB3976De56036aE7C8Ef95A96fFbd5fa98
+
+cast send 0x600000000a36F3cD48407e35eB7C5c910dc1f7a8 --from 0x628BC4fB3976De56036aE7C8Ef95A96fFbd5fa98 "transfer(address,uint256)(bool)" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 5000000000000000000
+
+# # Transfer Gobblers to user
+cast rpc anvil_impersonateAccount 0x41bfc4b8c5765f0bee49322003fcda7382f2d311
+
+cast send 0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769 --from 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 "transferFrom(address,address,uint256)" 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 11
+
+cast send 0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769 --from 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 "transferFrom(address,address,uint256)" 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 9
+
+cast send 0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769 --from 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 "transferFrom(address,address,uint256)" 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 21
+
+cast send 0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769 --from 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 "transferFrom(address,address,uint256)" 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 85
+
+cast send 0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769 --from 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 "transferFrom(address,address,uint256)" 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 104
+
+cast send 0x60bb1e2AA1c9ACAfB4d34F71585D7e959f387769 --from 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 "transferFrom(address,address,uint256)" 0x41bfc4b8c5765f0bee49322003fcda7382f2d311 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 139
+
+
+
+# cast send 0x600000000a36F3cD48407e35eB7C5c910dc1f7a8 --from 0x628BC4fB3976De56036aE7C8Ef95A96fFbd5fa98 "transfer(address,uint256)(bool)" 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc 1000000000000000000
