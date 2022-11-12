@@ -549,7 +549,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             _gobblerBalance += gobblerMult;
         }
         (erroneousGoo,,) =
-            _swapCalculations(_gooReserve, _gobblerReserve, _gooBalance, _gobblerBalance, gooOut, multOut, true);
+            _swapCalculations(_gooReserve, _gobblerReserve, _gooBalance, _gobblerBalance, gooOut, multOut, false);
     }
 
     /*//////////////////////////////////////////////////////////////

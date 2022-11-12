@@ -949,7 +949,7 @@ contract GooberTest is Test {
 
         goober.safeDeposit(artGobblersToDeposit, gooToDeposit, users[1], expectedFractions, block.timestamp);
 
-        bytes memory data;
+        //bytes memory data;
 
         // TODO(Push the price around with a trade/sandwich and check that it reverts)
         //vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
@@ -1139,9 +1139,9 @@ contract GooberTest is Test {
         // Fee = 150451354062186560 based on erroneous goo calc for 100 ether in the pool
         // and a swap of 50 ether.
         // TODO(Express how to do that calc here based on other vars)
-        uint256 fee = 150451354062186560;
+        uint256 feeExpected = 150451354062186560;
         uint256 gooOut = 50 ether;
-        uint256 gooIn = gooOut + fee;
+        uint256 gooIn = gooOut + feeExpected;
         assertEq(goober.previewSwap(gobblersZero, gooIn, gobblersZero, gooOut), 0);
 
         // Check we can swap.
