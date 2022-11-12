@@ -15,14 +15,15 @@ import "../src/Goober.sol";
 import "../src/interfaces/IGoober.sol";
 
 // TODO Spot check data table and fill in any outstanding XYZs
-// TODO Improve tracking on aliceGooBalance, bobGooBalance, aliceGooberBalance, bobGooberBalance
+// TODO Improve tracking on all the balances
 // TODO Add numerical assertions for management and performance fees accruing to FeeTo account
 
 // TODO Bring in LibGOO for actual emission amounts
-// TODO Use previewDeposit, previewWithdraw, previewSwap for asserting actual results
+// TODO Use previewDeposit and previewWithdraw for asserting actual results
 // TODO Consider forking mainnet and running against deployed Goo / ArtGobblers contracts
 // TODO Consider fuzzing # Gobblers to mint, Goo deposit amounts, Swap params, and time to let Goo accrue
 // TODO Refactor test helpers into base class or test utility lib
+// TODO TODO Invariants
 
 contract GooberIntegrationTest is Test {
     using stdStorage for StdStorage;
@@ -59,7 +60,6 @@ contract GooberIntegrationTest is Test {
     uint256 internal aliceGooBalance;
     uint256 internal bobGooBalance;
     uint256 internal vaultGooBalance;
-    uint256 internal feeToGooBalance;
 
     // Gobblers (in storage to avoid stack too deep)
     uint256 internal aliceGobblerBalance;
@@ -80,8 +80,10 @@ contract GooberIntegrationTest is Test {
     uint256[] internal emptyGobblers;
 
     // Goober Vault Fractions
+    uint256 internal totalVaultGooberBalance;
     uint256 internal aliceGooberBalance;
     uint256 internal bobGooberBalance;
+    uint256 internal feeToGooberBalance;
 
     function setUp() public {
         // Start from TIME0
@@ -144,23 +146,24 @@ contract GooberIntegrationTest is Test {
     // 
     // ## Acceptance Criteria
     // ### Depositing
-    // - Should be able to preview a deposit (not inclusive of any fees)
+    // - Should be able to preview a deposit
     // - Should be able to deposit Goo and/or Gobblers in exchange for minting GBR vault fractions
     // - Should be able to safe deposit, which ensures a deadline after which the tx will revert,
     //   and minimum amount of GBR fractions to be minted
     // ### Withdrawing
-    // - Should be able to preview a withdraw (not inclusive of any fees)
+    // - Should be able to preview a withdraw
     // - Should be able to withdraw Goo and/or Gobblers in exchange for burning GBR vault fractions
     // - Should be able to safe withdraw, which ensures a deadline after which the tx will revert,
     //   and maximum amount of GBR fractioned to be burned
     // ### Swapping
-    // - Should be able to preview a swap (not inclusive of any fees)
+    // - Should be able to preview a swap
     // - Should be able to swap Goo and/or Gobblers in exchange for Goo and/or Gobblers, with a
     //   potential surplus or debt of Goo required
     // - Should be able to safe swap, which ensures a deadline after which the tx will revert, and
     //   a maximum amount of potential surplus or debt of Goo required
     // ### Flash Loans
-    // - Should be able to xyz TODO
+    // - Should be able to use any assets in the Goober vault for 1 tx, provided those assets can 
+    // be transferred plus 30 bps fee in Goo on the amount withdrawn by the end of tx
     // ### Vault Accounting
     // - Should be able to check total assets of the Goober vault
     // - Should be able to check reserves of the Goober vault
@@ -181,7 +184,7 @@ contract GooberIntegrationTest is Test {
 
     // # Scenario ////////////////////////////////////////////////////////////////////////////////////////////////////
     //
-    // V = Vault, A = Alice, B = Bob, F = FeeTo
+    // T = Total, V = Vault, A = Alice, B = Bob, F = FeeTo
     //
     // gbr = Goober vault fractions
     // goo = physically held Goo tokens
@@ -189,7 +192,7 @@ contract GooberIntegrationTest is Test {
     // mult = Gobbler multiplier for account
     //
     //  _____________________________________________________________________________________________________________
-    // | V gbr | V goo | V gbbl | V mult | A gbr | A goo | A gbbl | A mult | B gbr | B goo | B gbbl | B mult | F goo |
+    // | T gbr | V goo | V gbbl | V mult | A gbr | A goo | A gbbl | A mult | B gbr | B goo | B gbbl | B mult | F goo |
     // |=============================================================================================================|
     // | 0. Vault, Alice, Bob, FeeTo starting balances                                                               |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
@@ -207,55 +210,55 @@ contract GooberIntegrationTest is Test {
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |     0 |     0 |      0 |     0 |      0 |  1000 |      3 |     23 |     0 |  1500 |      1 |      9 |     0 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 4. Alice deposits 200 Goo and Gobblers 9, 8, minting ~57.1433 GBR vault fractions                           |
-    // | (FeeTo receives XYZ Goo as management fee, No performance fee bc there's no growth in k since lastK)        |
+    // | 4. TODO Alice deposits 200 Goo and Gobblers 9 and 8, minting sqrt(17 * 200) GBR Vault fractions                  |
+    // | (Alice receives 98%, FeeTo receives 2% as management fee, No performance fee bc there's no growth in k      |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   200 |     0 |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 |   XYZ |
+    // |   ~57 |   200 |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 |   ABC |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 5. Vault accrues Goo for 1 hour, receiving XYZ GBR in emissions from 2 Gobblers with multiple 17            |
+    // | 5. TODO Vault accrues Goo for 1 hour, receiving ~sqrt(17 * 200)/24 GBR in emissions    |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   200 |   XYZ |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 6. Bob swaps in a Gobbler 9 for 500 Goo and a Gobbler 8 out (Vault receives XYZ GBR as swap fee)            |
+    // | 6. TODO Bob swaps in a Gobbler 9 for 500 Goo and a Gobbler 8 out (Vault receives 30 bps in Goo as swap fee)            |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   200 |   XYZ |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  2000 |      1 |      8 |   XYZ |
+    // |   200 |   700 |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  2000 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 7. Vault accrues Goo for 1 hour, receiving XYZ GBR in emissions from 2 Gobblers with multiple 20            |
+    // | 7. TODO Vault accrues Goo for 1 hour, receiving ~sqrt(18 * 700)/24 GBR in emissions            |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   200 |   XYZ |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  2000 |      1 |      8 |   XYZ |
+    // |   200 |   700 |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  2000 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 8. Vault mints 1 Gobbler for ~59.7 Goo                                                                      |
+    // | 8. TODO Vault mints 1 Gobbler for ~59.7 Goo based on VRGDA price (kDebt is recorded)                                                                      |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   200 |   XYZ |      3 |    18 |    ~57 |   800 |      1 |      6 |     0 |  2000 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 9. Alice swaps in a Gobbler 6 and XYZ Goo for a Gobbler 9 out                                               |
-    // | (Vault receives XYZ Goo as swap fee, Vault records kDebt)                                                   |
+    // | 9. TODO Alice swaps in a Gobbler 6 and XYZ Goo for a Gobbler 9 out                                               |
+    // | (Vault receives 30 bps in Goo on the 3 mult and XYZ Goo as swap fee, Vault does not record kDebt)                                                   |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   200 |   XYZ |      3 |    15 |    ~57 |   XYZ |      1 |      9 |     0 |  2000 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 10. Bob deposits 10 Goo, minting him ~17.0487 GBR fractions                                                 |
+    // | 10. TODO Bob deposits 10 Goo, minting him the portion of the total supply by which he increases sqrt(Goo * Mult) as it relates to the previous amounts
     // | (This triggers a small performance fee, but not enough to fully offset the kDebt so no performance fee)     |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   200 |   XYZ |      3 |    15 |    ~57 |   XYZ |      1 |      9 |   ~17 |  1990 |      1 |      8 |   XYZ |
+    // |   222 |   777 |      3 |    15 |    ~57 |   XYZ |      1 |      9 |   ~17 |  1990 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 11. Gobblers reveal – Vault gets a Gobbler 6, plus ~55 Goo in emissions for the 1 day which elapsed         |
+    // | 11. TODO Gobblers reveal – Vault gets a Gobbler 6, plus ~55 Goo in emissions for the 1 day which elapsed         |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   200 |   XYZ |      3 |    21 |    ~57 |   XYZ |      1 |      9 |   ~17 |  1990 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 12. Bob deposits 10 more Goo, minting him XYZ GBR fractions                                                 |
+    // | 12. TODO Bob deposits 10 more Goo
     // | (Between the swap fee and the mint, there's now enough to offset the kDebt so a performance fee is assessed)|
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   200 |   XYZ |      3 |    21 |    ~57 |   XYZ |      1 |      9 |   XYZ |  1980 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 13. Vault accrues Goo for 1 hour, receiving ~2.9679 GBR in emissions from 3 Gobblers with multiple 21       |
+    // | 13. TODO Vault accrues Goo for 1 hour, receiving ~2.9679 GBR in emissions       |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   200 |   XYZ |      3 |    21 |    ~57 |   XYZ |      1 |      9 |   XYZ |  1980 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 14. Bob withdraws XYZ Goo for XYZ GBR fractions (FeeTo accrues XYZ Goo as fee)                              |
+    // | 14. TODO Bob withdraws XYZ Goo in exchange for burning XYZ GBR fractions (FeeTo accrues XYZ GBR as fee)                              |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   XYZ |   XYZ |      3 |    21 |    ~57 |   XYZ |      1 |      9 |   XYZ |  1980 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 15. Alice withdraws XYZ Goo and 2 Gobbler 6s for ~35.5816 GBR fractions (FeeTo accrues XYZ Goo as fee)      |
+    // | 15. TODO Alice withdraws XYZ Goo and 2 Gobbler 6s for ~35.5816 GBR fractions (FeeTo accrues XYZ GBR as fee)      |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // |   XYZ |   XYZ |      1 |     9 |    ~57 |   XYZ |      1 |     21 |   XYZ |  1980 |      1 |      8 |   XYZ |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
@@ -273,7 +276,7 @@ contract GooberIntegrationTest is Test {
         gobblers.setApprovalForAll(vault, true);
         vm.stopPrank();
 
-        vaultGooberBalance = 0;
+        totalVaultGooberBalance = 0;
         vaultGooBalance = 0;
         vaultGobblerBalance = 0;
         vaultMult = 0;
@@ -298,7 +301,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 0);
         assertEq(gobblers.balanceOf(bob), 0);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, 0);
+        assertEq(vaultGooBalance, 0);
         assertEq(vaultMult, 0);
         (uint112 vaultGooReserve, uint112 vaultGobblersReserve, uint32 vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, 0);
@@ -331,7 +334,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 3);
         assertEq(gobblers.balanceOf(bob), 0);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, 0);
+        assertEq(vaultGooBalance, 0);
         assertEq(vaultMult, 0);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, 0);
@@ -353,7 +356,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 3);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, 0);
+        assertEq(vaultGooBalance, 0);
         assertEq(vaultMult, 0);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, 0);
@@ -393,7 +396,7 @@ contract GooberIntegrationTest is Test {
         assertEq(goober.balanceOf(alice), aliceFractions);
         // Total assets and reserve balances are updated,
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -410,7 +413,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -425,7 +428,7 @@ contract GooberIntegrationTest is Test {
         vm.startPrank(bob);
 
         int256 bobErroneousGoo = goober.previewSwap(bobSwapIn, 0, bobSwapOut, 0);
-        assertEq(bobErroneousGoo, -10_992_257_043_437_332_960); // Bob will get ~10.9 Goo back before swap fee
+        assertEq(bobErroneousGoo, -10_992_257_043_437_332_960); // Bob will get ~10.9 Goo back before swap fee TODO
 
         IGoober.SwapParams memory bobSwap = IGoober.SwapParams(bobSwapOut, 10 ether, bobSwapIn, 0, bob, "");
         goober.swap(bobSwap);
@@ -440,7 +443,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -456,7 +459,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -474,7 +477,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -489,7 +492,7 @@ contract GooberIntegrationTest is Test {
         aliceSwapOut[0] = 4; // Bob's Gobbler 9
 
         int256 aliceErroneousGoo = goober.previewSwap(aliceSwapIn, 0, aliceSwapOut, 0);
-        assertEq(aliceErroneousGoo, 27_301_611_343_663_367_346); // Alice will need to swap in at least ~27.3 Goo, before swap fee
+        assertEq(aliceErroneousGoo, 27_301_611_343_663_367_346); // Alice will need to swap in at least ~27.3 Goo, before swap fee TODO
 
         vm.startPrank(alice);
         IGoober.SwapParams memory aliceSwap = IGoober.SwapParams(aliceSwapOut, 0, aliceSwapIn, 30 ether, alice, "");
@@ -505,7 +508,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -525,7 +528,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -544,7 +547,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -563,7 +566,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -579,14 +582,14 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
         assertEq(vaultGobblersReserve, expectedMult);
         assertEq(vaultLastTimestamp, TIME0 + 1 days + 2 hours + 1 days);
 
-        // 14. Bob withdraws 20 Goo for ~0.3670 GBR fractions (FeeTo accrues XYZ Goo as fee)
+        // 14. Bob withdraws 20 Goo for burning ~0.3670 GBR fractions (FeeTo accrues XYZ Goo as fee)
         vm.prank(bob);
         uint256 fractionsWithdrawn = goober.withdraw(emptyGobblers, 20 ether, bob, bob);
 
@@ -598,7 +601,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.balanceOf(alice), 1);
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
@@ -622,7 +625,7 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.getUserEmissionMultiple(alice), 21); // multipliers 9, 6, and 6
         assertEq(gobblers.balanceOf(bob), 1);
         (vaultGooBalance, vaultMult) = goober.totalAssets();
-        assertEq(vaultGoo, expectedGoo);
+        assertEq(vaultGooBalance, expectedGoo);
         assertEq(vaultMult, expectedMult);
         (vaultGooReserve, vaultGobblersReserve, vaultLastTimestamp) = goober.getReserves();
         assertEq(vaultGooReserve, expectedGoo);
