@@ -62,7 +62,7 @@ interface IGoober is IERC721Receiver {
     // TODO(Test this)
     event FeesAccrued(address indexed feeTo, uint256 fractions, bool performanceFee, uint256 _deltaK);
 
-     // TODO(Test this)
+    // TODO(Test this)
     event Swap(
         address indexed caller,
         address indexed receiver,
@@ -72,15 +72,15 @@ interface IGoober is IERC721Receiver {
         uint256 gobblerMultOut
     );
 
-     // TODO(Test this)
+    // TODO(Test this)
     event Sync(uint112 gooBalance, uint112 multBalance);
 
     // Functions, Non-Mutating
 
-     // TODO(Test this)
+    // TODO(Test this)
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) external view returns (uint256 fractions);
 
-     // TODO(Test this)
+    // TODO(Test this)
     function previewWithdraw(uint256[] calldata gobblers, uint256 gooTokens)
         external
         view
