@@ -465,7 +465,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param gooOut - amount of goo to swap out.
     /// @return erroneousGoo - the amount in wei by which to increase or decreas gooIn/out to balance the swap.
     function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
-        external
+        public
         view
         returns (int256 erroneousGoo)
     {
@@ -908,16 +908,25 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool, with slippage and deadline control.
-    function safeSwap(SwapParams calldata parameters, uint256 erroneousGooAllowed, uint256 deadline)
+    function safeSwap(SwapParams calldata parameters, uint256 erroneousGooAbs, uint256 deadline)
         external
         ensure(deadline)
         returns (int256 erroneousGoo)
     {
-        erroneousGoo = swap(parameters);
-
-        // ErroneousGoo will always be positive or revert
-        if (uint256(erroneousGoo) > erroneousGooAllowed) {
-            revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        erroneousGoo = previewSwap(parameters.gobblersIn, parameters.gooIn, parameters.gobblersOut, parameters.gooOut);
+        uint256 additionalGooIn = 0;
+        uint256 additionalGooOut = 0;
+        if (erroneousGoo > 0) {
+            additionalGooIn = uint256(erroneousGoo);
+            if (additionalGooIn > erroneousGooAbs) {
+                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+            }
+        } else {
+            additionalGooOut = uint256(-erroneousGoo);
+            if (additionalGooOut > erroneousGooAbs) {
+                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+            }
         }
+        erroneousGoo = swap(parameters);
     }
 }
