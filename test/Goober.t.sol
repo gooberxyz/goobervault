@@ -401,9 +401,9 @@ contract GooberTest is Test {
     // Emit event
 
     function testWithdrawBothAll() public {
-        // Tests depositing goo and gobbler and withdrawing 
+        // Tests depositing goo and gobbler and withdrawing
         // after 7 days of K growth (increased by a later depositor).
-        
+
         // User 1 adds gobbler and goo, leaves it in pool.
         vm.startPrank(users[1]);
         uint256[] memory artGobblers1 = new uint256[](1);
