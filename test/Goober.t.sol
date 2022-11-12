@@ -1349,7 +1349,7 @@ contract GooberTest is Test {
                     uint256[] memory gobblerOut = new uint256[](1);
                     gobblerOut[0] = gobblersDeposit[idx % 4];
 
-                    if (gooIn == 0) {
+                    if (params.gooIn == 0) {
                         vm.expectRevert("Goober: INSUFFICIENT_INPUT_AMOUNT");
                         goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
                         vm.expectRevert("Goober: INSUFFICIENT_INPUT_AMOUNT");
