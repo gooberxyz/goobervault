@@ -1078,7 +1078,7 @@ contract GooberTest is Test {
         vm.stopPrank();
     }
 
-     function testPreviewSwapExactGoo() public {
+    function testPreviewSwapExactGoo() public {
         vm.startPrank(users[1]);
         uint256[] memory gobblersOut = new uint256[](1);
         gobblersOut[0] = gobblers.mintFromGoo(100 ether, false);
@@ -1092,12 +1092,12 @@ contract GooberTest is Test {
         // Fee = 150451354062186560 based on erroneous goo calc for 100 ether in the pool
         // and a swap of 50 ether.
         // TODO(Express how to do that calc here based on other vars)
-        uint fee = 150451354062186560;
+        uint256 fee = 150451354062186560;
         uint256 gooOut = 50 ether;
         uint256 gooIn = gooOut + fee;
         assertEq(goober.previewSwap(gobblersZero, gooIn, gobblersZero, gooOut), 0);
 
-        // Check we can swap. 
+        // Check we can swap.
         IGoober.SwapParams memory swap = IGoober.SwapParams(gobblersZero, gooOut, gobblersZero, gooIn, users[1], "");
         int256 erroneousGoo = goober.swap(swap);
         assertEq(erroneousGoo, int256(0));
@@ -1107,7 +1107,7 @@ contract GooberTest is Test {
         assertEq(_GooReserve, (100 ether + (gooIn - gooOut)));
 
         vm.stopPrank();
-     }
+    }
 
     function testPreviewSwapFail() public {
         vm.startPrank(users[1]);
