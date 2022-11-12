@@ -1115,9 +1115,10 @@ contract GooberTest is Test {
         vm.stopPrank();
     }
 
+    // TODO(Fuzz and fix deposit, which overflows over uint72)
     function testFuzzSwapAndPreview(
-        uint64 gooIn,
-        uint64 gooOut,
+        uint72 gooIn,
+        uint72 gooOut,
         uint8 idx,
         bool multiGobbler,
         bool gobblerGobbler,
@@ -1147,7 +1148,8 @@ contract GooberTest is Test {
         vm.warp(block.timestamp + 1 days);
         _setRandomnessAndReveal(4, "SecondSeed");
 
-        goober.deposit(gobblersDeposit, 5000 ether, users[1]);
+        // Deposit overflows at uint112 as expected
+        goober.deposit(gobblersDeposit, type(uint80).max, users[1]);
         bytes memory data;
 
         // Gobbler in
