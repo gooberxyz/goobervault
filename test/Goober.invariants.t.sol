@@ -52,17 +52,40 @@ contract GooberInvariantsTest is GooberTest {
         _addTargetContract(address(warper));
     }
 
-    function invariant_goo_balance() public {
-        // I am surprised this passes: isn't it possible for goo
-        // balances to decrease with withdrawals?
-        uint256 gooBalance = gobblers.gooBalance(address(goober));
-        assertGe(gooBalance, prevGooBalance);
-        prevGooBalance = gooBalance;
-    }
-
-    function invariant_fee_balance() public {
+    /// @dev Fee balances only go up.
+    function invariant_feeBalanceIncreases() public {
         uint256 gbrFeeBalance = goober.balanceOf(FEE_TO);
         assertGe(gbrFeeBalance, prevGbrFeeBalance);
         prevGbrFeeBalance = gbrFeeBalance;
+    }
+
+    /// @dev Goober vault multiplier = sum of deposited Gobbler multipliers
+    function invariant_vaultMulEqualsSumOfEmissionMultiples() public {
+        uint256 gooberMul = gobblers.getUserEmissionMultiple(address(goober));
+        uint256[] memory depositedGobblers = user.getDepositedGobblers();
+        uint256 depositedMulSum;
+        for (uint256 i; i < depositedGobblers.length; ++i) {
+            depositedMulSum += gobblers.getGobblerEmissionMultiple(depositedGobblers[i]);
+        }
+        assertEq(gooberMul, depositedMulSum);
+    }
+
+    /// @dev Goober vault gobbler reserve = sum of deposited + minted gobblers
+    function invariant_gobblerReserveEqualsVaultMultiplier() public {
+        (, uint112 gobblerReserve,) = goober.getReserves();
+        uint256 gooberMul = gobblers.getUserEmissionMultiple(address(goober));
+        assertEq(gooberMul, gobblerReserve);
+    }
+
+    /// @dev Goober vault gobbler reserve = sum of deposited + minted gobblers
+    function invariant_gobblerReserve() public {
+        (, uint112 gobblerReserve,) = goober.getReserves();
+
+        uint256[] memory depositedGobblers = user.getDepositedGobblers();
+        uint256 depositedMulSum;
+        for (uint256 i; i < depositedGobblers.length; ++i) {
+            depositedMulSum += gobblers.getGobblerEmissionMultiple(depositedGobblers[i]);
+        }
+        assertEq(depositedMulSum, gobblerReserve);
     }
 }
