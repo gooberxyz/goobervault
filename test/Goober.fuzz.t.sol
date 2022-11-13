@@ -80,13 +80,13 @@ contract GooberFuzzTest is GooberTest {
             uint256[] memory noGobblerDeposit = new uint256[](0);
             // Only depositing 1 goo is unrealistic at this point
             if (gooDeposit == 0) {
-                vm.expectRevert("Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+                vm.expectRevert(IGoober.InsufficientLiquidityDeposited.selector);
                 previewFractionsDeposit = goober.previewDeposit(noGobblerDeposit, gooDeposit);
-                vm.expectRevert("Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+                vm.expectRevert(IGoober.InsufficientLiquidityDeposited.selector);
                 actualFractionsDeposit = goober.deposit(noGobblerDeposit, gooDeposit, users[1]);
-                vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+                vm.expectRevert(IGoober.InsufficientLiquidityWithdrawn.selector);
                 previewFractionsWithdraw = goober.previewWithdraw(noGobblerDeposit, gooDeposit);
-                vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+                vm.expectRevert(IGoober.InsufficientLiquidityWithdrawn.selector);
                 actualFractionsWithdraw = goober.withdraw(noGobblerDeposit, gooDeposit, users[1], users[1]);
             } else if (gooDeposit > 1 ether) {
                 // Otherwise depends on specifics
@@ -259,9 +259,10 @@ contract GooberFuzzTest is GooberTest {
                     gobblerOut[0] = gobblersDeposit[idx % 4];
 
                     if (params.gooIn == 0) {
-                        vm.expectRevert("Goober: INSUFFICIENT_INPUT_AMOUNT");
+                        (uint256 gooReserve, uint256 gobblerReserve,) = goober.getReserves();
+                        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientInputAmount.selector, 0, 0));
                         goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
-                        vm.expectRevert("Goober: INSUFFICIENT_INPUT_AMOUNT");
+                        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientInputAmount.selector, 0, 0));
                         goober.swap(gobblerIn, params.gooIn, gobblerOut, params.gooOut, users[1], params.data);
                     } else {
                         int256 previewAdditionalGooRequired =

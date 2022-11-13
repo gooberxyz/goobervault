@@ -118,7 +118,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @notice This modifier ensures the transaction is included before a specified deadline.
     /// @param deadline - Unix timestamp after which the transaction will revert.
     modifier ensure(uint256 deadline) {
-        require(deadline >= block.timestamp, "Goober: EXPIRED");
+        if (block.timestamp > deadline) {
+            revert Expired(block.timestamp, deadline);
+        }
         _;
     }
 
@@ -158,7 +160,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         erroneousGoo = 0;
         amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
         amount1In = _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
-        require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
+        if (!(amount0In > 0 || amount1In > 0)) {
+            revert InsufficientInputAmount(amount0In, amount1In);
+        }
         {
             uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
@@ -208,7 +212,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance);
         // We don't want to allow the pool to be looted/decommed, ever.
         if (_k == 0) {
-            revert MustLeaveLiquidity();
+            revert MustLeaveLiquidity(_gooBalance, _gobblerBalance);
         }
         // Set delta and change to zero.
         _kDelta = 0;
@@ -478,7 +482,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         } else {
             fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
         }
-        require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+        if (fractions == 0) {
+            revert InsufficientLiquidityDeposited();
+        }
         // Simulate management fee and return preview.
         fractions -= _previewManagementFee(fractions);
     }
@@ -513,7 +519,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             _gobblerBalanceMult -= gobblerMult;
         }
         uint256 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
-        require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+        if (!(_gobblerAmountMult > 0 || gooTokens > 0)) {
+            revert InsufficientLiquidityWithdrawn();
+        }
         {
             // Calculate the fractions to burn based on the changes in k.
             (,,, uint256 _kDelta,) = _kCalculations(
@@ -708,7 +716,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             } else {
                 fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
             }
-            require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+            if (fractions == 0) {
+                revert InsufficientLiquidityDeposited();
+            }
         }
 
         // Mint fractions to depositor less management fee.
@@ -738,7 +748,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     ) external ensure(deadline) returns (uint256 fractions) {
         fractions = deposit(gobblers, gooTokens, receiver);
 
-        require(fractions >= minFractionsOut, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+        if (fractions < minFractionsOut) {
+            revert MintBelowLimit();
+        }
     }
 
     /// @notice Withdraws the requested gobblers and goo tokens from the vault.
@@ -780,7 +792,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Measure change.
         uint256 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
 
-        require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+        if (!(_gobblerAmountMult > 0 || gooTokens > 0)) {
+            revert InsufficientLiquidityWithdrawn();
+        }
 
         {
             // Calculate the fractions to burn based on the changes in k.
@@ -830,7 +844,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     ) external ensure(deadline) returns (uint256 fractions) {
         fractions = withdraw(gobblers, gooTokens, receiver, owner);
 
-        require(fractions <= maxFractionsIn, "Goober: BURN_ABOVE_LIMIT");
+        if (fractions > maxFractionsIn) {
+            revert BurnAboveLimit();
+        }
     }
 
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool.
@@ -842,8 +858,15 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         address receiver,
         bytes calldata data
     ) public nonReentrant returns (int256) {
-        require(gooOut > 0 || gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
-        require(receiver != address(goo) && receiver != address(artGobblers), "Goober: INVALID_TO");
+        // TODO(Coverage for these revert)
+        if (!(gooOut > 0 || gobblersOut.length > 0)) {
+            revert InsufficientOutputAmount(gooOut, gobblersOut.length);
+        }
+        if (receiver == address(goo) || receiver == address(artGobblers)) {
+            revert InvalidReceiver(receiver);
+        }
+
+        // Intermediary struct so we don't get stack too deep
         SwapData memory internalData;
 
         (internalData.gooReserve, internalData.gobblerReserve,) = getReserves(); // gas savings
@@ -922,16 +945,17 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         bytes calldata data
     ) external ensure(deadline) returns (int256 erroneousGoo) {
         erroneousGoo = previewSwap(gobblersIn, gooIn, gobblersOut, gooOut);
+        // TODO(Cover when we have some amount of erroneousGoo allowed in tests)
         if (erroneousGoo < 0) {
             uint256 additionalGooOut = uint256(-erroneousGoo);
             if (additionalGooOut > erroneousGooAbs) {
-                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+                revert ExcessiveErroneousGoo(additionalGooOut, erroneousGooAbs);
             }
             gooOut += additionalGooOut;
         } else if (erroneousGoo > 0) {
             uint256 additionalGooIn = uint256(erroneousGoo);
             if (additionalGooIn > erroneousGooAbs) {
-                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+                revert ExcessiveErroneousGoo(additionalGooIn, erroneousGooAbs);
             }
             gooIn += additionalGooIn;
         }

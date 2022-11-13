@@ -187,7 +187,7 @@ contract GooberUnitTest is GooberTest {
         assertEq(blockTimestampLast, 0);
         vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(2, "seed");
-        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.MustLeaveLiquidity.selector, 0, 17));
         goober.deposit(artGobblers, 0, users[1]);
         vm.stopPrank();
     }
@@ -205,7 +205,7 @@ contract GooberUnitTest is GooberTest {
         assertEq(gooReserve, 0);
         assertEq(gobblerReserve, 0);
         assertEq(blockTimestampLast, 0);
-        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.MustLeaveLiquidity.selector, gooToDeposit, 0));
         goober.deposit(artGobblersEmptyArray, gooToDeposit, users[1]);
         vm.stopPrank();
     }
@@ -303,7 +303,7 @@ contract GooberUnitTest is GooberTest {
         // Deposit 2 gobblers and 200 goo
         uint256 expectedFractions = goober.previewDeposit(artGobblers, gooToDeposit);
 
-        vm.expectRevert("Goober: EXPIRED");
+        vm.expectRevert(abi.encodeWithSelector(IGoober.Expired.selector, block.timestamp, block.timestamp - 1));
 
         goober.safeDeposit(artGobblers, gooToDeposit, users[1], expectedFractions, block.timestamp - 1);
     }
@@ -322,7 +322,7 @@ contract GooberUnitTest is GooberTest {
         // Deposit 2 gobblers and 200 goo
         uint256 expectedFractions = goober.previewDeposit(artGobblers, gooToDeposit);
 
-        vm.expectRevert("Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+        vm.expectRevert(IGoober.MintBelowLimit.selector);
 
         goober.safeDeposit(artGobblers, gooToDeposit, users[1], expectedFractions + 1, block.timestamp + 1);
     }
@@ -444,7 +444,7 @@ contract GooberUnitTest is GooberTest {
         goober.withdraw(artGobblers2, fractions, users[2], users[2]);
     }
 
-    function testWithdrawWhenOwnerIsNotReceiverButWithSufficientAllowance() public {
+    function testUnitWithdrawWhenOwnerIsNotReceiverButWithSufficientAllowance() public {
         vm.startPrank(users[1]);
         gobblers.addGoo(500 ether);
         uint256[] memory artGobblers = new uint256[](1);
@@ -590,7 +590,7 @@ contract GooberUnitTest is GooberTest {
 
         goober.deposit(artGobblers, 500 ether, users[1]);
 
-        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.MustLeaveLiquidity.selector, 0, 17));
 
         goober.withdraw(new uint256[](0), 500 ether, users[1], users[1]);
     }
@@ -615,7 +615,7 @@ contract GooberUnitTest is GooberTest {
 
         goober.deposit(artGobblers, 500 ether, users[1]);
 
-        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.MustLeaveLiquidity.selector, 490 ether, 0));
 
         goober.withdraw(artGobblers, 10 ether, users[1], users[1]);
     }
@@ -663,7 +663,7 @@ contract GooberUnitTest is GooberTest {
         vm.stopPrank();
     }
 
-    function testUnitWithdrawReventsWhenExpired() public {
+    function testUnitWithdrawRevertsWhenExpired() public {
         // Add Goo and mint Gobblers
         vm.startPrank(users[1]);
         uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 2);
@@ -688,7 +688,7 @@ contract GooberUnitTest is GooberTest {
 
         uint256 expectedFractionsIn = goober.previewWithdraw(artGobblersToWithdraw, gooToWithdraw);
 
-        vm.expectRevert("Goober: EXPIRED");
+        vm.expectRevert(abi.encodeWithSelector(IGoober.Expired.selector, block.timestamp, block.timestamp - 1));
 
         goober.safeWithdraw(
             artGobblersToWithdraw, gooToWithdraw, users[1], users[1], expectedFractionsIn, block.timestamp - 1
@@ -720,7 +720,7 @@ contract GooberUnitTest is GooberTest {
 
         uint256 expectedFractionsIn = goober.previewWithdraw(artGobblersToWithdraw, gooToWithdraw);
 
-        vm.expectRevert("Goober: BURN_ABOVE_LIMIT");
+        vm.expectRevert(IGoober.BurnAboveLimit.selector);
 
         goober.safeWithdraw(
             artGobblersToWithdraw, gooToWithdraw, users[1], users[1], expectedFractionsIn - 1, block.timestamp + 1
@@ -850,7 +850,7 @@ contract GooberUnitTest is GooberTest {
 
         bytes memory data;
 
-        vm.expectRevert("Goober: EXPIRED");
+        vm.expectRevert(abi.encodeWithSelector(IGoober.Expired.selector, block.timestamp, block.timestamp - 1));
 
         goober.safeSwap(
             0, block.timestamp - 1, artGobblersToSwap, 235765844523515264, artGobblersOut, 0, users[1], data
@@ -920,7 +920,7 @@ contract GooberUnitTest is GooberTest {
 
         // This tests the case of too much goo out
         // TODO(Think, is this something safe swap should prevent? Or only too much goo in?)
-        vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        vm.expectRevert(abi.encodeWithSelector(IGoober.ExcessiveErroneousGoo.selector, 88163488180920139792, 1));
         goober.safeSwap(1, block.timestamp + 1, artGobblersToSwap, 0, noGobblers, swapPreview, users[1], "");
 
         // So the user decides to make a trade anyway at this better price
@@ -941,7 +941,7 @@ contract GooberUnitTest is GooberTest {
 
         // Our slower trader is still protected though, because they are using safeSwap
         vm.startPrank(users[1]);
-        vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        vm.expectRevert(abi.encodeWithSelector(IGoober.ExcessiveErroneousGoo.selector, 88252089333012275015, 1));
         goober.safeSwap(1, block.timestamp + 1, artGobblersToSwap, 0, noGobblers, swapPreview, users[1], "");
         vm.stopPrank();
     }

@@ -10,15 +10,41 @@ import "./IERC721Receiver.sol";
 // So we can get all the natspec
 interface IGoober is IERC721Receiver {
     // Errors
-    error gobblerInvalidMultiplier();
-    error InvalidNFT();
-    error InvalidMultiplier(uint256 gobblerId);
-    error NoSkim();
-    error MustLeaveLiquidity();
-    error InsufficientLiquidity(uint256 gooBalance, uint256 gobblerBalance);
-    error AuctionPriceTooHigh(uint256 auctionPrice, uint256 poolPrice);
+
+    // Balance Errors
     error InsufficientAllowance();
     error InsufficientGoo(uint256 amount, uint256 actualK, uint256 expectedK);
+
+    // Deposit Errors
+    error InsufficientLiquidityDeposited();
+    error MintBelowLimit();
+
+    // K Calculation Errors
+    error MustLeaveLiquidity(uint256 gooBalance, uint256 gobblerBalance);
+
+    // Mint Errors
+    error AuctionPriceTooHigh(uint256 auctionPrice, uint256 poolPrice);
+    error InsufficientLiquidity(uint256 gooBalance, uint256 gobblerBalance);
+
+    // NFT Errors
+    error InvalidNFT();
+    error InvalidMultiplier(uint256 gobblerId);
+
+    // Skim Errors
+    error NoSkim();
+
+    // Swap Errors
+    error InsufficientInputAmount(uint256 amount0In, uint256 amount1In);
+    error InsufficientOutputAmount(uint256 gooOut, uint256 gobblersOut);
+    error InvalidReceiver(address receiver);
+    error ExcessiveErroneousGoo(uint256 actualErroneousGoo, uint256 allowedErroneousGoo);
+
+    // Time Errors
+    error Expired(uint256 time, uint256 deadline);
+
+    // Withdraw Errors
+    error InsufficientLiquidityWithdrawn();
+    error BurnAboveLimit();
 
     /**
      * @notice The caller doesn't have permission to access that function.
