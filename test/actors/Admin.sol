@@ -53,10 +53,13 @@ contract Minter is InvariantActor {
         } else {
             if (gobblerBalance > 0) {
                 if (gooBalance > auctionPrice) {
-                // No loss of precision as bps scalars cancel out.
-                auctionPricePerMult = (auctionPrice * 10000) / 73294;
-                poolPricePerMult = (gooBalance / gobblerBalance);
-                goober.mintGobbler();
+                    // No loss of precision as bps scalars cancel out.
+                    auctionPricePerMult = (auctionPrice * 10000) / 73294;
+                    poolPricePerMult = (gooBalance / gobblerBalance);
+                    if (poolPricePerMult > auctionPricePerMult) {
+                        goober.mintGobbler();
+                    }
+                }
             }
         }
         vm.stopPrank();
