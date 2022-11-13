@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v2
 
-      - name: Install JavaScript dependencies
+      - name: Install solhint dependencies
         run: npm install
 
       - name: Install Foundry
@@ -23,14 +23,14 @@ jobs:
         with:
           version: nightly
 
-      - name: Run solhint lint check
+      - name: Run lint checks
         run: npm run lint:check
 
       - name: Install submodules
         run: forge install
 
-      - name: Run tests
-        run: forge test --optimize
+      - name: Run tests and check snapshot
+        run: forge snapshot --check --optimize -vvv
 
       - name: Coverage
         run: |
