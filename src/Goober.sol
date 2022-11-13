@@ -126,6 +126,26 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // Internal: Non-Mutating
     //////////////////////////////////////////////////////////////*/
 
+    function _shouldMint(uint256 _gooBalance, uint256 _gobblerBalance, uint256 _auctionPrice)
+        internal
+        pure
+        returns (bool mint, uint256 auctionPricePerMult, uint256 poolPricePerMult)
+    {
+        if (_gooBalance == 0 || _gobblerBalance == 0) {
+            revert InsufficientLiquidity(_gooBalance, _gobblerBalance);
+        } else if (_auctionPrice == 0) {
+            // Unlikely, but avoids divide by zero below.
+            mint = true;
+        } else {
+            if (_gooBalance > _auctionPrice) {
+                // TODO(we are loosing precision here)
+                auctionPricePerMult = (_auctionPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
+                poolPricePerMult = (_gooBalance / _gobblerBalance);
+                mint = poolPricePerMult > auctionPricePerMult;
+            }
+        }
+    }
+
     function _swapCalculations(
         uint256 _gooReserve,
         uint256 _gobblerReserve,
@@ -578,36 +598,43 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
         // Get the mint price
         uint256 mintPrice = artGobblers.gobblerPrice();
+
         // We get the reserves directly here to save some gas
         uint256 gooReserve = artGobblers.gooBalance(address(this));
-        uint256 gooBalance = gooReserve;
         uint256 gobblerReserve = artGobblers.getUserEmissionMultiple(address(this));
 
+        // Set an internal balance counter for goo
+        uint256 gooBalance = gooReserve;
+
         // Should we mint?
-        bool mint = (gooBalance / gobblerReserve) >= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
-        // Mint counter
-        uint16 minted = 0;
+        (bool mint, uint256 auctionPricePerMult, uint256 poolPricePerMult) =
+            _shouldMint(gooBalance, gobblerReserve, mintPrice);
+
+        // We revert here to tell the minter it's calculations are off
         if (mint == false) {
-            revert("Pool Goo per Mult lower than Auction's");
-        } else {
-            // Mint Gobblers to pool when our Goo per Mult < Auction (VRGDA) Goo per Mult
-            while (mint) {
-                if (gooBalance >= mintPrice) {
-                    gooBalance -= mintPrice;
-                    artGobblers.mintFromGoo(mintPrice, true);
-                    // TODO(Can we calculate the increase without an sload here?)
-                    mintPrice = artGobblers.gobblerPrice();
-                    mint = (gooBalance / gobblerReserve) >= (mintPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
-                    minted++;
-                } else {
-                    mint = false;
-                    emit VaultMint(msg.sender, uint112(gooReserve - gooBalance), minted, true);
-                }
-            }
+            revert AuctionPriceTooHigh(auctionPricePerMult, poolPricePerMult);
         }
+
+        // Mint Gobblers to pool when our Goo per Mult > Auction (VRGDA) Goo per Mult
+        while (mint) {
+            // Mint a new gobbler
+            artGobblers.mintFromGoo(mintPrice, true);
+
+            // _shouldMint already prevents an overflow here
+            gooBalance -= mintPrice;
+
+            // Emit info about this mint for off chain analysis
+            emit VaultMint(msg.sender, auctionPricePerMult, poolPricePerMult, mintPrice);
+
+            // Get the new mint price
+            mintPrice = artGobblers.gobblerPrice();
+
+            // Should we mint again?
+            (mint, auctionPricePerMult, poolPricePerMult) = _shouldMint(gooBalance, gobblerReserve, mintPrice);
+        }
+
         // Update accumulators, kLast, kDebt
         _update(gooBalance, gobblerReserve, gooReserve, gobblerReserve, true, true);
-        emit VaultMint(msg.sender, uint112(gooReserve - gooBalance), minted, false);
     }
 
     /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.
