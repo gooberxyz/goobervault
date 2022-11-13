@@ -10,6 +10,10 @@ import "./IERC721Receiver.sol";
 // So we can get all the natspec
 interface IGoober is IERC721Receiver {
     // Errors
+
+    // Swap Errors
+    error InsufficientInputAmount(uint256 amount0In, uint256 amount1In);
+
     error gobblerInvalidMultiplier();
     error InvalidNFT();
     error InvalidMultiplier(uint256 gobblerId);

@@ -158,7 +158,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         erroneousGoo = 0;
         amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
         amount1In = _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
-        require(amount0In > 0 || amount1In > 0, "Goober: INSUFFICIENT_INPUT_AMOUNT");
+        if (!(amount0In > 0 || amount1In > 0)) {
+            revert InsufficientInputAmount(amount0In, amount1In);
+        }
         {
             uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
             uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);

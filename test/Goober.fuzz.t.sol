@@ -259,9 +259,10 @@ contract GooberFuzzTest is GooberTest {
                     gobblerOut[0] = gobblersDeposit[idx % 4];
 
                     if (params.gooIn == 0) {
-                        vm.expectRevert("Goober: INSUFFICIENT_INPUT_AMOUNT");
+                        (uint256 gooReserve, uint256 gobblerReserve,) = goober.getReserves();
+                        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientInputAmount.selector, 0, 0));
                         goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
-                        vm.expectRevert("Goober: INSUFFICIENT_INPUT_AMOUNT");
+                        vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientInputAmount.selector, 0, 0));
                         goober.swap(gobblerIn, params.gooIn, gobblerOut, params.gooOut, users[1], params.data);
                     } else {
                         int256 previewAdditionalGooRequired =
