@@ -5,10 +5,9 @@ pragma solidity ^0.8.17;
 
 import "./utils/GooberTest.sol";
 
-// TODO(Fuzz withdraw)
 // TODO(Walk all paths and add assertions about balances)
 
-contract GooberUnitTest is GooberTest {
+contract GooberFuzzTest is GooberTest {
     function setUp() public override {
         super.setUp();
 
@@ -83,10 +82,10 @@ contract GooberUnitTest is GooberTest {
         assertEq(previewFractions, actualFractions);
     }
 
-    // TODO(Fuzz and fix deposit, which overflows over uint72)
+    // Not feasible to test here above uint96 because the fuzz starts hitting over/underflow a lot.
     function testFuzzSwapAndPreview(
-        uint72 gooIn,
-        uint72 gooOut,
+        uint96 gooIn,
+        uint96 gooOut,
         uint8 idx,
         bool multiGobbler,
         bool gobblerGobbler,
@@ -116,15 +115,14 @@ contract GooberUnitTest is GooberTest {
         vm.warp(block.timestamp + 1 days);
         _setRandomnessAndReveal(4, "SecondSeed");
 
-        // Deposit overflows at uint112 as expected
-        goober.deposit(gobblersDeposit, type(uint80).max, users[1]);
-
         SwapParams memory params = SwapParams(gobblersDeposit, gooIn, gobblersWallet, gooOut, msg.sender, "");
+
+        goober.deposit(params.gobblersOut, type(uint104).max, users[1]);
 
         // Gobbler in
         if (multiGobbler) {
             int256 previewAdditionalGooRequired =
-            goober.previewSwap(params.gobblersIn, params.gooIn, params.gobblersOut, params.gooOut);
+                goober.previewSwap(params.gobblersIn, params.gooIn, params.gobblersOut, params.gooOut);
             if (previewAdditionalGooRequired < 0) {
                 assertEq(
                     goober.swap(
@@ -166,7 +164,7 @@ contract GooberUnitTest is GooberTest {
                 gobblerOut[0] = gobblersDeposit[idx % 4];
 
                 int256 previewAdditionalGooRequired =
-                goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
+                    goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
                 if (previewAdditionalGooRequired < 0) {
                     assertEq(
                         goober.swap(
@@ -205,7 +203,7 @@ contract GooberUnitTest is GooberTest {
                     uint256[] memory gobblerOut = new uint256[](0);
 
                     int256 previewAdditionalGooRequired =
-                    goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
+                        goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
                     if (previewAdditionalGooRequired < 0) {
                         assertEq(
                             goober.swap(
@@ -249,7 +247,7 @@ contract GooberUnitTest is GooberTest {
                         goober.swap(gobblerIn, params.gooIn, gobblerOut, params.gooOut, users[1], params.data);
                     } else {
                         int256 previewAdditionalGooRequired =
-                        goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
+                            goober.previewSwap(gobblerIn, params.gooIn, gobblerOut, params.gooOut);
                         if (previewAdditionalGooRequired < 0) {
                             assertEq(
                                 goober.swap(
