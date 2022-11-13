@@ -52,10 +52,9 @@ contract Minter is InvariantActor {
             goober.mintGobbler();
         } else {
             if (gobblerBalance > 0) {
-                    goober.mintGobbler();
-                }
+                goober.mintGobbler();
             }
-        vm.stopPrank();
         }
+        vm.stopPrank();
     }
-
+}
