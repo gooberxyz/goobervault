@@ -3,14 +3,15 @@ pragma solidity ^0.8.17;
 
 import "./utils/GooberTest.sol";
 
-import {Warper} from "./actors/Warper.sol";
+import {Timekeeper} from "./actors/Timekeeper.sol";
 import {Admin, Minter} from "./actors/Admin.sol";
 import {User} from "./actors/User.sol";
+import "./actors/Timekeeper.sol";
 
 // TODO write invariant tests that use actors, with various assets and actions
 
 contract GooberInvariantsTest is GooberTest {
-    Warper internal warper;
+    Timekeeper internal timekeeper;
     Admin internal admin;
     User internal user;
     Minter internal minter;
@@ -56,23 +57,23 @@ contract GooberInvariantsTest is GooberTest {
         _randProvider: randProvider
         });
 
-        warper = new Warper();
+        timekeeper = new Timekeeper();
 
         _addTargetContract(address(user));
         _addTargetContract(address(admin));
         _addTargetContract(address(minter));
-        _addTargetContract(address(warper));
+        _addTargetContract(address(timekeeper));
     }
 
     /// @dev Fee balances only go up.
-    function invariant_feeBalanceIncreases() public {
+    function testInvariantFeeBalanceIncreases() public {
         uint256 gbrFeeBalance = goober.balanceOf(FEE_TO);
         assertGe(gbrFeeBalance, prevGbrFeeBalance);
         prevGbrFeeBalance = gbrFeeBalance;
     }
 
     /// @dev Goober vault multiplier = sum of deposited Gobbler multipliers
-    function invariant_vaultMulEqualsSumOfEmissionMultiples() public {
+    function testInvariantVaultMulEqualsSumOfEmissionMultiples() public {
         uint256 gooberMul = gobblers.getUserEmissionMultiple(address(goober));
         uint256[] memory depositedGobblers = user.getDepositedGobblers();
         uint256 depositedMulSum;
@@ -83,14 +84,14 @@ contract GooberInvariantsTest is GooberTest {
     }
 
     /// @dev Goober vault gobbler reserve = sum of deposited + minted gobblers
-    function invariant_gobblerReserveEqualsVaultMultiplier() public {
+    function testInvariantGobblerReserveEqualsVaultMultiplier() public {
         (, uint112 gobblerReserve,) = goober.getReserves();
         uint256 gooberMul = gobblers.getUserEmissionMultiple(address(goober));
         assertEq(gooberMul, gobblerReserve);
     }
 
     /// @dev Goober vault gobbler reserve = sum of deposited + minted gobblers
-    function invariant_gobblerReserve() public {
+    function testInvariantGobblerReserve() public {
         (, uint112 gobblerReserve,) = goober.getReserves();
 
         uint256[] memory depositedGobblers = user.getDepositedGobblers();

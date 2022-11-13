@@ -15,6 +15,8 @@ interface IGoober is IERC721Receiver {
     error InvalidMultiplier(uint256 gobblerId);
     error NoSkim();
     error MustLeaveLiquidity();
+    error InsufficientLiquidity(uint256 gooBalance, uint256 gobblerBalance);
+    error AuctionPriceTooHigh(uint256 auctionPrice, uint256 poolPrice);
     error InsufficientAllowance();
     error InsufficientGoo(uint256 amount, uint256 actualK, uint256 expectedK);
 
@@ -46,7 +48,7 @@ interface IGoober is IERC721Receiver {
 
     // Events
 
-    event VaultMint(address indexed minter, uint112 gooConsumed, uint112 gobblersMinted, bool balanceTerminated);
+    event VaultMint(address indexed minter, uint256 auctionPricePerMult, uint256 poolPricePerMult, uint256 gooConsumed);
 
     event Deposit(
         address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
