@@ -22,8 +22,10 @@ contract GooberFuzzTest is GooberTest {
         }
     }
 
-    function testFuzzDeposit(uint112 gooDeposit, uint8 idx, bool multiGobbler, bool gooAndGobbler) public {
-        _writeTokenBalance(users[1], address(goo), type(uint256).max - 1);
+    function testFuzzDepositWithdrawAndPreview(uint104 gooDeposit, uint8 idx, bool multiGobbler, bool gooAndGobbler)
+        public
+    {
+        _writeTokenBalance(users[1], address(goo), type(uint128).max - 1);
         vm.startPrank(users[1]);
         gobblers.addGoo(800 ether);
 
@@ -48,38 +50,54 @@ contract GooberFuzzTest is GooberTest {
         _setRandomnessAndReveal(4, "SecondSeed");
 
         // Mint minimum liquidity to rule out edge cases that are documented
-        goober.deposit(gobblersDeposit, 400 ether, users[1]);
+        // Account for withdraws
+        uint256 initial = 1 ether + (uint256(gooDeposit) * 103 - uint256(gooDeposit) * 100);
+        goober.deposit(gobblersDeposit, initial, users[1]);
 
         if (gooDeposit > type(uint104).max) {
-            gooDeposit -= 401 ether;
+            gooDeposit = type(uint104).max;
         }
 
-        uint256 previewFractions;
-        uint256 actualFractions;
+        uint256 previewFractionsDeposit;
+        uint256 actualFractionsDeposit;
+        uint256 previewFractionsWithdraw;
+        uint256 actualFractionsWithdraw;
         if (gooAndGobbler) {
             if (multiGobbler) {
-                previewFractions = goober.previewDeposit(gobblersWallet, gooDeposit);
-                actualFractions = goober.deposit(gobblersWallet, gooDeposit, users[1]);
+                previewFractionsDeposit = goober.previewDeposit(gobblersWallet, gooDeposit);
+                actualFractionsDeposit = goober.deposit(gobblersWallet, gooDeposit, users[1]);
+                previewFractionsWithdraw = goober.previewWithdraw(gobblersWallet, gooDeposit);
+                actualFractionsWithdraw = goober.withdraw(gobblersWallet, gooDeposit, users[1], users[1]);
             } else {
                 uint256[] memory gobblersWalletDeposit = new uint256[](1);
                 gobblersWalletDeposit[0] = gobblersWallet[idx % 4];
-                previewFractions = goober.previewDeposit(gobblersWalletDeposit, gooDeposit);
-                actualFractions = goober.deposit(gobblersWalletDeposit, gooDeposit, users[1]);
+                previewFractionsDeposit = goober.previewDeposit(gobblersWalletDeposit, gooDeposit);
+                actualFractionsDeposit = goober.deposit(gobblersWalletDeposit, gooDeposit, users[1]);
+                previewFractionsWithdraw = goober.previewWithdraw(gobblersWalletDeposit, gooDeposit);
+                actualFractionsWithdraw = goober.withdraw(gobblersWalletDeposit, gooDeposit, users[1], users[1]);
             }
         } else {
             uint256[] memory noGobblerDeposit = new uint256[](0);
             // Only depositing 1 goo is unrealistic at this point
-            if (gooDeposit < 7060343201) {
+            if (gooDeposit == 0) {
                 vm.expectRevert("Goober: INSUFFICIENT_LIQUIDITY_MINTED");
-                previewFractions = goober.previewDeposit(noGobblerDeposit, gooDeposit);
+                previewFractionsDeposit = goober.previewDeposit(noGobblerDeposit, gooDeposit);
                 vm.expectRevert("Goober: INSUFFICIENT_LIQUIDITY_MINTED");
-                actualFractions = goober.deposit(noGobblerDeposit, gooDeposit, users[1]);
-            } else {
-                previewFractions = goober.previewDeposit(noGobblerDeposit, gooDeposit);
-                actualFractions = goober.deposit(noGobblerDeposit, gooDeposit, users[1]);
+                actualFractionsDeposit = goober.deposit(noGobblerDeposit, gooDeposit, users[1]);
+                vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+                previewFractionsWithdraw = goober.previewWithdraw(noGobblerDeposit, gooDeposit);
+                vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+                actualFractionsWithdraw = goober.withdraw(noGobblerDeposit, gooDeposit, users[1], users[1]);
+            } else if (gooDeposit > 1 ether) {
+                // Otherwise depends on specifics
+                previewFractionsDeposit = goober.previewDeposit(noGobblerDeposit, gooDeposit);
+                actualFractionsDeposit = goober.deposit(noGobblerDeposit, gooDeposit, users[1]);
+                previewFractionsWithdraw = goober.previewWithdraw(noGobblerDeposit, gooDeposit);
+                actualFractionsWithdraw = goober.withdraw(noGobblerDeposit, gooDeposit, users[1], users[1]);
             }
         }
-        assertEq(previewFractions, actualFractions);
+        assertEq(previewFractionsDeposit, actualFractionsDeposit);
+        assertEq(previewFractionsWithdraw, actualFractionsWithdraw);
     }
 
     // Not feasible to test here above uint96 because the fuzz starts hitting over/underflow a lot.
