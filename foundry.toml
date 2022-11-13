@@ -4,8 +4,8 @@ out = 'out'
 libs = ['lib']
 
 [invariant]
-runs = 512
-depth = 16
+runs = 256
+depth = 8
 fail_on_revert = false
 call_override = false
 dictionary_weight = 80

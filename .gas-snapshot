@@ -1,4 +1,6 @@
 GooberIntegrationTest:testMultipleDepositSwapMintWithdraw() (gas: 2564459)
+GooberInvariantsTest:invariant_fee_balance() (runs: 256, calls: 2048, reverts: 1212)
+GooberInvariantsTest:invariant_goo_balance() (runs: 256, calls: 2048, reverts: 1212)
 GooberTest:testCantUnrevealedCantEscapeVault() (gas: 496597)
 GooberTest:testConvertToAssets() (gas: 403335)
 GooberTest:testConvertToFractions() (gas: 462398)
