@@ -88,5 +88,4 @@ contract GooberInvariantsTest is GooberTest {
         }
         assertEq(depositedMulSum, gobblerReserve);
     }
-
 }
