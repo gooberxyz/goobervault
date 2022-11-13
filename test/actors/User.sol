@@ -5,8 +5,8 @@ import "./InvariantActor.sol";
 
 /// @dev The User calls deposit, withdraw, and swap.
 contract User is InvariantActor {
-    uint256 depositedGoo;
-    uint256[] depositedGobblers;
+    uint256 public depositedGoo;
+    uint256[] public depositedGobblers;
 
     uint256 public depositCalls;
     uint256 public withdrawCalls;
@@ -21,6 +21,10 @@ contract User is InvariantActor {
         RandProvider _randProvider,
         VRFCoordinatorMock _vrfCoordinator
     ) InvariantActor(_goober, _goo, _gobblers, _randProvider, _vrfCoordinator) {}
+
+    function getDepositedGobblers() external view returns (uint256[] memory) {
+        return depositedGobblers;
+    }
 
     function deposit(uint8 _gooTokens, uint8 _numGobblers) external {
         // convert _gooTokens to an amount between 10 and 2550 Goo.

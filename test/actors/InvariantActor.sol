@@ -83,7 +83,7 @@ abstract contract InvariantActor is StdUtils, CommonBase {
     }
 
     /// @dev Call back vrf with randomness and reveal gobblers.
-    function _setRandomnessAndReveal(uint256 numReveal, string memory seed) private {
+    function _setRandomnessAndReveal(uint256 numReveal, string memory seed) internal {
         bytes32 requestId = gobblers.requestRandomSeed();
         uint256 randomness = uint256(keccak256(abi.encodePacked(seed)));
         // call back from coordinator
