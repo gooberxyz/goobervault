@@ -17,6 +17,7 @@ interface IGoober is IERC721Receiver {
 
     // Deposit Errors
     error InsufficientLiquidityDeposited();
+    error MintBelowLimit();
 
     // K Calculation Errors
     error MustLeaveLiquidity(uint256 gooBalance, uint256 gobblerBalance);
@@ -37,6 +38,7 @@ interface IGoober is IERC721Receiver {
 
     // Withdraw Errors
     error InsufficientLiquidityWithdrawn();
+    error BurnAboveLimit();
 
     /**
      * @notice The caller doesn't have permission to access that function.

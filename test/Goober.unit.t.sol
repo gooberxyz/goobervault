@@ -322,7 +322,7 @@ contract GooberUnitTest is GooberTest {
         // Deposit 2 gobblers and 200 goo
         uint256 expectedFractions = goober.previewDeposit(artGobblers, gooToDeposit);
 
-        vm.expectRevert("Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+        vm.expectRevert(IGoober.MintBelowLimit.selector);
 
         goober.safeDeposit(artGobblers, gooToDeposit, users[1], expectedFractions + 1, block.timestamp + 1);
     }
@@ -720,7 +720,7 @@ contract GooberUnitTest is GooberTest {
 
         uint256 expectedFractionsIn = goober.previewWithdraw(artGobblersToWithdraw, gooToWithdraw);
 
-        vm.expectRevert("Goober: BURN_ABOVE_LIMIT");
+        vm.expectRevert(IGoober.BurnAboveLimit.selector);
 
         goober.safeWithdraw(
             artGobblersToWithdraw, gooToWithdraw, users[1], users[1], expectedFractionsIn - 1, block.timestamp + 1

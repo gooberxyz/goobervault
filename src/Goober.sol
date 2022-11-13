@@ -746,7 +746,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     ) external ensure(deadline) returns (uint256 fractions) {
         fractions = deposit(gobblers, gooTokens, receiver);
 
-        require(fractions >= minFractionsOut, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+        if (fractions < minFractionsOut) {
+            revert MintBelowLimit();
+        }
     }
 
     /// @notice Withdraws the requested gobblers and goo tokens from the vault.
@@ -840,7 +842,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     ) external ensure(deadline) returns (uint256 fractions) {
         fractions = withdraw(gobblers, gooTokens, receiver, owner);
 
-        require(fractions <= maxFractionsIn, "Goober: BURN_ABOVE_LIMIT");
+        if (fractions > maxFractionsIn) {
+            revert BurnAboveLimit();
+        }
     }
 
     /// @notice Swaps supplied gobblers/goo for gobblers/goo in the pool.
