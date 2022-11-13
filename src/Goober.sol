@@ -133,12 +133,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     {
         if (_gooBalance == 0 || _gobblerBalance == 0) {
             revert InsufficientLiquidity(_gooBalance, _gobblerBalance);
-        } else if (_auctionPrice == 0) {
-            // Unlikely, but avoids divide by zero below.
-            mint = true;
         } else {
             if (_gooBalance > _auctionPrice) {
-                // TODO(we are loosing precision here)
+                // No loss of precision as bps scalars cancel out.
                 auctionPricePerMult = (_auctionPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
                 poolPricePerMult = (_gooBalance / _gobblerBalance);
                 mint = poolPricePerMult > auctionPricePerMult;

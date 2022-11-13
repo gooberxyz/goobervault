@@ -50,19 +50,12 @@ contract Minter is InvariantActor {
         if (gooBalance == 0 || gobblerBalance == 0) {
             vm.expectRevert(abi.encodeWithSelector(IGoober.InsufficientLiquidity.selector, gooBalance, gobblerBalance));
             goober.mintGobbler();
-        } else if (auctionPrice == 0) {
-            // Unlikely, but avoids divide by zero below.
-            goober.mintGobbler();
         } else {
-            if (gooBalance > auctionPrice) {
-                // TODO(we are loosing precision here)
-                auctionPricePerMult = (auctionPrice * 10000) / 73294;
-                poolPricePerMult = (gooBalance / gobblerBalance);
-                if (poolPricePerMult > auctionPricePerMult) {
+            if (gobblerBalance > 0) {
                     goober.mintGobbler();
                 }
             }
-        }
         vm.stopPrank();
+        }
     }
-}
+
