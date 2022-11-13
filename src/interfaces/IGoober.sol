@@ -16,8 +16,8 @@ interface IGoober is IERC721Receiver {
 
     // Deposit Errors
 
-    // Withdraw Errors
-    error MustLeaveLiquidity();
+    // K Calculation Errors
+    error MustLeaveLiquidity(uint256 gooBalance, uint256 gobblerBalance);
 
     // Mint Errors
     error AuctionPriceTooHigh(uint256 auctionPrice, uint256 poolPrice);

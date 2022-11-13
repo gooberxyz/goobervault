@@ -210,7 +210,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _k = FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance);
         // We don't want to allow the pool to be looted/decommed, ever.
         if (_k == 0) {
-            revert MustLeaveLiquidity();
+            revert MustLeaveLiquidity(_gooBalance, _gobblerBalance);
         }
         // Set delta and change to zero.
         _kDelta = 0;

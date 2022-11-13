@@ -187,7 +187,7 @@ contract GooberUnitTest is GooberTest {
         assertEq(blockTimestampLast, 0);
         vm.warp(TIME0 + 1 days);
         _setRandomnessAndReveal(2, "seed");
-        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.MustLeaveLiquidity.selector, 0, 17));
         goober.deposit(artGobblers, 0, users[1]);
         vm.stopPrank();
     }
@@ -205,7 +205,7 @@ contract GooberUnitTest is GooberTest {
         assertEq(gooReserve, 0);
         assertEq(gobblerReserve, 0);
         assertEq(blockTimestampLast, 0);
-        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.MustLeaveLiquidity.selector, gooToDeposit, 0));
         goober.deposit(artGobblersEmptyArray, gooToDeposit, users[1]);
         vm.stopPrank();
     }
@@ -444,7 +444,7 @@ contract GooberUnitTest is GooberTest {
         goober.withdraw(artGobblers2, fractions, users[2], users[2]);
     }
 
-    function testWithdrawWhenOwnerIsNotReceiverButWithSufficientAllowance() public {
+    function testUnitWithdrawWhenOwnerIsNotReceiverButWithSufficientAllowance() public {
         vm.startPrank(users[1]);
         gobblers.addGoo(500 ether);
         uint256[] memory artGobblers = new uint256[](1);
@@ -590,7 +590,7 @@ contract GooberUnitTest is GooberTest {
 
         goober.deposit(artGobblers, 500 ether, users[1]);
 
-        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.MustLeaveLiquidity.selector, 0, 17));
 
         goober.withdraw(new uint256[](0), 500 ether, users[1], users[1]);
     }
@@ -615,7 +615,7 @@ contract GooberUnitTest is GooberTest {
 
         goober.deposit(artGobblers, 500 ether, users[1]);
 
-        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        vm.expectRevert(abi.encodeWithSelector(IGoober.MustLeaveLiquidity.selector, 490 ether, 0));
 
         goober.withdraw(artGobblers, 10 ether, users[1], users[1]);
     }
