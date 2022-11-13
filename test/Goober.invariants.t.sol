@@ -7,6 +7,8 @@ import {Warper} from "./actors/Warper.sol";
 import {Admin} from "./actors/Admin.sol";
 import {User} from "./actors/User.sol";
 
+// TODO write invariant tests that use actors, with various assets and actions
+
 contract GooberInvariantsTest is GooberTest {
     Warper internal warper;
     Admin internal admin;
