@@ -1376,9 +1376,6 @@ contract GooberUnitTest is GooberTest {
         // Safety check to verify starting gobblerPrice is correct.
         assertEq(gobblers.gobblerPrice(), 73013654753028651285);
 
-        // Add enough Goo to vault to mint a single Gobbler.
-        _writeTokenBalance(users[10], address(goo), 1000 ether);
-
         // Mint the first gobbler
         vm.startPrank(users[10]);
         uint256[] memory artGobbler = new uint256[](1);
@@ -1432,6 +1429,66 @@ contract GooberUnitTest is GooberTest {
         assertEq(_newGobblerReserve, 15);
         // Check our goo balance updated from emission.
         assertEq(_newGooReserve, 46140671657193055549);
+    }
+
+    function testMintMultiple() public {
+        // Mints exactly 3 gobblers in a single mintGobblers() call.
+        // NOTE Each mint will update auction price,
+        // goo balance and mult balance (after 24hr);
+        // Safety check to verify starting gobblerPrice is correct.
+        assertEq(gobblers.gobblerPrice(), 73013654753028651285);
+
+        // Add enough Goo to vault to be able mint three Gobblers.
+        // we calculate the needed go by summing the incremental VRGDA
+        // price of 3 incremental mints, after an initial mint and 24
+        // hours to setup the pool.
+        // Needed goo is exactly 175995503714107834819 (around 175.95 goo);
+
+        // Mint the first gobbler to setup the pool.
+        vm.startPrank(users[10]);
+        uint256[] memory artGobbler = new uint256[](1);
+        artGobbler[0] = gobblers.mintFromGoo(75 ether, false);
+
+        vm.warp(block.timestamp + 86400);
+        _setRandomnessAndReveal(1, "seed");
+        uint256 gobblerMult = (gobblers.getGobblerEmissionMultiple(artGobbler[0]));
+        // Based on our seed, we get a mult of 9 here.
+        assertEq(gobblerMult, 9);
+
+        // To get the amount (sum) to predict gooSpent:
+        // NOTE commented out as it would bump the auction price)
+        // uint256[] memory artGobblers = new uint256[](2);
+        // artGobblers[0] = gobblers.mintFromGoo(100 ether, false);
+        // uint112 mintPrice2 = uint112(gobblers.gobblerPrice());
+        // assertEq(mintPrice2, 55730397425599282914);
+        // artGobblers[1] = gobblers.mintFromGoo(120 ether, false);
+        // uint112 mintPrice3 = uint112(gobblers.gobblerPrice());
+        // assertEq(mintPrice3, 58615385439085817001);
+        // uint112 sum = 52987405899699731484 + mintPrice2 + mintPrice3;
+        // assertEq(sum, 167333188764384831399);
+
+        // NOTE dilemma: since we added a gobbler to setup the pool,
+        // We need extra goo to increase the numerator of our goo/gobbler
+        // to satisfy the > auction goo/gobbler condition.
+        // However, if we add too much more goo, we will mint another gobbler,
+        // thus increasing the denomenator.
+        // This makes testing for a VaultMint with *true* BalanceTerminated
+        // inherently difficult, so we expect a false here.
+
+        uint112 gooTokens = 200 ether;
+        goober.deposit(artGobbler, gooTokens, users[10]);
+        vm.stopPrank();
+
+        vm.prank(MINTER);
+        uint112 gooSpent = (167333188764384831399);
+        vm.expectEmit(true, false, false, true);
+        emit VaultMint(MINTER, gooSpent, 3, false);
+        goober.mintGobbler();
+
+        // Check to see the pool owns Gobbler id 2, 3 and 4.
+        assertEq(gobblers.ownerOf(2), address(goober));
+        assertEq(gobblers.ownerOf(3), address(goober));
+        assertEq(gobblers.ownerOf(4), address(goober));
     }
 
     function testCantUnrevealedCantEscapeVault() public {
