@@ -16,13 +16,39 @@ contract Admin is InvariantActor {
         VRFCoordinatorMock _vrfCoordinator
     ) InvariantActor(_goober, _goo, _gobblers, _randProvider, _vrfCoordinator) {}
 
-    function mint() external {
-        vm.prank(MINTER);
-        goober.mintGobbler();
-    }
-
     function skim() external {
         vm.prank(FEE_TO);
-        goober.skimGoo();
+        uint256 gooTankBalance = gobblers.gooBalance(address(goober));
+        if (gooTankBalance >= type(uint112).max) {
+            goober.skimGoo();
+        }
+    }
+}
+
+/// @dev The Minter randomly mints Gobblers.
+contract Minter is InvariantActor {
+    using FixedPointMathLib for uint256;
+
+    address internal constant FEE_TO = address(0xFEEE);
+    address internal constant MINTER = address(0x1337);
+
+    constructor(
+        Goober _goober,
+        Goo _goo,
+        ArtGobblers _gobblers,
+        RandProvider _randProvider,
+        VRFCoordinatorMock _vrfCoordinator
+    ) InvariantActor(_goober, _goo, _gobblers, _randProvider, _vrfCoordinator) {}
+
+    function mint() external {
+        vm.prank(MINTER);
+        uint256 gooReserve = gobblers.gooBalance(address(this));
+        uint256 gobblerReserve = gobblers.getUserEmissionMultiple(address(this));
+        uint256 mintPrice = gobblers.gobblerPrice();
+        uint256 gooPerMult = (gooReserve / gobblerReserve);
+        bool mint = gooPerMult >= (mintPrice * 1e4) / 73294;
+        if (mint) {
+            goober.mintGobbler();
+        }
     }
 }
