@@ -90,6 +90,66 @@ contract GooberUnitTest is GooberTest {
     // Update reserve balances
     // Emit event
 
+    function testFuzzDeposit(uint112 gooDeposit, uint8 idx, bool multiGobbler, bool gooAndGobbler) public {
+        _writeTokenBalance(users[1], address(goo), type(uint256).max - 1);
+        vm.startPrank(users[1]);
+        gobblers.addGoo(800 ether);
+
+        // Gobblers to deposit
+        uint256[] memory gobblersDeposit = new uint256[](4);
+        gobblersDeposit[0] = gobblers.mintFromGoo(100 ether, true);
+        gobblersDeposit[1] = gobblers.mintFromGoo(100 ether, true);
+        gobblersDeposit[2] = gobblers.mintFromGoo(100 ether, true);
+        gobblersDeposit[3] = gobblers.mintFromGoo(100 ether, true);
+
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(4, "FirstSeed");
+
+        // Gobblers to deposit
+        uint256[] memory gobblersWallet = new uint256[](4);
+        gobblersWallet[0] = gobblers.mintFromGoo(100 ether, true);
+        gobblersWallet[1] = gobblers.mintFromGoo(100 ether, true);
+        gobblersWallet[2] = gobblers.mintFromGoo(100 ether, true);
+        gobblersWallet[3] = gobblers.mintFromGoo(110 ether, true);
+
+        vm.warp(block.timestamp + 1 days);
+        _setRandomnessAndReveal(4, "SecondSeed");
+
+        // Mint minimum liquidity to rule out edge cases that are documented
+        goober.deposit(gobblersDeposit, 400 ether, users[1]);
+
+        if (gooDeposit > type(uint104).max) {
+            gooDeposit -= 401 ether;
+        }
+
+        uint256 previewFractions;
+        uint256 actualFractions;
+        if (gooAndGobbler) {
+            if (multiGobbler) {
+                previewFractions = goober.previewDeposit(gobblersWallet, gooDeposit);
+                actualFractions = goober.deposit(gobblersWallet, gooDeposit, users[1]);
+            } else {
+                uint256[] memory gobblersWalletDeposit = new uint256[](1);
+                gobblersWalletDeposit[0] = gobblersWallet[idx % 4];
+                previewFractions = goober.previewDeposit(gobblersWalletDeposit, gooDeposit);
+                actualFractions = goober.deposit(gobblersWalletDeposit, gooDeposit, users[1]);
+            }
+        } else {
+            uint256[] memory noGobblerDeposit = new uint256[](0);
+            // Only depositing 1 goo is unrealistic at this point
+            if (gooDeposit < 7060343201) {
+                vm.expectRevert("Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+                previewFractions = goober.previewDeposit(noGobblerDeposit, gooDeposit);
+                vm.expectRevert("Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+                actualFractions = goober.deposit(noGobblerDeposit, gooDeposit, users[1]);
+            } else {
+                previewFractions = goober.previewDeposit(noGobblerDeposit, gooDeposit);
+                actualFractions = goober.deposit(noGobblerDeposit, gooDeposit, users[1]);
+            }
+        }
+        assertEq(previewFractions, actualFractions);
+    }
+
     function testDepositBoth() public {
         // Add Goo and mint Gobblers
         vm.startPrank(users[1]);
