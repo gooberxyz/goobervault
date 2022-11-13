@@ -118,7 +118,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @notice This modifier ensures the transaction is included before a specified deadline.
     /// @param deadline - Unix timestamp after which the transaction will revert.
     modifier ensure(uint256 deadline) {
-        require(deadline >= block.timestamp, "Goober: EXPIRED");
+        if (block.timestamp > deadline) {
+            revert Expired(block.timestamp, deadline);
+        }
         _;
     }
 

@@ -36,6 +36,9 @@ interface IGoober is IERC721Receiver {
     // Swap Errors
     error InsufficientInputAmount(uint256 amount0In, uint256 amount1In);
 
+    // Time Errors
+    error Expired(uint256 time, uint256 deadline);
+
     // Withdraw Errors
     error InsufficientLiquidityWithdrawn();
     error BurnAboveLimit();
