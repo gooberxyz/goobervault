@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import "./utils/GooberTest.sol";
 
 import {Warper} from "./actors/Warper.sol";
-import {Admin} from "./actors/Admin.sol";
+import {Admin, Minter} from "./actors/Admin.sol";
 import {User} from "./actors/User.sol";
 
 // TODO write invariant tests that use actors, with various assets and actions
@@ -13,6 +13,7 @@ contract GooberInvariantsTest is GooberTest {
     Warper internal warper;
     Admin internal admin;
     User internal user;
+    Minter internal minter;
 
     address[] private _targetContracts;
 
@@ -47,10 +48,19 @@ contract GooberInvariantsTest is GooberTest {
             _randProvider: randProvider
         });
 
+        minter = new Minter({
+        _goo: goo,
+        _gobblers: gobblers,
+        _goober: goober,
+        _vrfCoordinator: vrfCoordinator,
+        _randProvider: randProvider
+        });
+
         warper = new Warper();
 
         _addTargetContract(address(user));
         _addTargetContract(address(admin));
+        _addTargetContract(address(minter));
         _addTargetContract(address(warper));
     }
 

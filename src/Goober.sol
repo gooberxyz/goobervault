@@ -515,7 +515,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         view
         returns (int256 erroneousGoo)
     {
-        erroneousGoo = 0;
         (uint256 _gooReserve, uint256 _gobblerReserve,) = getReserves();
         // Simulate transfers out
         uint256 _gooBalance = _gooReserve - gooOut;
