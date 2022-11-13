@@ -80,13 +80,13 @@ contract GooberFuzzTest is GooberTest {
             uint256[] memory noGobblerDeposit = new uint256[](0);
             // Only depositing 1 goo is unrealistic at this point
             if (gooDeposit == 0) {
-                vm.expectRevert(IGoober.InsufficientLiquidityMinted.selector);
+                vm.expectRevert(IGoober.InsufficientLiquidityDeposited.selector);
                 previewFractionsDeposit = goober.previewDeposit(noGobblerDeposit, gooDeposit);
-                vm.expectRevert(IGoober.InsufficientLiquidityMinted.selector);
+                vm.expectRevert(IGoober.InsufficientLiquidityDeposited.selector);
                 actualFractionsDeposit = goober.deposit(noGobblerDeposit, gooDeposit, users[1]);
-                vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+                vm.expectRevert(IGoober.InsufficientLiquidityWithdrawn.selector);
                 previewFractionsWithdraw = goober.previewWithdraw(noGobblerDeposit, gooDeposit);
-                vm.expectRevert("Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+                vm.expectRevert(IGoober.InsufficientLiquidityWithdrawn.selector);
                 actualFractionsWithdraw = goober.withdraw(noGobblerDeposit, gooDeposit, users[1], users[1]);
             } else if (gooDeposit > 1 ether) {
                 // Otherwise depends on specifics

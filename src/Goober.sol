@@ -481,7 +481,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
         }
         if (fractions == 0) {
-            revert InsufficientLiquidityMinted();
+            revert InsufficientLiquidityDeposited();
         }
         // Simulate management fee and return preview.
         fractions -= _previewManagementFee(fractions);
@@ -517,7 +517,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             _gobblerBalanceMult -= gobblerMult;
         }
         uint256 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
-        require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+        if (!(_gobblerAmountMult > 0 || gooTokens > 0)) {
+            revert InsufficientLiquidityWithdrawn();
+        }
         {
             // Calculate the fractions to burn based on the changes in k.
             (,,, uint256 _kDelta,) = _kCalculations(
@@ -713,7 +715,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
             }
             if (fractions == 0) {
-                revert InsufficientLiquidityMinted();
+                revert InsufficientLiquidityDeposited();
             }
         }
 
@@ -786,7 +788,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Measure change.
         uint256 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
 
-        require(_gobblerAmountMult > 0 || gooTokens > 0, "Goober: INSUFFICIENT LIQUIDITY WITHDRAW");
+        if (!(_gobblerAmountMult > 0 || gooTokens > 0)) {
+            revert InsufficientLiquidityWithdrawn();
+        }
 
         {
             // Calculate the fractions to burn based on the changes in k.

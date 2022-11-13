@@ -11,11 +11,12 @@ import "./IERC721Receiver.sol";
 interface IGoober is IERC721Receiver {
     // Errors
 
-    // Swap Errors
-    error InsufficientInputAmount(uint256 amount0In, uint256 amount1In);
+    // Balance Errors
+    error InsufficientAllowance();
+    error InsufficientGoo(uint256 amount, uint256 actualK, uint256 expectedK);
 
     // Deposit Errors
-    error InsufficientLiquidityMinted();
+    error InsufficientLiquidityDeposited();
 
     // K Calculation Errors
     error MustLeaveLiquidity(uint256 gooBalance, uint256 gobblerBalance);
@@ -24,13 +25,18 @@ interface IGoober is IERC721Receiver {
     error AuctionPriceTooHigh(uint256 auctionPrice, uint256 poolPrice);
     error InsufficientLiquidity(uint256 gooBalance, uint256 gobblerBalance);
 
-    error gobblerInvalidMultiplier();
+    // NFT Errors
     error InvalidNFT();
     error InvalidMultiplier(uint256 gobblerId);
+
+    // Skim Errors
     error NoSkim();
 
-    error InsufficientAllowance();
-    error InsufficientGoo(uint256 amount, uint256 actualK, uint256 expectedK);
+    // Swap Errors
+    error InsufficientInputAmount(uint256 amount0In, uint256 amount1In);
+
+    // Withdraw Errors
+    error InsufficientLiquidityWithdrawn();
 
     /**
      * @notice The caller doesn't have permission to access that function.
