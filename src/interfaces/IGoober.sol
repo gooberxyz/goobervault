@@ -15,6 +15,7 @@ interface IGoober is IERC721Receiver {
     error InsufficientInputAmount(uint256 amount0In, uint256 amount1In);
 
     // Deposit Errors
+    error InsufficientLiquidityMinted();
 
     // K Calculation Errors
     error MustLeaveLiquidity(uint256 gooBalance, uint256 gobblerBalance);

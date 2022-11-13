@@ -480,7 +480,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         } else {
             fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
         }
-        require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+        if (fractions == 0) {
+            revert InsufficientLiquidityMinted();
+        }
         // Simulate management fee and return preview.
         fractions -= _previewManagementFee(fractions);
     }
@@ -710,7 +712,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             } else {
                 fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
             }
-            require(fractions > 0, "Goober: INSUFFICIENT_LIQUIDITY_MINTED");
+            if (fractions == 0) {
+                revert InsufficientLiquidityMinted();
+            }
         }
 
         // Mint fractions to depositor less management fee.
