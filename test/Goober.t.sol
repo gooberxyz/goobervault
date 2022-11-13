@@ -1530,8 +1530,8 @@ contract GooberTest is Test {
     }
 
     function testMintMultiple() public {
-        // Tries to mint 3 gobblers in a single mintGobblers() call;
-        // NOTE each mint will update auction price,
+        // Mints exactly 3 gobblers in a single mintGobblers() call.
+        // NOTE Each mint will update auction price,
         // goo balance and mult balance (after 24hr);
         // Safety check to verify starting gobblerPrice is correct.
         assertEq(gobblers.gobblerPrice(), 73013654753028651285);
@@ -1554,7 +1554,7 @@ contract GooberTest is Test {
         assertEq(gobblerMult, 9);
 
         // To get the amount (sum) to predict gooSpent:
-        // (commented out as it would bump the auction price)
+        // NOTE commented out as it would bump the auction price)
         // uint256[] memory artGobblers = new uint256[](2);
         // artGobblers[0] = gobblers.mintFromGoo(100 ether, false);
         // uint112 mintPrice2 = uint112(gobblers.gobblerPrice());
@@ -1565,7 +1565,7 @@ contract GooberTest is Test {
         // uint112 sum = 52987405899699731484 + mintPrice2 + mintPrice3;
         // assertEq(sum, 167333188764384831399);
 
-        // NOTE Dilemma: since we added a Gobbler to setup the pool,
+        // NOTE dilemma: since we added a gobbler to setup the pool,
         // We need extra goo to increase the numerator of our goo/gobbler
         // to satisfy the > auction goo/gobbler condition.
         // However, if we add too much more goo, we will mint another gobbler,
