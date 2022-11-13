@@ -14,13 +14,20 @@ interface IGoober is IERC721Receiver {
     // Swap Errors
     error InsufficientInputAmount(uint256 amount0In, uint256 amount1In);
 
+    // Deposit Errors
+
+    // Withdraw Errors
+    error MustLeaveLiquidity();
+
+    // Mint Errors
+    error AuctionPriceTooHigh(uint256 auctionPrice, uint256 poolPrice);
+    error InsufficientLiquidity(uint256 gooBalance, uint256 gobblerBalance);
+
     error gobblerInvalidMultiplier();
     error InvalidNFT();
     error InvalidMultiplier(uint256 gobblerId);
     error NoSkim();
-    error MustLeaveLiquidity();
-    error InsufficientLiquidity(uint256 gooBalance, uint256 gobblerBalance);
-    error AuctionPriceTooHigh(uint256 auctionPrice, uint256 poolPrice);
+
     error InsufficientAllowance();
     error InsufficientGoo(uint256 amount, uint256 actualK, uint256 expectedK);
 
