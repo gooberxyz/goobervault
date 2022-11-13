@@ -858,8 +858,15 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         address receiver,
         bytes calldata data
     ) public nonReentrant returns (int256) {
-        require(gooOut > 0 || gobblersOut.length > 0, "Goober: INSUFFICIENT_OUTPUT_AMOUNT");
-        require(receiver != address(goo) && receiver != address(artGobblers), "Goober: INVALID_TO");
+        // TODO(Coverage for these revert)
+        if (!(gooOut > 0 || gobblersOut.length > 0)) {
+            revert InsufficientOutputAmount(gooOut, gobblersOut.length);
+        }
+        if (receiver == address(goo) || receiver == address(artGobblers)) {
+            revert InvalidReceiver(receiver);
+        }
+
+        // Intermediary struct so we don't get stack too deep
         SwapData memory internalData;
 
         (internalData.gooReserve, internalData.gobblerReserve,) = getReserves(); // gas savings
@@ -938,16 +945,17 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         bytes calldata data
     ) external ensure(deadline) returns (int256 erroneousGoo) {
         erroneousGoo = previewSwap(gobblersIn, gooIn, gobblersOut, gooOut);
+        // TODO(Cover when we have some amount of erroneousGoo allowed in tests)
         if (erroneousGoo < 0) {
             uint256 additionalGooOut = uint256(-erroneousGoo);
             if (additionalGooOut > erroneousGooAbs) {
-                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+                revert ExcessiveErroneousGoo(additionalGooOut, erroneousGooAbs);
             }
             gooOut += additionalGooOut;
         } else if (erroneousGoo > 0) {
             uint256 additionalGooIn = uint256(erroneousGoo);
             if (additionalGooIn > erroneousGooAbs) {
-                revert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+                revert ExcessiveErroneousGoo(additionalGooIn, erroneousGooAbs);
             }
             gooIn += additionalGooIn;
         }

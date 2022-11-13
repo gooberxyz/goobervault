@@ -920,7 +920,7 @@ contract GooberUnitTest is GooberTest {
 
         // This tests the case of too much goo out
         // TODO(Think, is this something safe swap should prevent? Or only too much goo in?)
-        vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        vm.expectRevert(abi.encodeWithSelector(IGoober.ExcessiveErroneousGoo.selector, 88163488180920139792, 1));
         goober.safeSwap(1, block.timestamp + 1, artGobblersToSwap, 0, noGobblers, swapPreview, users[1], "");
 
         // So the user decides to make a trade anyway at this better price
@@ -941,7 +941,7 @@ contract GooberUnitTest is GooberTest {
 
         // Our slower trader is still protected though, because they are using safeSwap
         vm.startPrank(users[1]);
-        vm.expectRevert("Goober: SWAP_EXCEEDS_ERRONEOUS_GOO");
+        vm.expectRevert(abi.encodeWithSelector(IGoober.ExcessiveErroneousGoo.selector, 88252089333012275015, 1));
         goober.safeSwap(1, block.timestamp + 1, artGobblersToSwap, 0, noGobblers, swapPreview, users[1], "");
         vm.stopPrank();
     }

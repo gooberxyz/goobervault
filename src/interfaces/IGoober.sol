@@ -35,6 +35,9 @@ interface IGoober is IERC721Receiver {
 
     // Swap Errors
     error InsufficientInputAmount(uint256 amount0In, uint256 amount1In);
+    error InsufficientOutputAmount(uint256 gooOut, uint256 gobblersOut);
+    error InvalidReceiver(address receiver);
+    error ExcessiveErroneousGoo(uint256 actualErroneousGoo, uint256 allowedErroneousGoo);
 
     // Time Errors
     error Expired(uint256 time, uint256 deadline);
