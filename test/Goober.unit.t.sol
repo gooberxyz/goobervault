@@ -238,6 +238,45 @@ contract GooberUnitTest is GooberTest {
 
     // }
 
+    function testRevertFirstDepositOnlyGoo() public {
+        vm.startPrank(users[1]);
+        uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 2);
+        assertEq(gobblers.gooBalance(address(goober)), 0);
+        assertEq(gobblers.ownerOf(artGobblers[0]), users[1]);
+        assertEq(gobblers.ownerOf(artGobblers[1]), users[1]);
+        assertEq(goober.balanceOf(users[1]), 0);
+        (uint256 gooTokens, uint256 gobblerMult) = goober.totalAssets();
+        assertEq(gooTokens, 0);
+        assertEq(gobblerMult, 0);
+        (uint112 gooReserve, uint112 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
+        assertEq(gooReserve, 0);
+        assertEq(gobblerReserve, 0);
+        assertEq(blockTimestampLast, 0);
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(2, "seed");
+        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        goober.deposit(artGobblers, 0, users[1]);
+        vm.stopPrank();
+    }
+
+    function testRevertFirstDepositOnlyGobblers() public {
+        vm.startPrank(users[1]);
+        uint256[] memory artGobblersEmptyArray = new uint256[](0);
+        uint256 gooToDeposit = 200 ether;
+        assertEq(gobblers.gooBalance(address(goober)), 0);
+        assertEq(goober.balanceOf(users[1]), 0);
+        (uint256 gooTokens, uint256 gobblerMult) = goober.totalAssets();
+        assertEq(gooTokens, 0);
+        assertEq(gobblerMult, 0);
+        (uint112 gooReserve, uint112 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
+        assertEq(gooReserve, 0);
+        assertEq(gobblerReserve, 0);
+        assertEq(blockTimestampLast, 0);
+        vm.expectRevert(IGoober.MustLeaveLiquidity.selector);
+        goober.deposit(artGobblersEmptyArray, gooToDeposit, users[1]);
+        vm.stopPrank();
+    }
+
     function testEventDeposit() public {
         // Add Goo and mint Gobblers
         vm.startPrank(users[1]);
