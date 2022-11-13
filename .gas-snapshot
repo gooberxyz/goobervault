@@ -1,5 +1,5 @@
-GooberFuzzTest:testFuzzDeposit(uint112,uint8,bool,bool) (runs: 256, μ: 961599, ~: 952584)
-GooberFuzzTest:testFuzzSwapAndPreview(uint96,uint96,uint8,bool,bool,bool) (runs: 256, μ: 998230, ~: 972091)
+GooberFuzzTest:testFuzzDepositWithdrawAndPreview(uint104,uint8,bool,bool) (runs: 256, μ: 971032, ~: 908765)
+GooberFuzzTest:testFuzzSwapAndPreview(uint96,uint96,uint8,bool,bool,bool) (runs: 256, μ: 998218, ~: 972079)
 GooberIntegrationTest:testMultipleDepositSwapMintWithdraw() (gas: 2564594)
 GooberInvariantsTest:invariant_feeBalanceIncreases() (runs: 256, calls: 2048, reverts: 1186)
 GooberInvariantsTest:invariant_gobblerReserve() (runs: 256, calls: 2048, reverts: 1186)
