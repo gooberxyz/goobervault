@@ -6,7 +6,6 @@ import "./InvariantActor.sol";
 /// @dev The Admin randomly mints Gobblers and skims.
 contract Admin is InvariantActor {
     address internal constant FEE_TO = address(0xFEEE);
-    address internal constant MINTER = address(0x1337);
 
     constructor(
         Goober _goober,
@@ -29,7 +28,6 @@ contract Admin is InvariantActor {
 contract Minter is InvariantActor {
     using FixedPointMathLib for uint256;
 
-    address internal constant FEE_TO = address(0xFEEE);
     address internal constant MINTER = address(0x1337);
 
     constructor(
@@ -46,7 +44,8 @@ contract Minter is InvariantActor {
         uint256 gobblerReserve = gobblers.getUserEmissionMultiple(address(this));
         uint256 mintPrice = gobblers.gobblerPrice();
         uint256 gooPerMult = (gooReserve / gobblerReserve);
-        bool mint = gooPerMult >= (mintPrice * 1e4) / 73294;
+        // TODO(Account for slippage)
+        bool mint = gooPerMult > (mintPrice * 1e4) / 73294;
         if (mint) {
             goober.mintGobbler();
         }
