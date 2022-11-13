@@ -3,16 +3,9 @@ pragma solidity ^0.8.17;
 
 import "./utils/GooberTest.sol";
 
-// TODO Spot check data table and add FeeTo balance changes marked with "X TODO" (and copy to all following lines, until next change)
-// TODO Why swap fee only on Gobblers and not Goo in #9 ? (this is marked with TODO in data table and test code)
-// TODO Why no performance fee assessed on withdraw in #15 ? (ditto, this is marked with TODO in data table and test code)
-
-// TODO Bring in LibGOO for actual emission amounts
-// TODO Use previewDeposit and previewWithdraw for asserting actual results
-// TODO Consider forking mainnet and running against deployed Goo / ArtGobblers contracts
-// TODO Consider fuzzing # Gobblers to mint, Goo deposit amounts, Swap params, and time to let Goo accrue
-// TODO Refactor test helpers into base class or test utility lib
-// TODO Invariants
+// TODO Use preview functions for calculating results
+// TODO Bring in LibGOO to for calculating emission amounts
+// TODO Consider forking to run against deployed Goo / ArtGobblers contracts
 
 contract GooberIntegrationTest is GooberTest {
     // Time
@@ -98,55 +91,55 @@ contract GooberIntegrationTest is GooberTest {
     // | 4. Alice deposits 200 Goo and Gobblers 9 and 8, minting sqrt(17 * 200) GBR Vault fractions                  |
     // | (Alice receives 98%, FeeTo receives 2% as management fee, No performance fee bc there's no growth in k      |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~58 |   200 |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 |X TODO |
+    // |   ~58 |   200 |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 | ~1.16 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 5. Vault accrues Goo for 1 hour, receiving ~sqrt(17 * 200) in emissions                                     |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~58 |  ~202 |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 |  TODO |
+    // |   ~58 |  ~202 |      2 |    17 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      9 | ~1.16 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 6. Bob swaps in a Gobbler 9 for 500 Goo and a Gobbler 8 out (Vault receives 30 bps in Goo as swap fee)      |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~58 |  ~702 |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      8 |  TODO |
+    // |   ~58 |  ~702 |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      8 | ~1.16 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 7. Vault accrues Goo for 1 hour, receiving ~sqrt(18 * 700) in emissions                                     |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~58 |  ~704 |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      8 |  TODO |
+    // |   ~58 |  ~704 |      2 |    18 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      8 | ~1.16 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 8. Vault mints 1 Gobbler for ~59.7 Goo based on VRGDA price (kDebt is recorded)                             |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~58 |  ~645 |      3 |    18 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      8 |  TODO |
+    // |   ~58 |  ~645 |      3 |    18 |    ~57 |   800 |      1 |      6 |     0 |  1500 |      1 |      8 | ~1.16 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 9. Alice swaps in a Gobbler 6 and 30 Goo for a Gobbler 9 out                                                |
-    // | (Vault receives 30 bps in Goo on the 3 mult and TODO XYZ Goo as swap fee, Vault does not record kDebt)      |
+    // | Vault receives 30 bps in Goo on the 3 mult as swap fee, Vault does not record kDebt) TODO double check fee  |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~58 |  ~675 |      3 |    15 |    ~57 |   770 |      1 |      9 |     0 |  1500 |      1 |      8 |  TODO |
+    // |   ~58 |  ~675 |      3 |    15 |    ~57 |   770 |      1 |      9 |     0 |  1500 |      1 |      8 | ~1.16 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 10. Bob deposits 10 Goo, minting him the portion of the total supply by which he increases the value        |
     // | of sqrt(Goo * Mult) as it relates to previous amounts (~1.7 GBR)                                            |
     // | (This triggers a small management fee, but not enough to fully offset the kDebt so no performance fee)      |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~60 |  ~685 |      3 |    15 |    ~57 |   770 |      1 |      9 |  ~1.7 |  1490 |      1 |      8 |X TODO |
+    // |   ~60 |  ~685 |      3 |    15 |    ~57 |   770 |      1 |      9 |  ~1.7 |  1490 |      1 |      8 | ~1.19 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 11. Gobblers reveal – Vault gets a Gobbler 6, plus ~55 Goo in emissions for the 1 day which elapsed         |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~60 |  ~740 |      3 |    21 |    ~57 |   770 |      1 |      9 |  ~1.7 |  1490 |      1 |      8 |  TODO |
+    // |   ~60 |  ~740 |      3 |    21 |    ~57 |   770 |      1 |      9 |  ~1.7 |  1490 |      1 |      8 | ~1.19 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 12. Bob deposits 10 more Goo, minting ~2.4 more GBR fractions                                               |
     // | (Between the swap fee and the mint, there's now enough to offset the kDebt so a performance fee is assessed)|
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~63 |  ~750 |      3 |    21 |    ~57 |   770 |      1 |      9 |  ~4.1 |  1480 |      1 |      8 |X TODO |
+    // |   ~63 |  ~750 |      3 |    21 |    ~57 |   770 |      1 |      9 |  ~4.1 |  1480 |      1 |      8 | ~2.30 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 13. Vault accrues Goo for 1 hour, receiving ~sqrt(18 * 700) in emissions (~2.9 Goo)                         |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~63 |  ~753 |      3 |    21 |    ~57 |   770 |      1 |      9 |  ~4.1 |  1480 |      1 |      8 |  TODO |
+    // |   ~63 |  ~753 |      3 |    21 |    ~57 |   770 |      1 |      9 |  ~4.1 |  1480 |      1 |      8 | ~2.30 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
     // | 14. Bob withdraws 20 Goo in exchange for burning ~2.6 GBR fractions (FeeTo accrues fee in GBR)              |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~60 |  ~733 |      3 |    21 |    ~57 |   770 |      1 |      9 |  ~1.5 |  1500 |      1 |      8 |X TODO |
+    // |   ~60 |  ~733 |      3 |    21 |    ~57 |   770 |      1 |      9 |  ~1.5 |  1500 |      1 |      8 | ~2.34 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // | 15. Alice withdraws 10 Goo and a Gobbler 6 for ~10.4 GBR fractions (TODO FeeTo accrues fee in GBR)          |
+    // | 15. Alice withdraws 10 Goo and a Gobbler 6 for ~10.4 GBR fractions TODO why no performance fee assessed ?   |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
-    // |   ~49 |  ~723 |      2 |    15 |    ~46 |   780 |      2 |     15 |  ~1.5 |  1500 |      1 |      8 |X TODO |
+    // |   ~49 |  ~723 |      2 |    15 |    ~46 |   780 |      2 |     15 |  ~1.5 |  1500 |      1 |      8 | ~2.34 |
     // |-------|-------|--------|-------|--------|-------|--------|--------|-------|-------|--------|--------|-------|
 
     function testMultipleDepositSwapMintWithdraw() public {
@@ -463,7 +456,7 @@ contract GooberIntegrationTest is GooberTest {
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
 
         // 9. Alice swaps in a Gobbler 6 and 30 Goo for a Gobbler 9 out
-        // Vault receives 30 bps in Goo on the 3 mult and TODO XYZ Goo as swap fee, Vault does not record kDebt)
+        // Vault receives 30 bps in Goo on the 3 mult as swap fee, Vault does not record kDebt)
         aliceSwapIn = new uint256[](1);
         aliceSwapIn[0] = 3; // Alice's Gobbler 6
         aliceSwapOut = new uint256[](1);
@@ -692,7 +685,6 @@ contract GooberIntegrationTest is GooberTest {
         // FeeTo
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
 
-        // TODO why no performance fee assessed on this one ?
         // 15. Alice withdraws 10 Goo and a Gobbler 6 for 10_416_352_000 GBR fractions (FeeTo accrues fee in GBR)
         vm.prank(alice);
         aliceWithdraw = new uint256[](1);
@@ -708,7 +700,7 @@ contract GooberIntegrationTest is GooberTest {
         aliceGooBalance += 10 ether; // 10 more Goo
         aliceGobblerBalance = 2; // new balance
         aliceMult = gobblers.getGobblerEmissionMultiple(4) + gobblers.getGobblerEmissionMultiple(3); // new multiple
-        feeToGooberBalance = 2_352_155_092;
+        // feeToGooberBalance = 2_352_155_092; // TODO why no performance fee assessed ?
         vaultLastTimestamp = time0 + 1 days + 2 hours + 1 days + 1 hours;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);

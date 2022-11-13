@@ -66,14 +66,14 @@ contract GooberInvariantsTest is GooberTest {
     }
 
     /// @dev Fee balances only go up.
-    function testInvariantFeeBalanceIncreases() public {
+    function invariant_FeeBalanceIncreases() public {
         uint256 gbrFeeBalance = goober.balanceOf(FEE_TO);
         assertGe(gbrFeeBalance, prevGbrFeeBalance);
         prevGbrFeeBalance = gbrFeeBalance;
     }
 
     /// @dev Goober vault multiplier = sum of deposited Gobbler multipliers
-    function testInvariantVaultMulEqualsSumOfEmissionMultiples() public {
+    function invariant_VaultMulEqualsSumOfEmissionMultiples() public {
         uint256 gooberMul = gobblers.getUserEmissionMultiple(address(goober));
         uint256[] memory depositedGobblers = user.getDepositedGobblers();
         uint256 depositedMulSum;
@@ -83,15 +83,16 @@ contract GooberInvariantsTest is GooberTest {
         assertEq(gooberMul, depositedMulSum);
     }
 
-    /// @dev Goober vault gobbler reserve = sum of deposited + minted gobblers
-    function testInvariantGobblerReserveEqualsVaultMultiplier() public {
+    /// @dev Goober vault gobbler reserve = gobblers emission multiple for vault address
+    function invariant_GobblerReserveEqualsVaultMultiplier() public {
         (, uint112 gobblerReserve,) = goober.getReserves();
         uint256 gooberMul = gobblers.getUserEmissionMultiple(address(goober));
         assertEq(gooberMul, gobblerReserve);
     }
 
     /// @dev Goober vault gobbler reserve = sum of deposited + minted gobblers
-    function testInvariantGobblerReserve() public {
+    /// TODO: reveal and account for minted gobbler multiples
+    function invariant_GobblerReserveEqualsSumOfDepositedAndMintedGobblers() public {
         (, uint112 gobblerReserve,) = goober.getReserves();
 
         uint256[] memory depositedGobblers = user.getDepositedGobblers();
@@ -100,5 +101,13 @@ contract GooberInvariantsTest is GooberTest {
             depositedMulSum += gobblers.getGobblerEmissionMultiple(depositedGobblers[i]);
         }
         assertEq(depositedMulSum, gobblerReserve);
+    }
+
+    /// @dev convertToAssets(totalSupply()) = goo balance, gobbler emission multiple
+    function invariant_convertAllSharesToAssetsEqualsTotalBalances() public {
+        (uint256 gooTokens, uint256 gobblerMult) = goober.convertToAssets(goober.totalSupply());
+        (uint112 gooAssets, uint112 gobblerAssets) = goober.totalAssets();
+        assertEq(gooTokens, gooAssets);
+        assertEq(gobblerMult, gobblerAssets);
     }
 }

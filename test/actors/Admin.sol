@@ -16,7 +16,7 @@ contract Admin is InvariantActor {
     ) InvariantActor(_goober, _goo, _gobblers, _randProvider, _vrfCoordinator) {}
 
     // TODO(Skimming goo breaks invariants)
-    function skim() external {
+    function skim() internal {
         //vm.startPrank(FEE_TO);
         //uint256 gooTankBalance = gobblers.gooBalance(address(goober));
         //if (gooTankBalance >= type(uint112).max) {
