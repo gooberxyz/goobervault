@@ -1,18 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.15;
 
-import "forge-std/Test.sol";
-
-import "art-gobblers/Goo.sol";
-import "art-gobblers/../test/utils/mocks/LinkToken.sol";
-import "art-gobblers/../lib/chainlink/contracts/src/v0.8/mocks/VRFCoordinatorMock.sol";
-import {ChainlinkV1RandProvider} from "art-gobblers/utils/rand/ChainlinkV1RandProvider.sol";
-import {Utilities} from "art-gobblers/../test/utils/Utilities.sol";
-import "art-gobblers/utils/GobblerReserve.sol";
-import "./mocks/MockERC721.sol";
-
-import "../src/Goober.sol";
-import "../src/interfaces/IGoober.sol";
+import "./utils/GooberTest.sol";
 
 // TODO Spot check data table and add FeeTo balance changes marked with "X TODO" (and copy to all following lines, until next change)
 // TODO Why swap fee only on Gobblers and not Goo in #9 ? (this is marked with TODO in data table and test code)
@@ -25,36 +14,16 @@ import "../src/interfaces/IGoober.sol";
 // TODO Refactor test helpers into base class or test utility lib
 // TODO Invariants
 
-contract GooberIntegrationTest is Test {
-    using stdStorage for StdStorage;
-
-    Goober internal goober;
-
-    Utilities internal utils;
-
-    ArtGobblers internal gobblers;
-    VRFCoordinatorMock internal vrfCoordinator;
-    LinkToken internal linkToken;
-    Goo internal goo;
-    Pages internal pages;
-    GobblerReserve internal team;
-    GobblerReserve internal community;
-    RandProvider internal randProvider;
-
-    bytes32 private keyHash;
-    uint256 private fee;
-
-    uint256[] internal ids;
-
+contract GooberIntegrationTest is GooberTest {
     // Time
-    uint32 internal constant TIME0 = 2_000_000_000;
+    uint32 internal constant time0 = uint32(TIME0);
 
     // Users
     address internal vault;
     address internal constant alice = address(0xAAAA);
     address internal constant bob = address(0xBBBB);
-    address internal constant feeTo = address(0xFFFF1);
-    address internal constant minter = address(0xFFFF2);
+    address internal constant feeTo = FEE_TO;
+    address internal constant minter = MINTER;
 
     // Goo
     uint256 internal aliceGooBalance;
@@ -93,56 +62,8 @@ contract GooberIntegrationTest is Test {
     uint32 internal expectedVaultLastTimestamp;
     uint32 internal vaultLastTimestamp;
 
-    function setUp() public {
-        // Start from TIME0
-        vm.warp(TIME0);
-
-        // Deploy Art Gobblers contracts
-        utils = new Utilities();
-        linkToken = new LinkToken();
-        vrfCoordinator = new VRFCoordinatorMock(address(linkToken));
-        address gobblerAddress = utils.predictContractAddress(address(this), 4);
-        address pagesAddress = utils.predictContractAddress(address(this), 5);
-        team = new GobblerReserve(ArtGobblers(gobblerAddress), address(this));
-        community = new GobblerReserve(ArtGobblers(gobblerAddress), address(this));
-        randProvider = new ChainlinkV1RandProvider({
-            _artGobblers: ArtGobblers(gobblerAddress),
-            _vrfCoordinator: address(vrfCoordinator),
-            _linkToken: address(linkToken),
-            _chainlinkKeyHash: keyHash,
-            _chainlinkFee: fee
-        });
-        goo = new Goo({
-            _artGobblers: utils.predictContractAddress(address(this), 1),
-            _pages: utils.predictContractAddress(address(this), 2)
-        });
-        gobblers = new ArtGobblers({
-            _merkleRoot: keccak256(abi.encodePacked(address(0xCAFE))),
-            _mintStart: block.timestamp,
-            _goo: goo,
-            _pages: Pages(pagesAddress),
-            _team: address(team),
-            _community: address(community),
-            _randProvider: randProvider,
-            _baseUri: "base",
-            _unrevealedUri: "",
-            _provenanceHash: keccak256(abi.encodePacked("provenance"))
-        });
-        pages = new Pages({
-            _mintStart: block.timestamp,
-            _goo: goo,
-            _community: address(0xBEEF),
-            _artGobblers: gobblers,
-            _baseUri: ""
-        });
-
-        // Deploy Goober contract
-        goober = new Goober({
-            _gobblersAddress: address(gobblers),
-            _gooAddress: address(goo),
-            _feeTo: feeTo,
-            _minter: minter
-        });
+    function setUp() public override {
+        super.setUp();
         vault = address(goober);
     }
 
@@ -349,7 +270,7 @@ contract GooberIntegrationTest is Test {
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
 
         // 3. Gobblers reveal – Alice gets a 9, 8, and 6 and Bob gets a Gobbler 9
-        vm.warp(TIME0 + 1 days);
+        vm.warp(time0 + 1 days);
         _setRandomnessAndReveal(4, "seed");
 
         // Check reveals
@@ -382,7 +303,7 @@ contract GooberIntegrationTest is Test {
         aliceGobblerBalance = 1;
         aliceMult = gobblers.getGobblerEmissionMultiple(3);
         feeToGooberBalance = 1_166_190_358; // 2% management fee, No performance fee bc there's no growth in k on initial deposit
-        vaultLastTimestamp = TIME0 + 1 days;
+        vaultLastTimestamp = time0 + 1 days;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -406,7 +327,7 @@ contract GooberIntegrationTest is Test {
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
 
         // 5. Vault accrues Goo for 1 hour, receiving ~sqrt(17 * 200) in emissions
-        vm.warp(TIME0 + 1 days + 1 hours);
+        vm.warp(time0 + 1 days + 1 hours);
 
         // Check balances
         totalVaultGooberBalance = 58_309_517_948;
@@ -457,7 +378,7 @@ contract GooberIntegrationTest is Test {
         bobGooBalance = 1510 ether; // 10 more Goo
         bobGobblerBalance = 1;
         bobMult = gobblers.getGobblerEmissionMultiple(2); // new bob multiple after swap
-        vaultLastTimestamp = TIME0 + 1 days + 1 hours; // new time
+        vaultLastTimestamp = time0 + 1 days + 1 hours; // new time
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -481,7 +402,7 @@ contract GooberIntegrationTest is Test {
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
 
         // 7. Vault accrues Goo for 1 hour, receiving ~sqrt(18 * 700) in emissions
-        vm.warp(TIME0 + 1 days + 2 hours);
+        vm.warp(time0 + 1 days + 2 hours);
 
         // Check balances
         totalVaultGooberBalance = 58_309_517_948;
@@ -518,7 +439,7 @@ contract GooberIntegrationTest is Test {
         totalVaultGooberBalance = 58_309_517_948;
         vaultGooBalance -= 59_772_562_115_376_111_594; // new balance, after paying ~59.7 Goo to mint
         vaultGobblerBalance = 2;
-        vaultLastTimestamp = TIME0 + 1 days + 2 hours; // new time
+        vaultLastTimestamp = time0 + 1 days + 2 hours; // new time
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -564,7 +485,7 @@ contract GooberIntegrationTest is Test {
         aliceGooBalance -= 30 ether; // alice swaps in 30 Goo
         aliceGobblerBalance = 1;
         aliceMult = gobblers.getGobblerEmissionMultiple(4); // new multiple after swap
-        vaultLastTimestamp = TIME0 + 1 days + 2 hours;
+        vaultLastTimestamp = time0 + 1 days + 2 hours;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -604,7 +525,7 @@ contract GooberIntegrationTest is Test {
         bobGobblerBalance = 1;
         bobMult = gobblers.getGobblerEmissionMultiple(2);
         feeToGooberBalance += 34_793_430; // Small management fee
-        vaultLastTimestamp = TIME0 + 1 days + 2 hours;
+        vaultLastTimestamp = time0 + 1 days + 2 hours;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -628,7 +549,7 @@ contract GooberIntegrationTest is Test {
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
 
         // 11. Gobblers reveal – Vault gets a Gobbler 6, plus ~55 Goo in emissions for the 1 day which elapsed
-        vm.warp(TIME0 + 1 days + 2 hours + 1 days);
+        vm.warp(time0 + 1 days + 2 hours + 1 days);
         _setRandomnessAndReveal(1, "seed2");
 
         // Check balances
@@ -638,7 +559,7 @@ contract GooberIntegrationTest is Test {
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
             + gobblers.getGobblerEmissionMultiple(5); // new multiple
         feeToGooberBalance = 1_200_983_788;
-        vaultLastTimestamp = TIME0 + 1 days + 2 hours;
+        vaultLastTimestamp = time0 + 1 days + 2 hours;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -677,7 +598,7 @@ contract GooberIntegrationTest is Test {
         bobGobblerBalance = 1;
         bobMult = gobblers.getGobblerEmissionMultiple(2);
         feeToGooberBalance += 1_112_696_324; // 10% performance fee assessed
-        vaultLastTimestamp = TIME0 + 1 days + 2 hours + 1 days; // new time
+        vaultLastTimestamp = time0 + 1 days + 2 hours + 1 days; // new time
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -701,7 +622,7 @@ contract GooberIntegrationTest is Test {
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
 
         // 13. Vault accrues Goo for 1 hour, receiving ~sqrt(18 * 700) in emissions
-        vm.warp(TIME0 + 1 days + 2 hours + 1 days + 1 hours);
+        vm.warp(time0 + 1 days + 2 hours + 1 days + 1 hours);
 
         // Check balances
         totalVaultGooberBalance = 62_449_776_402;
@@ -710,7 +631,7 @@ contract GooberIntegrationTest is Test {
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
             + gobblers.getGobblerEmissionMultiple(5);
         feeToGooberBalance = 2_313_680_112;
-        vaultLastTimestamp = TIME0 + 1 days + 2 hours + 1 days;
+        vaultLastTimestamp = time0 + 1 days + 2 hours + 1 days;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -748,7 +669,7 @@ contract GooberIntegrationTest is Test {
         bobGobblerBalance = 1;
         bobMult = gobblers.getGobblerEmissionMultiple(2);
         feeToGooberBalance += 38_474_980; // fee assessed
-        vaultLastTimestamp = TIME0 + 1 days + 2 hours + 1 days + 1 hours; // new time
+        vaultLastTimestamp = time0 + 1 days + 2 hours + 1 days + 1 hours; // new time
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -788,7 +709,7 @@ contract GooberIntegrationTest is Test {
         aliceGobblerBalance = 2; // new balance
         aliceMult = gobblers.getGobblerEmissionMultiple(4) + gobblers.getGobblerEmissionMultiple(3); // new multiple
         feeToGooberBalance = 2_352_155_092;
-        vaultLastTimestamp = TIME0 + 1 days + 2 hours + 1 days + 1 hours;
+        vaultLastTimestamp = time0 + 1 days + 2 hours + 1 days + 1 hours;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
         (expectedVaultGooBalance, expectedVaultMult) = goober.totalAssets();
@@ -810,22 +731,5 @@ contract GooberIntegrationTest is Test {
         assertEq(gobblers.getUserEmissionMultiple(bob), bobMult);
         // FeeTo
         assertEq(goober.balanceOf(feeTo), feeToGooberBalance);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                        Test Helpers
-    //////////////////////////////////////////////////////////////*/
-
-    function _writeTokenBalance(address who, address token, uint256 amt) internal {
-        stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
-    }
-
-    /// @dev Call back vrf with randomness and reveal gobblers.
-    function _setRandomnessAndReveal(uint256 numReveal, string memory seed) internal {
-        bytes32 requestId = gobblers.requestRandomSeed();
-        uint256 randomness = uint256(keccak256(abi.encodePacked(seed)));
-        // call back from coordinator
-        vrfCoordinator.callBackWithRandomness(requestId, randomness, address(randProvider));
-        gobblers.revealGobblers(numReveal);
     }
 }
