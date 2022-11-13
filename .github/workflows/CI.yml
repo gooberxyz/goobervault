@@ -24,13 +24,13 @@ jobs:
           version: nightly
 
       - name: Run solhint lint check
-        run: npm run lint:check
+        run: forge fmt --check && solhint --config ./.solhint.json 'src/**/*.sol'
 
       - name: Install submodules
         run: forge install
 
-      - name: Run tests
-        run: forge test --optimize
+      - name: Run tests and check snapshot
+        run: forge snapshot --check --optimize -vvv
 
       - name: Coverage
         run: |
