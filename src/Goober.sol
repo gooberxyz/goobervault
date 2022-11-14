@@ -20,7 +20,6 @@ import "./interfaces/IGooberCallee.sol";
 /// @author eth_call
 /// @author goerlibot
 /// @author thal0x
-/// @author homeslashpluto
 /// @notice Goober is an experimental Uniswap V2 and EIP-4626 flavored vault to optimize Art
 /// @notice production for the decentralized art factory by Justin Roiland and Paradigm.
 contract Goober is ReentrancyGuard, ERC20, IGoober {
@@ -93,7 +92,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @param _gooAddress - The address of the Goo contract/token.
     /// @param _feeTo - The admin and address to accrue fees to.
     /// @param _minter - The address able to mint gobblers to the pool.
-    /// @notice The minter is able to mint using pool assets based on conditions defined in the mintGobbler() function.
+    /// @notice The minter is able to mint using pool assets based on conditions defined in the mintGobbler function.
     constructor(address _gobblersAddress, address _gooAddress, address _feeTo, address _minter)
         ERC20("Goober", "GBR", 18)
     {
@@ -570,7 +569,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /*//////////////////////////////////////////////////////////////
-    // External: Mutating, Admin
+    // External: Mutating, Restricted Access
     //////////////////////////////////////////////////////////////*/
 
     // Access Control
