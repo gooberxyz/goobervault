@@ -22,6 +22,7 @@ import "./interfaces/IGooberCallee.sol";
 contract Goober is ReentrancyGuard, ERC20, IGoober {
     // We want to ensure all transfers are safe
     using SafeTransferLib for Goo;
+    using SafeTransferLib for ERC20;
     // We use this for fixed point WAD scalar math
     using FixedPointMathLib for uint256;
     // This is the Uniswap V2 112 bit Q math, updated for Solidity 8.
@@ -632,12 +633,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @inheritdoc IGoober
     function skim(address erc20) external nonReentrant onlyFeeTo {
         /// @dev Contract should never hold ERC20 tokens (only virtual GOO).
-        uint256 contractBalance = IERC20(erc20).balanceOf(address(this));
+        uint256 contractBalance = ERC20(erc20).balanceOf(address(this));
         if (contractBalance == 0) {
             revert NoSkim();
         }
         // Transfer the excess goo to the admin for handling.
-        IERC20(erc20).transfer(msg.sender, contractBalance);
+        ERC20(erc20).safeTransfer(msg.sender, contractBalance);
     }
 
     function flagGobbler(uint256 tokenId, bool _flagged) external onlyFeeTo {
