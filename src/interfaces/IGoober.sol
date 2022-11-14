@@ -5,9 +5,7 @@ pragma solidity >=0.8.0;
 import "./IERC20Metadata.sol";
 import "./IERC721Receiver.sol";
 
-// TODO(IERC20 solmate overrides)
-// This should really be IERC20Metadata as well
-// So we can get all the natspec
+// Would be nice to inherit from IERC20 here.
 interface IGoober is IERC721Receiver {
     // Errors
 
@@ -25,6 +23,7 @@ interface IGoober is IERC721Receiver {
     // Mint Errors
     error AuctionPriceTooHigh(uint256 auctionPrice, uint256 poolPrice);
     error InsufficientLiquidity(uint256 gooBalance, uint256 gobblerBalance);
+    error MintFailed();
 
     // NFT Errors
     error InvalidNFT();
@@ -89,10 +88,8 @@ interface IGoober is IERC721Receiver {
         uint256 fractions
     );
 
-    // TODO(Test this)
     event FeesAccrued(address indexed feeTo, uint256 fractions, bool performanceFee, uint256 _deltaK);
 
-    // TODO(Test this)
     event Swap(
         address indexed caller,
         address indexed receiver,
@@ -102,7 +99,6 @@ interface IGoober is IERC721Receiver {
         uint256 gobblerMultOut
     );
 
-    // TODO(Test this)
     event Sync(uint256 gooBalance, uint256 multBalance);
 
     /*//////////////////////////////////////////////////////////////

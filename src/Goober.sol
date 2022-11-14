@@ -8,17 +8,13 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
+import "./interfaces/IERC20Metadata.sol";
 import "./math/UQ112x112.sol";
 import "./interfaces/IGoober.sol";
 import "./interfaces/IGooberCallee.sol";
 
-// TODO(Can we get rid of permanently locked liquidity?)
-// TODO(Custom errors to replace all reverts)
-// TODO(Do we want to emit any info about debt accrual and repayment that we dont right now)
-// TODO(Medium sev slither detectors)
-// TODO(Consider removing oracle to get rid of 112 bit math since we are reading remote slots anyway)
-
 // Goober is a Uniswap V2 and EIP-4626 flavored yield vault to optimize gobbler/goo production for Art Gobblers.
+// @inheritdoc IERC20Metadata
 contract Goober is ReentrancyGuard, ERC20, IGoober {
     // We want to ensure all transfers are safe
     using SafeTransferLib for Goo;
@@ -37,7 +33,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @notice The Art Gobblers NFT contract.
     ArtGobblers public immutable artGobblers;
 
-    // TODO(Can we engineer this out?)
     /// @notice The liquidity locked forever in the pool.
     uint16 private constant MINIMUM_LIQUIDITY = 1e3;
     /// @notice A scalar for scaling up and down to basis points.
@@ -73,7 +68,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     /// @notice Last block timestamp
     /// @dev Yes, the oracle accumulators will reset in 2036.
-    uint32 private blockTimestampLast; // uses single storage slot, accessible via getReserves
+    uint32 public blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     /// @notice Flagged NFTs cannot be deposited or swapped in.
     mapping(uint256 => bool) public flagged;
@@ -141,7 +136,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             mint = true;
         } else {
             if (_gooBalance > _auctionPrice) {
-                // TODO(we are loosing precision here)
                 auctionPricePerMult = (_auctionPrice * BPS_SCALAR) / AVERAGE_MULT_BPS;
                 poolPricePerMult = (_gooBalance / _gobblerBalance);
                 mint = poolPricePerMult > auctionPricePerMult;
@@ -312,7 +306,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         }
 
-        // TODO(Do we need these oracle accumulators, or can we get rid of the uint112 limitation)
         // These are accumulators which can be used for a goo/gobbler mult twap
         (uint112 castGooReserve, uint112 castGobblerReserve) = (uint112(_gooReserve), uint112(_gobblerReserve));
         if (timeElapsed > 0 && _gooReserve != 0 && _gobblerReserve != 0) {
@@ -473,7 +466,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         );
         if (_totalSupply == 0) {
             // We scale this up to start the fractions at the right order of magnitude at pool launch
-            fractions = _k - MINIMUM_LIQUIDITY;
+            // We scale this by 1e9 to simulate 2 ERC20s at launch because gobbler mult are integers
+            // rather than 1e18
+            fractions = _k * 1e9 - MINIMUM_LIQUIDITY;
         } else {
             fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
         }
@@ -611,6 +606,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         // Mint Gobblers to pool when our Goo per Mult > Auction (VRGDA) Goo per Mult
         while (mint) {
             // Mint a new gobbler
+            //slither-disable-next-line unused-return
             artGobblers.mintFromGoo(mintPrice, true);
 
             // _shouldMint already prevents an overflow here
@@ -634,6 +630,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     function skim(address erc20) external nonReentrant onlyFeeTo {
         /// @dev Contract should never hold ERC20 tokens (only virtual GOO).
         uint256 contractBalance = ERC20(erc20).balanceOf(address(this));
+        //slither-disable-next-line dangerous-strict-equalities
         if (contractBalance == 0) {
             revert NoSkim();
         }
@@ -684,7 +681,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             (uint256 _k,,, uint256 _kDelta,) = _kCalculations(_gooBalance, _gobblerBalanceMult, _kLast, 0, true);
             if (_totalSupply == 0) {
                 // We scale this up to start the fractions at the right order of magnitude at pool launch
-                fractions = _k - MINIMUM_LIQUIDITY;
+                // We scale this by 1e9 to simulate 2 ERC20s at launch because gobbler mult are integers
+                // rather than 1e18
+                fractions = _k * 1e9 - MINIMUM_LIQUIDITY;
             } else {
                 fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
             }
@@ -732,7 +731,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         _performanceFee(_gooReserve, _gobblerReserveMult);
 
         // Optimistically transfer goo if any.
-        if (gooTokens >= 0) {
+        if (gooTokens > 0) {
             artGobblers.removeGoo(gooTokens);
             goo.safeTransfer(receiver, gooTokens);
             _gooBalance -= gooTokens;
@@ -811,7 +810,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         address receiver,
         bytes calldata data
     ) public nonReentrant returns (int256) {
-        // TODO(Coverage for these revert)
         if (!(gooOut > 0 || gobblersOut.length > 0)) {
             revert InsufficientOutputAmount(gooOut, gobblersOut.length);
         }
@@ -820,7 +818,16 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         }
 
         // Intermediary struct so we don't get stack too deep
-        SwapData memory internalData;
+        SwapData memory internalData = SwapData({
+            gooReserve: 0,
+            gobblerReserve: 0,
+            gooBalance: 0,
+            gobblerBalance: 0,
+            multOut: 0,
+            amount0In: 0,
+            amount1In: 0,
+            erroneousGoo: 0
+        });
 
         (internalData.gooReserve, internalData.gobblerReserve,) = getReserves(); // gas savings
 
@@ -898,7 +905,6 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         bytes calldata data
     ) external ensure(deadline) returns (int256 erroneousGoo) {
         erroneousGoo = previewSwap(gobblersIn, gooIn, gobblersOut, gooOut);
-        // TODO(Cover when we have some amount of erroneousGoo allowed in tests)
         if (erroneousGoo < 0) {
             uint256 additionalGooOut = uint256(-erroneousGoo);
             if (additionalGooOut > erroneousGooAbs) {

@@ -241,7 +241,7 @@ contract GooberUnitTest is GooberTest {
 
         // Check Deposit event
         vm.expectEmit(true, true, false, true, address(goober));
-        emit Deposit(users[1], users[1], artGobblers, gooToDeposit, 57143327590);
+        emit Deposit(users[1], users[1], artGobblers, gooToDeposit, 57143328569039999020);
 
         // TODO
         // Check FeesAccrued events
@@ -261,7 +261,7 @@ contract GooberUnitTest is GooberTest {
         uint256 fractions = goober.deposit(artGobblers, gooToDeposit, users[1]);
         vm.stopPrank();
 
-        assertEq(fractions, 57143327590);
+        assertEq(fractions, 57143328569039999020);
     }
 
     // function testRevertDepositWhenInsufficientLiquidityMined() public {
@@ -358,7 +358,7 @@ contract GooberUnitTest is GooberTest {
 
         // Check how many fractions we receive.
         uint256 fractions = goober.deposit(artGobblers1, 500 ether, users[1]);
-        assertEq(fractions, 65740397558);
+        assertEq(fractions, 65740398537519999020);
         vm.stopPrank();
         // K should be 4500 here, we check.
         (uint256 _GooReserve0, uint256 _GobblerReserve0,) = goober.getReserves();
@@ -393,17 +393,16 @@ contract GooberUnitTest is GooberTest {
         vm.expectEmit(true, false, false, true);
         // The summed 'fractions' that FeesAccrued emits minus fes are
         // equal to how many fractions total have been accrued by the user.
-        emit FeesAccrued(FEE_TO, 4952963124, true, kDelta);
-        emit FeesAccrued(FEE_TO, 1039027993, false, 0);
+        emit FeesAccrued(FEE_TO, 4952963198578904942, true, kDelta);
         // TODO(Calc how much are lost to fees below with the 30bps)
         uint256 fractionsNew = goober.withdraw(artGobblers1, 500 ether, users[1], users[1]);
         // We withdrew everything we put in, and still own 10197914272 shares,
         // in other words we grew our position by 10197914272 shares.
-        assertEq(fractionsNew, 55542483286);
+        assertEq(fractionsNew, 55542484114047516323);
         uint256 fractionsLeft = goober.balanceOf(users[1]);
         assertEq(fractionsLeft, fractions - fractionsNew);
         // We have 10197914272 shares left.
-        assertEq(fractionsLeft, 10197914272);
+        assertEq(fractionsLeft, 10197914423472482697);
 
         vm.stopPrank();
     }
@@ -1004,8 +1003,8 @@ contract GooberUnitTest is GooberTest {
         uint256 noSlippageFractions = goober.convertToFractions(100, 100);
         assertEq(noSlippageFractions, 100);
         goober.deposit(artGobblers, 100 ether, users[1]);
-        noSlippageFractions = goober.convertToFractions(9, 100 ether);
-        assertEq(noSlippageFractions, 29999999000);
+        noSlippageFractions = goober.convertToFractions(8, 99999996666666669999);
+        assertEq(noSlippageFractions, 28284270775999999037);
     }
 
     function testUnitConvertToAssets() public {
@@ -1020,9 +1019,11 @@ contract GooberUnitTest is GooberTest {
         assertEq(gooToken, 0);
         assertEq(gobblerMult, 0);
         goober.deposit(artGobblers, 100 ether, users[1]);
-        (gooToken, gobblerMult) = goober.convertToAssets(29999999000);
-        assertEq(gooToken, 100 ether);
-        assertEq(gobblerMult, 9);
+        (gooToken, gobblerMult) = goober.convertToAssets(29999999000 * 1e9);
+        // Because management fee
+        assertEq(gooToken, 99999996666666669999);
+        // Because management fee
+        assertEq(gobblerMult, 8);
     }
 
     function testUnitPreviewDeposit() public {
