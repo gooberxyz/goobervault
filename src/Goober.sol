@@ -13,13 +13,22 @@ import "./math/UQ112x112.sol";
 import "./interfaces/IGoober.sol";
 import "./interfaces/IGooberCallee.sol";
 
-// Goober is a Uniswap V2 and EIP-4626 flavored yield vault to optimize gobbler/goo production for Art Gobblers.
-// @inheritdoc IERC20Metadata
+/// @title goober_xyz
+/// @author 0xalcibiades
+/// @author bandit.eth
+/// @author neodaoist
+/// @author eth_call
+/// @author goerlibot
+/// @author thal0x
+/// @author homeslashpluto
+/// @custom:experimental Goober is a experimental Uniswap V2 and EIP-4626 flavored vault to optimize Art
+/// Gobblers/Goo production for the experimental decentralized art factory by Justin Roiland
+/// and Paradigm.
 contract Goober is ReentrancyGuard, ERC20, IGoober {
-    // We want to ensure all transfers are safe
+    // We want to ensure all transfers are safe.
     using SafeTransferLib for Goo;
     using SafeTransferLib for ERC20;
-    // We use this for fixed point WAD scalar math
+    // We use this for fixed point WAD scalar math.
     using FixedPointMathLib for uint256;
     // This is the Uniswap V2 112 bit Q math, updated for Solidity 8.
     using UQ112x112 for uint224;
