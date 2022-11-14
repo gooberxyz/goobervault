@@ -311,14 +311,16 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         }
 
+        // TODO(Do we need these oracle accumulators, or can we get rid of the uint112 limitation)
         // These are accumulators which can be used for a goo/gobbler mult twap
+        (uint112 castGooReserve, uint112 castGobblerReserve) = (uint112(_gooReserve), uint112(_gobblerReserve));
         if (timeElapsed > 0 && _gooReserve != 0 && _gobblerReserve != 0) {
             unchecked {
                 // * never overflows, and + overflow is desired
                 priceGooCumulativeLast +=
-                    uint256(UQ112x112.encode(uint112(_gobblerReserve)).uqdiv(uint112(_gooReserve))) * timeElapsed;
+                    uint256(UQ112x112.encode(uint112(castGooReserve)).uqdiv(castGobblerReserve)) * timeElapsed;
                 priceGobblerCumulativeLast +=
-                    uint256(UQ112x112.encode(uint112(_gooReserve)).uqdiv(uint112(_gobblerReserve))) * timeElapsed;
+                    uint256(UQ112x112.encode(uint112(castGobblerReserve)).uqdiv(uint112(castGooReserve))) * timeElapsed;
             }
         }
 
@@ -348,7 +350,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         }
 
         // Emit the reserves which can be used to chart the growth of the pool.
-        emit Sync(uint112(_gooBalance), uint112(_gobblerBalance));
+        emit Sync(_gooBalance, _gobblerBalance);
     }
 
     /// @notice accrues the performance fee on the growth of K if any, offset by kDebt
@@ -402,9 +404,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IGoober
-    function totalAssets() public view returns (uint112 gooTokens, uint112 gobblerMult) {
-        gooTokens = uint112(artGobblers.gooBalance(address(this)));
-        gobblerMult = uint112(artGobblers.getUserEmissionMultiple(address(this)));
+    function totalAssets() public view returns (uint256 gooTokens, uint256 gobblerMult) {
+        gooTokens = artGobblers.gooBalance(address(this));
+        gobblerMult = artGobblers.getUserEmissionMultiple(address(this));
     }
 
     /// @inheritdoc IGoober
@@ -437,17 +439,17 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     function getReserves()
         public
         view
-        returns (uint112 _gooReserve, uint112 _gobblerReserve, uint32 _blockTimestampLast)
+        returns (uint256 _gooReserve, uint256 _gobblerReserve, uint32 _blockTimestampLast)
     {
-        _gooReserve = uint112(artGobblers.gooBalance(address(this)));
-        _gobblerReserve = uint112(artGobblers.getUserEmissionMultiple(address(this)));
+        _gooReserve = artGobblers.gooBalance(address(this));
+        _gobblerReserve = artGobblers.getUserEmissionMultiple(address(this));
         _blockTimestampLast = blockTimestampLast;
     }
 
     /// @inheritdoc IGoober
     function previewDeposit(uint256[] calldata gobblers, uint256 gooTokens) external view returns (uint256 fractions) {
         // Collect a virtual performance fee.
-        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
+        (uint256 _gooReserve, uint256 _gobblerReserveMult,) = getReserves();
         (uint256 pFee,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
         // Increment virtual total supply by performance fee.
         uint256 _totalSupply = pFee + totalSupply;
@@ -623,23 +625,14 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IGoober
-    function skimGoo() public nonReentrant onlyFeeTo {
-        /// @dev if goo has overflown uint112 in the tank, this is the escape valve.
-        uint256 gooTankBalance = artGobblers.gooBalance(address(this));
-        // This will unstick the contract, in the unlikely case this occurs.
-        if (gooTankBalance >= type(uint112).max) {
-            artGobblers.removeGoo(type(uint112).max + 1);
-        }
-        /// @dev Contract should never hold GOO tokens (only virtual GOO).
-        uint256 contractGooBalance = goo.balanceOf(address(this));
-        if (contractGooBalance == 0) {
+    function skim(address erc20) public nonReentrant onlyFeeTo {
+        /// @dev Contract should never hold ERC20 tokens (only virtual GOO).
+        uint256 contractBalance = IERC20(erc20).balanceOf(address(this));
+        if (contractBalance == 0) {
             revert NoSkim();
         }
         // Transfer the excess goo to the admin for handling.
-        goo.safeTransfer(msg.sender, contractGooBalance);
-        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
-        // TODO(Is this right?)
-        _update(_gooReserve, _gobblerReserveMult, _gooReserve, _gobblerReserveMult, false, false);
+        IERC20(erc20).transfer(msg.sender, contractBalance);
     }
 
     function flagGobbler(uint256 tokenId, bool _flagged) public onlyFeeTo {
@@ -657,7 +650,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         returns (uint256 fractions)
     {
         // Get reserve balances before they are updated from deposit transfers.
-        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves(); // gas savings
+        (uint256 _gooReserve, uint256 _gobblerReserveMult,) = getReserves(); // gas savings
 
         // Assess performance fee since last transaction.
         _performanceFee(_gooReserve, _gobblerReserveMult);
@@ -674,7 +667,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         }
 
         // Get the new reserves after transfers in.
-        (uint112 _gooBalance, uint112 _gobblerBalanceMult,) = getReserves();
+        (uint256 _gooBalance, uint256 _gobblerBalanceMult,) = getReserves();
         {
             // Check the total token supply.
             uint256 _totalSupply = totalSupply;
@@ -726,8 +719,8 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         returns (uint256 fractions)
     {
         // Get starting reserves.
-        (uint112 _gooReserve, uint112 _gobblerReserveMult,) = getReserves();
-        (uint112 _gooBalance, uint112 _gobblerBalanceMult) = (_gooReserve, _gobblerReserveMult);
+        (uint256 _gooReserve, uint256 _gobblerReserveMult,) = getReserves();
+        (uint256 _gooBalance, uint256 _gobblerBalanceMult) = (_gooReserve, _gobblerReserveMult);
 
         // Assess performance fee since last transaction.
         _performanceFee(_gooReserve, _gobblerReserveMult);
@@ -736,7 +729,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         if (gooTokens >= 0) {
             artGobblers.removeGoo(gooTokens);
             goo.safeTransfer(receiver, gooTokens);
-            _gooBalance -= uint112(gooTokens);
+            _gooBalance -= gooTokens;
         }
 
         // Optimistically transfer gobblers if any.
@@ -747,7 +740,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 revert InvalidMultiplier(gobblers[i]);
             }
             artGobblers.transferFrom(address(this), receiver, gobblers[i]);
-            _gobblerBalanceMult -= uint112(gobblerMult);
+            _gobblerBalanceMult -= gobblerMult;
         }
 
         // Measure change.
@@ -841,7 +834,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 if (gobblerMult < 6) {
                     revert InvalidMultiplier(gobblersOut[i]);
                 }
-                internalData.multOut += uint112(gobblerMult);
+                internalData.multOut += gobblerMult;
                 artGobblers.transferFrom(address(this), receiver, gobblersOut[i]);
             }
         }

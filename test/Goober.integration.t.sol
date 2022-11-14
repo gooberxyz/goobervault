@@ -50,8 +50,8 @@ contract GooberIntegrationTest is GooberTest {
     // Vault Accounting
     uint256 internal expectedVaultGooBalance;
     uint256 internal expectedVaultMult;
-    uint112 internal expectedVaultGooReserve;
-    uint112 internal expectedVaultGobblersReserve;
+    uint256 internal expectedVaultGooReserve;
+    uint256 internal expectedVaultGobblersReserve;
     uint32 internal expectedVaultLastTimestamp;
     uint32 internal vaultLastTimestamp;
 

@@ -85,7 +85,7 @@ contract GooberInvariantsTest is GooberTest {
 
     /// @dev Goober vault gobbler reserve = gobblers emission multiple for vault address
     function invariant_GobblerReserveEqualsVaultMultiplier() public {
-        (, uint112 gobblerReserve,) = goober.getReserves();
+        (, uint256 gobblerReserve,) = goober.getReserves();
         uint256 gooberMul = gobblers.getUserEmissionMultiple(address(goober));
         assertEq(gooberMul, gobblerReserve);
     }
@@ -93,7 +93,7 @@ contract GooberInvariantsTest is GooberTest {
     /// @dev Goober vault gobbler reserve = sum of deposited + minted gobblers
     /// TODO: reveal and account for minted gobbler multiples
     function invariant_GobblerReserveEqualsSumOfDepositedAndMintedGobblers() public {
-        (, uint112 gobblerReserve,) = goober.getReserves();
+        (, uint256 gobblerReserve,) = goober.getReserves();
 
         uint256[] memory depositedGobblers = user.getDepositedGobblers();
         uint256 depositedMulSum;
@@ -106,7 +106,7 @@ contract GooberInvariantsTest is GooberTest {
     /// @dev convertToAssets(totalSupply()) = goo balance, gobbler emission multiple
     function invariant_convertAllSharesToAssetsEqualsTotalBalances() public {
         (uint256 gooTokens, uint256 gobblerMult) = goober.convertToAssets(goober.totalSupply());
-        (uint112 gooAssets, uint112 gobblerAssets) = goober.totalAssets();
+        (uint256 gooAssets, uint256 gobblerAssets) = goober.totalAssets();
         assertEq(gooTokens, gooAssets);
         assertEq(gobblerMult, gobblerAssets);
     }
