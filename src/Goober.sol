@@ -466,7 +466,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         );
         if (_totalSupply == 0) {
             // We scale this up to start the fractions at the right order of magnitude at pool launch
-            fractions = _k - MINIMUM_LIQUIDITY;
+            // We scale this by 1e9 to simulate 2 ERC20s at launch because gobbler mult are integers
+            // rather than 1e18
+            fractions = _k * 1e9 - MINIMUM_LIQUIDITY;
         } else {
             fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
         }
@@ -679,7 +681,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             (uint256 _k,,, uint256 _kDelta,) = _kCalculations(_gooBalance, _gobblerBalanceMult, _kLast, 0, true);
             if (_totalSupply == 0) {
                 // We scale this up to start the fractions at the right order of magnitude at pool launch
-                fractions = _k - MINIMUM_LIQUIDITY;
+                // We scale this by 1e9 to simulate 2 ERC20s at launch because gobbler mult are integers
+                // rather than 1e18
+                fractions = _k * 1e9 - MINIMUM_LIQUIDITY;
             } else {
                 fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
             }

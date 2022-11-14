@@ -287,7 +287,7 @@ contract GooberIntegrationTest is GooberTest {
         vm.stopPrank();
 
         // Check balances
-        totalVaultGooberBalance = 58_309_517_948; // ~58 GBR fractions minted total
+        totalVaultGooberBalance = 58309518947999999000; // ~58 GBR fractions minted total
         vaultGooBalance = 200 ether; // 200 Goo
         vaultGobblerBalance = 2; // 2 Gobblers
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(2);
@@ -295,7 +295,7 @@ contract GooberIntegrationTest is GooberTest {
         aliceGooBalance -= 200 ether;
         aliceGobblerBalance = 1;
         aliceMult = gobblers.getGobblerEmissionMultiple(3);
-        feeToGooberBalance = 1_166_190_358; // 2% management fee, No performance fee bc there's no growth in k on initial deposit
+        feeToGooberBalance = 1166190378959999980; // 2% management fee, No performance fee bc there's no growth in k on initial deposit
         vaultLastTimestamp = time0 + 1 days;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
@@ -323,7 +323,7 @@ contract GooberIntegrationTest is GooberTest {
         vm.warp(time0 + 1 days + 1 hours);
 
         // Check balances
-        totalVaultGooberBalance = 58_309_517_948;
+        totalVaultGooberBalance = 58309518947999999000;
         vaultGooBalance += 2_436_941_761_741_097_378;
         vaultGobblerBalance = 2;
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(2);
@@ -363,7 +363,7 @@ contract GooberIntegrationTest is GooberTest {
         vm.stopPrank();
 
         // Check balances
-        totalVaultGooberBalance = 58_309_517_948;
+        totalVaultGooberBalance = 58309518947999999000;
         vaultGooBalance -= 10 ether; // 10 less Goo
         vaultGobblerBalance = 2;
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(4); // new vault multiple after swap
@@ -398,7 +398,7 @@ contract GooberIntegrationTest is GooberTest {
         vm.warp(time0 + 1 days + 2 hours);
 
         // Check balances
-        totalVaultGooberBalance = 58_309_517_948;
+        totalVaultGooberBalance = 58309518947999999000;
         vaultGooBalance += 2_460_087_857_714_628_484; // vault receives ~2.4 Goo in emissions
         vaultGobblerBalance = 2;
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(4); // new vault multiple after swap
@@ -429,7 +429,7 @@ contract GooberIntegrationTest is GooberTest {
         goober.mintGobbler();
 
         // Check balances
-        totalVaultGooberBalance = 58_309_517_948;
+        totalVaultGooberBalance = 58309518947999999000;
         vaultGooBalance -= 59_772_562_115_376_111_594; // new balance, after paying ~59.7 Goo to mint
         vaultGobblerBalance = 2;
         vaultLastTimestamp = time0 + 1 days + 2 hours; // new time
@@ -470,7 +470,7 @@ contract GooberIntegrationTest is GooberTest {
         vm.stopPrank();
 
         // Check balances
-        totalVaultGooberBalance = 58_309_517_948;
+        totalVaultGooberBalance = 58309518947999999000;
         vaultGooBalance += 30 ether; // new balance, after alice swaps in 30 Goo
         vaultGobblerBalance = 2;
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3); // new multiple after swap
@@ -509,7 +509,7 @@ contract GooberIntegrationTest is GooberTest {
         uint256 bobFractions = goober.deposit(emptyGobblers, 10 ether, bob);
 
         // Check balances
-        totalVaultGooberBalance += 1_739_671_538; // ~1.7 more GBR fractions minted
+        totalVaultGooberBalance += 1704878137032935137; // ~1.7 more GBR fractions minted
         vaultGooBalance += 10 ether; // bob deposits 10 Goo
         vaultGobblerBalance = 2;
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3);
@@ -517,7 +517,8 @@ contract GooberIntegrationTest is GooberTest {
         bobGooBalance -= 10 ether; // 10 less Goo
         bobGobblerBalance = 1;
         bobMult = gobblers.getGobblerEmissionMultiple(2);
-        feeToGooberBalance += 34_793_430; // Small management fee
+        feeToGooberBalance += 34793431368019084; // Small management fee
+        totalVaultGooberBalance += 34793431368019084;
         vaultLastTimestamp = time0 + 1 days + 2 hours;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
@@ -546,12 +547,12 @@ contract GooberIntegrationTest is GooberTest {
         _setRandomnessAndReveal(1, "seed2");
 
         // Check balances
-        totalVaultGooberBalance = 60_049_189_486;
+        totalVaultGooberBalance = 60049190516400953221;
         vaultGooBalance += 55_002_970_768_153_471_144; // Goo emissions
         vaultGobblerBalance = 2;
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
             + gobblers.getGobblerEmissionMultiple(5); // new multiple
-        feeToGooberBalance = 1_200_983_788;
+        feeToGooberBalance = 1200983810328019064;
         vaultLastTimestamp = time0 + 1 days + 2 hours;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
@@ -581,7 +582,7 @@ contract GooberIntegrationTest is GooberTest {
         bobFractions += goober.deposit(emptyGobblers, 10 ether, bob);
 
         // Check balances
-        totalVaultGooberBalance += 2_400_586_916; // ~2.4 more fractions minted
+        totalVaultGooberBalance = 62449777474818190833; //  more fractions minted
         vaultGooBalance += 10 ether; // 10 more Goo from Bob
         vaultGobblerBalance = 2;
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
@@ -590,7 +591,8 @@ contract GooberIntegrationTest is GooberTest {
         bobGooBalance -= 10 ether; // 10 less Goo
         bobGobblerBalance = 1;
         bobMult = gobblers.getGobblerEmissionMultiple(2);
-        feeToGooberBalance += 1_112_696_324; // 10% performance fee assessed
+        feeToGooberBalance += 26283481920336162; // 2% deposit fee assed
+        feeToGooberBalance += 1086412862400429478; // 10% performance fee assessed
         vaultLastTimestamp = time0 + 1 days + 2 hours + 1 days; // new time
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
@@ -618,12 +620,11 @@ contract GooberIntegrationTest is GooberTest {
         vm.warp(time0 + 1 days + 2 hours + 1 days + 1 hours);
 
         // Check balances
-        totalVaultGooberBalance = 62_449_776_402;
+        totalVaultGooberBalance = 62449777474818190833;
         vaultGooBalance += 2_967_939_719_600_851_528; // ~2.9 Goo in emissions
         vaultGobblerBalance = 2;
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
             + gobblers.getGobblerEmissionMultiple(5);
-        feeToGooberBalance = 2_313_680_112;
         vaultLastTimestamp = time0 + 1 days + 2 hours + 1 days;
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
@@ -652,7 +653,7 @@ contract GooberIntegrationTest is GooberTest {
         uint256 fractionsWithdrawn = goober.withdraw(emptyGobblers, 20 ether, bob, bob);
 
         // Check balances
-        totalVaultGooberBalance -= 2_587_213_346; // less total supply of GBR fractions
+        totalVaultGooberBalance -= 2625688370851535558; // less total supply of GBR fractions
         vaultGooBalance -= 20 ether; // 20 less Goo
         vaultGobblerBalance = 2;
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(3)
@@ -661,7 +662,8 @@ contract GooberIntegrationTest is GooberTest {
         bobGooBalance += 20 ether; // 20 more Goo
         bobGobblerBalance = 1;
         bobMult = gobblers.getGobblerEmissionMultiple(2);
-        feeToGooberBalance += 38_474_980; // fee assessed
+        feeToGooberBalance += 38474980759678088; // fee assessed
+        totalVaultGooberBalance += 38474980759678088;
         vaultLastTimestamp = time0 + 1 days + 2 hours + 1 days + 1 hours; // new time
         // Vault
         assertEq(goober.totalSupply(), totalVaultGooberBalance);
@@ -692,7 +694,7 @@ contract GooberIntegrationTest is GooberTest {
         fractionsWithdrawn = goober.withdraw(aliceWithdraw, 10 ether, alice, alice);
 
         // Check balances
-        totalVaultGooberBalance -= 10_416_352_000; // less total supply of GBR fractions
+        totalVaultGooberBalance -= 10416352178088712190; // less total supply of GBR fractions
         vaultGooBalance -= 10 ether; // 10 less Goo
         vaultGobblerBalance = 1; // new balance
         vaultMult = gobblers.getGobblerEmissionMultiple(1) + gobblers.getGobblerEmissionMultiple(5); // new multiple
