@@ -109,7 +109,7 @@ contract GooberFuzzTest is GooberTest {
         bool gobblerGobbler,
         bool gobblerInOut
     ) public {
-        _writeTokenBalance(users[1], address(goo), type(uint112).max);
+        _writeTokenBalance(users[1], address(goo), type(uint256).max);
         vm.startPrank(users[1]);
         gobblers.addGoo(800 ether);
 

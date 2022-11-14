@@ -62,11 +62,11 @@ interface IGoober is IERC721Receiver {
     // Structs
 
     struct SwapData {
-        uint112 gooReserve;
-        uint112 gobblerReserve;
-        uint112 gooBalance;
-        uint112 gobblerBalance;
-        uint112 multOut;
+        uint256 gooReserve;
+        uint256 gobblerReserve;
+        uint256 gooBalance;
+        uint256 gobblerBalance;
+        uint256 multOut;
         uint256 amount0In;
         uint256 amount1In;
         int256 erroneousGoo;
@@ -103,7 +103,7 @@ interface IGoober is IERC721Receiver {
     );
 
     // TODO(Test this)
-    event Sync(uint112 gooBalance, uint112 multBalance);
+    event Sync(uint256 gooBalance, uint256 multBalance);
 
     /*//////////////////////////////////////////////////////////////
     // External: Non Mutating
@@ -111,7 +111,7 @@ interface IGoober is IERC721Receiver {
 
     /// @return gooTokens the total amount of goo owned
     /// @return gobblerMult the total multiple of all gobblers owned
-    function totalAssets() external view returns (uint112 gooTokens, uint112 gobblerMult);
+    function totalAssets() external view returns (uint256 gooTokens, uint256 gobblerMult);
 
     // @param gooTokens the token amount to simulate.
     // @param gobblerMult - the multiplier amount of gobblers in to simulate.
@@ -132,7 +132,7 @@ interface IGoober is IERC721Receiver {
     function getReserves()
         external
         view
-        returns (uint112 _gooReserve, uint112 _gobblerReserve, uint32 _blockTimestampLast);
+        returns (uint256 _gooReserve, uint256 _gobblerReserve, uint32 _blockTimestampLast);
 
     /// @notice Previews a deposit of the supplied gobblers and goo.
     /// @param gobblers - array of gobbler ids
@@ -185,8 +185,8 @@ interface IGoober is IERC721Receiver {
     /// @notice are met and the vault can afford to mint.
     function mintGobbler() external;
 
-    /// @notice Admin function for skimming any goo that may be in the wrong place, or overflown.
-    function skimGoo() external;
+    /// @notice Admin function for skimming any ERC20 that may have been sent in error.
+    function skim(address erc20) external;
 
     /*//////////////////////////////////////////////////////////////
     // External: Mutating, Unrestricted

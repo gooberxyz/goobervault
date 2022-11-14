@@ -15,14 +15,13 @@ contract Admin is InvariantActor {
         VRFCoordinatorMock _vrfCoordinator
     ) InvariantActor(_goober, _goo, _gobblers, _randProvider, _vrfCoordinator) {}
 
-    // TODO(Skimming goo breaks invariants)
     function skim() internal {
-        //vm.startPrank(FEE_TO);
-        //uint256 gooTankBalance = gobblers.gooBalance(address(goober));
-        //if (gooTankBalance >= type(uint112).max) {
-        //    goober.skimGoo();
-        //}
-        //vm.stopPrank();
+        vm.startPrank(FEE_TO);
+        uint256 gooTankBalance = goo.balanceOf(address(goober));
+        if (gooTankBalance > 0) {
+            goober.skim(address(goober));
+        }
+        vm.stopPrank();
     }
 }
 

@@ -103,7 +103,7 @@ contract GooberUnitTest is GooberTest {
         (uint256 gooTokens, uint256 gobblerMult) = goober.totalAssets();
         assertEq(gooTokens, 0);
         assertEq(gobblerMult, 0);
-        (uint112 gooReserve, uint112 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
+        (uint256 gooReserve, uint256 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
         assertEq(gooReserve, 0);
         assertEq(gobblerReserve, 0);
         assertEq(blockTimestampLast, 0);
@@ -151,7 +151,7 @@ contract GooberUnitTest is GooberTest {
         (uint256 gooTokensAfter, uint256 gobblerMultAfter) = goober.totalAssets();
         assertEq(gooTokensAfter, gooToDeposit);
         assertEq(gobblerMultAfter, expectedGobblerMult);
-        (uint112 gooReserveAfter, uint112 gobblerReserveAfter, uint32 blockTimestampLastAfter) = goober.getReserves();
+        (uint256 gooReserveAfter, uint256 gobblerReserveAfter, uint32 blockTimestampLastAfter) = goober.getReserves();
         assertEq(gooReserveAfter, gooToDeposit);
         assertEq(gobblerReserveAfter, expectedGobblerMult);
         assertEq(blockTimestampLastAfter, TIME0 + 1 days);
@@ -181,7 +181,7 @@ contract GooberUnitTest is GooberTest {
         (uint256 gooTokens, uint256 gobblerMult) = goober.totalAssets();
         assertEq(gooTokens, 0);
         assertEq(gobblerMult, 0);
-        (uint112 gooReserve, uint112 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
+        (uint256 gooReserve, uint256 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
         assertEq(gooReserve, 0);
         assertEq(gobblerReserve, 0);
         assertEq(blockTimestampLast, 0);
@@ -201,7 +201,7 @@ contract GooberUnitTest is GooberTest {
         (uint256 gooTokens, uint256 gobblerMult) = goober.totalAssets();
         assertEq(gooTokens, 0);
         assertEq(gobblerMult, 0);
-        (uint112 gooReserve, uint112 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
+        (uint256 gooReserve, uint256 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
         assertEq(gooReserve, 0);
         assertEq(gobblerReserve, 0);
         assertEq(blockTimestampLast, 0);
@@ -230,7 +230,7 @@ contract GooberUnitTest is GooberTest {
         (uint256 gooTokens, uint256 gobblerMult) = goober.totalAssets();
         assertEq(gooTokens, 0);
         assertEq(gobblerMult, 0);
-        (uint112 gooReserve, uint112 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
+        (uint256 gooReserve, uint256 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
         assertEq(gooReserve, 0);
         assertEq(gobblerReserve, 0);
         assertEq(blockTimestampLast, 0);
@@ -245,8 +245,8 @@ contract GooberUnitTest is GooberTest {
 
         // TODO
         // Check FeesAccrued events
-        // (uint112 _gooBalance, uint112 _gobblerBalanceMult,) = goober.getReserves();
-        // (uint256 fee, uint112 kDebtChange, uint256 deltaK) = goober._previewPerformanceFee(_gooBalance, _gobblerBalanceMult);
+        // (uint256 _gooBalance, uint256 _gobblerBalanceMult,) = goober.getReserves();
+        // (uint256 fee, uint256 kDebtChange, uint256 deltaK) = goober._previewPerformanceFee(_gooBalance, _gobblerBalanceMult);
         // assertEq(fee,0);
         // assertEq(deltaK,0);
         // vm.expectEmit(true, false, false, true, address(goober));
@@ -361,8 +361,8 @@ contract GooberUnitTest is GooberTest {
         assertEq(fractions, 65740397558);
         vm.stopPrank();
         // K should be 4500 here, we check.
-        (uint112 _GooReserve0, uint112 _GobblerReserve0,) = goober.getReserves();
-        uint112 oldK = (_GooReserve0 * _GobblerReserve0);
+        (uint256 _GooReserve0, uint256 _GobblerReserve0,) = goober.getReserves();
+        uint256 oldK = (_GooReserve0 * _GobblerReserve0);
         assertEq(oldK, 4500 ether);
 
         // User 2 adds gobbler and goo, tries to withdraw it
@@ -378,13 +378,13 @@ contract GooberUnitTest is GooberTest {
 
         // We warp ahead to grow K.
         vm.warp(block.timestamp + 7 days);
-        (uint112 _GooReserve1, uint112 _GobblerReserve1,) = goober.getReserves();
-        uint112 newK = (_GooReserve1 * _GobblerReserve1);
+        (uint256 _GooReserve1, uint256 _GobblerReserve1,) = goober.getReserves();
+        uint256 newK = (_GooReserve1 * _GobblerReserve1);
         assertEq(newK, 32094380310921470254575);
 
-        //(,, uint112 kDelta) = goober._previewPerformanceFee(_GooReserve1, _GobblerReserve1);
+        //(,, uint256 kDelta) = goober._previewPerformanceFee(_GooReserve1, _GobblerReserve1);
         // kDelta is 414531353282231156 here (we make the above function public to calc)
-        uint112 kDelta = 414531353282231156;
+        uint256 kDelta = 414531353282231156;
         vm.stopPrank();
 
         // Check to see user 1 can withdraw as much as they can.
@@ -560,7 +560,7 @@ contract GooberUnitTest is GooberTest {
     // Goober: INSUFFICIENT LIQUIDITY WITHDRAW edge cases
 
     // TODO getting std Arithmetic over/underflow revert before Goober revert
-    // function testRevertDepositWhenGooBalanceWouldOverflowUint112() public {
+    // function testRevertDepositWhenGooBalanceWouldOverflowuint256() public {
     //     _writeTokenBalance(users[10], address(goo), type(uint128).max);
 
     //     vm.startPrank(users[10]);
@@ -571,7 +571,7 @@ contract GooberUnitTest is GooberTest {
 
     //     vm.expectRevert("Goober: OVERFLOW");
 
-    //     goober.deposit(artGobblers, type(uint112).max + 1, users[10]);
+    //     goober.deposit(artGobblers, type(uint256).max + 1, users[10]);
     // }
 
     function testUnitRevertWithdrawWhenInsufficientGobblerMult() public {
@@ -985,7 +985,7 @@ contract GooberUnitTest is GooberTest {
         uint256 expectedGooTokens = 100 ether;
         uint256 expectedGobblerMult = gobblers.getUserEmissionMultiple(users[1]);
         goober.deposit(artGobblers, expectedGooTokens, users[1]);
-        (uint112 gooReserves, uint112 gobblerReserves, uint32 lastBlockTimestamp) = goober.getReserves();
+        (uint256 gooReserves, uint256 gobblerReserves, uint32 lastBlockTimestamp) = goober.getReserves();
         assertEq(gooReserves, expectedGooTokens);
         assertEq(gobblerReserves, expectedGobblerMult);
         assertEq(uint256(lastBlockTimestamp), block.timestamp);
@@ -1130,7 +1130,7 @@ contract GooberUnitTest is GooberTest {
         assertEq(erroneousGoo, int256(0));
 
         // Check we got received the fee from the banal goo swap.
-        (uint112 _GooReserve,,) = goober.getReserves();
+        (uint256 _GooReserve,,) = goober.getReserves();
         assertEq(_GooReserve, (100 ether + (gooIn - gooOut)));
 
         vm.stopPrank();
@@ -1216,7 +1216,7 @@ contract GooberUnitTest is GooberTest {
         goober.mintGobbler();
 
         // Check our Goo balance went down from minting: 81 - 52.99 ~= 28.01.
-        (uint112 _GooReserve,,) = goober.getReserves();
+        (uint256 _GooReserve,,) = goober.getReserves();
         assertEq(_GooReserve, 28012594100300268516);
 
         // Warp ahead to reveal second gobbler.
@@ -1225,7 +1225,7 @@ contract GooberUnitTest is GooberTest {
         _setRandomnessAndReveal(1, "seed2");
         // Check we own the second minted gobbler.
         assertEq(gobblers.ownerOf(2), address(goober));
-        (uint112 _newGooReserve, uint112 _newGobblerReserve,) = goober.getReserves();
+        (uint256 _newGooReserve, uint256 _newGobblerReserve,) = goober.getReserves();
         // Check we have 15 total mult including the previous 9, since we minted a 6.
         assertEq(_newGobblerReserve, 15);
         // Check our goo balance updated from emission.
@@ -1260,12 +1260,12 @@ contract GooberUnitTest is GooberTest {
         // NOTE commented out as it would bump the auction price)
         // uint256[] memory artGobblers = new uint256[](2);
         // artGobblers[0] = gobblers.mintFromGoo(100 ether, false);
-        // uint112 mintPrice2 = uint112(gobblers.gobblerPrice());
+        // uint256 mintPrice2 = uint256(gobblers.gobblerPrice());
         // assertEq(mintPrice2, 55730397425599282914);
         // artGobblers[1] = gobblers.mintFromGoo(120 ether, false);
-        // uint112 mintPrice3 = uint112(gobblers.gobblerPrice());
+        // uint256 mintPrice3 = uint256(gobblers.gobblerPrice());
         // assertEq(mintPrice3, 58615385439085817001);
-        // uint112 sum = 52987405899699731484 + mintPrice2 + mintPrice3;
+        // uint256 sum = 52987405899699731484 + mintPrice2 + mintPrice3;
         // assertEq(sum, 167333188764384831399);
 
         // NOTE dilemma: since we added a gobbler to setup the pool,
@@ -1276,7 +1276,7 @@ contract GooberUnitTest is GooberTest {
         // This makes testing for a VaultMint with *true* BalanceTerminated
         // inherently difficult, so we expect a false here.
 
-        uint112 gooTokens = 200 ether;
+        uint256 gooTokens = 200 ether;
         goober.deposit(artGobbler, gooTokens, users[10]);
         vm.stopPrank();
 
@@ -1505,7 +1505,7 @@ contract GooberUnitTest is GooberTest {
         assertEq(goo.balanceOf(address(goober)), 1 ether);
 
         vm.prank(FEE_TO);
-        goober.skimGoo();
+        goober.skim(address(goo));
 
         assertEq(goo.balanceOf(FEE_TO), 1 ether);
         assertEq(goo.balanceOf(address(goober)), 0);
@@ -1515,14 +1515,14 @@ contract GooberUnitTest is GooberTest {
         vm.expectRevert(abi.encodeWithSelector(IGoober.AccessControlViolation.selector, OTHER, FEE_TO));
 
         vm.prank(OTHER);
-        goober.skimGoo();
+        goober.skim(address(goo));
     }
 
     function testUnitRevertSkimGooWhenNoGooInContract() public {
         vm.expectRevert(IGoober.NoSkim.selector);
 
         vm.prank(FEE_TO);
-        goober.skimGoo();
+        goober.skim(address(goo));
     }
 
     function testUnitSetFeeTo() public {
@@ -1577,7 +1577,7 @@ contract GooberUnitTest is GooberTest {
                         Events
     //////////////////////////////////////////////////////////////*/
 
-    event VaultMint(address indexed minter, uint112 gooConsumed, uint112 gobblersMinted, bool BalanceTerminated);
+    event VaultMint(address indexed minter, uint256 gooConsumed, uint256 gobblersMinted, bool BalanceTerminated);
 
     event Deposit(
         address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
@@ -1603,5 +1603,5 @@ contract GooberUnitTest is GooberTest {
         uint256 gobblerMultOut
     );
 
-    event Sync(uint112 gooBalance, uint112 multBalance);
+    event Sync(uint256 gooBalance, uint256 multBalance);
 }
