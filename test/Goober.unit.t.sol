@@ -264,6 +264,46 @@ contract GooberUnitTest is GooberTest {
         assertEq(fractions, 57143328569039999020);
     }
 
+    function testUnitEventSyncFromDeposit() public {
+        // Add Goo and mint Gobblers
+        vm.startPrank(users[1]);
+        uint256[] memory artGobblers = _addGooAndMintGobblers(500 ether, 2);
+
+        uint256 gooToDeposit = 200 ether;
+
+        // Precondition checks
+        // Goo ownership
+        gobblers.gooBalance(users[1]);
+        assertEq(gobblers.gooBalance(address(goober)), 0);
+        // Gobbler ownership
+        assertEq(gobblers.ownerOf(artGobblers[0]), users[1]);
+        assertEq(gobblers.ownerOf(artGobblers[1]), users[1]);
+        // Fractions of depositor
+        assertEq(goober.balanceOf(users[1]), 0);
+        // Total assets and Reserve balances
+        (uint256 gooTokens, uint256 gobblerMult) = goober.totalAssets();
+        assertEq(gooTokens, 0);
+        assertEq(gobblerMult, 0);
+        (uint256 gooReserve, uint256 gobblerReserve, uint32 blockTimestampLast) = goober.getReserves();
+        assertEq(gooReserve, 0);
+        assertEq(gobblerReserve, 0);
+        assertEq(blockTimestampLast, 0);
+
+        // Reveal
+        vm.warp(TIME0 + 1 days);
+        _setRandomnessAndReveal(2, "seed");
+
+        // Check Sync event
+        vm.expectEmit(false, false, false, true, address(goober));
+        emit Sync(gooToDeposit, 17);
+
+        // Deposit 2 gobblers and 200 goo
+        uint256 fractions = goober.deposit(artGobblers, gooToDeposit, users[1]);
+        vm.stopPrank();
+
+        assertEq(fractions, 57143328569039999020);
+    }
+
     // function testRevertDepositWhenInsufficientLiquidityMined() public {
     //     // Goober: INSUFFICIENT_LIQUIDITY_MINTED
     // }
@@ -774,6 +814,34 @@ contract GooberUnitTest is GooberTest {
         fractions = goober.withdraw(artGobblersTwo, 100 ether, users[1], users[1]);
 
         // TODO assertions
+    }
+
+    function testUnitSwapEvent() public {
+        vm.startPrank(users[1]);
+        gobblers.addGoo(500 ether);
+
+        uint256[] memory artGobblers = new uint256[](2);
+        uint256[] memory artGobblersTwo = new uint256[](1);
+        uint256[] memory artGobblersThree = new uint256[](1);
+        artGobblers[0] = gobblers.mintFromGoo(100 ether, true);
+        artGobblers[1] = gobblers.mintFromGoo(100 ether, true);
+        artGobblersTwo[0] = gobblers.mintFromGoo(100 ether, true);
+        artGobblersThree[0] = artGobblers[0];
+
+        vm.warp(block.timestamp + 1 days);
+
+        _setRandomnessAndReveal(3, "seed");
+
+        uint256 gooTokens = 200 ether;
+        uint256 fractions = goober.deposit(artGobblers, gooTokens, users[1]);
+
+        bytes memory data;
+
+        // Check Swap event
+        vm.expectEmit(true, true, false, true, address(goober));
+        emit Swap(users[1], users[1], 100 ether, 6, 0, 9);
+
+        goober.swap(artGobblersTwo, 100 ether, artGobblersThree, 0 ether, users[1], data);
     }
 
     // Goober: INSUFFICIENT_OUTPUT_AMOUNT
