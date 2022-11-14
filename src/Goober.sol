@@ -410,7 +410,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IGoober
-    function convertToFractions(uint256 gooTokens, uint256 gobblerMult) public view returns (uint256 fractions) {
+    function convertToFractions(uint256 gooTokens, uint256 gobblerMult) external view returns (uint256 fractions) {
         uint256 _totalSupply = totalSupply;
         uint256 kInput = FixedPointMathLib.sqrt(gooTokens * gobblerMult);
         if (_totalSupply > 0) {
@@ -424,7 +424,12 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IGoober
-    function convertToAssets(uint256 fractions) public view virtual returns (uint256 gooTokens, uint256 gobblerMult) {
+    function convertToAssets(uint256 fractions)
+        external
+        view
+        virtual
+        returns (uint256 gooTokens, uint256 gobblerMult)
+    {
         gooTokens = 0;
         gobblerMult = 0;
         uint256 _totalSupply = totalSupply;
@@ -561,7 +566,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // Access Control
 
     /// @inheritdoc IGoober
-    function setFeeTo(address newFeeTo) public onlyFeeTo {
+    function setFeeTo(address newFeeTo) external onlyFeeTo {
         if (newFeeTo == address(0)) {
             revert InvalidAddress(newFeeTo);
         }
@@ -569,7 +574,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IGoober
-    function setMinter(address newMinter) public onlyFeeTo {
+    function setMinter(address newMinter) external onlyFeeTo {
         if (newMinter == address(0)) {
             revert InvalidAddress(newMinter);
         }
@@ -579,7 +584,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     // Other Privileged Functions
 
     /// @inheritdoc IGoober
-    function mintGobbler() public nonReentrant onlyMinter {
+    function mintGobbler() external nonReentrant onlyMinter {
         /// @dev Restricted to onlyMinter to prevent Goo price manipulation.
         /// @dev Prevent reentrancy in case onlyMinter address/keeper is compromised.
 
@@ -625,7 +630,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /// @inheritdoc IGoober
-    function skim(address erc20) public nonReentrant onlyFeeTo {
+    function skim(address erc20) external nonReentrant onlyFeeTo {
         /// @dev Contract should never hold ERC20 tokens (only virtual GOO).
         uint256 contractBalance = IERC20(erc20).balanceOf(address(this));
         if (contractBalance == 0) {
@@ -635,7 +640,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         IERC20(erc20).transfer(msg.sender, contractBalance);
     }
 
-    function flagGobbler(uint256 tokenId, bool _flagged) public onlyFeeTo {
+    function flagGobbler(uint256 tokenId, bool _flagged) external onlyFeeTo {
         flagged[tokenId] = _flagged;
     }
 
