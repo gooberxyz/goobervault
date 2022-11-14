@@ -184,6 +184,9 @@ interface IGoober is IERC721Receiver {
     /// @notice Admin function for skimming any ERC20 that may have been sent in error.
     function skim(address erc20) external;
 
+    /// @notice Admin function for blocking compromised Gobblers from the pool.
+    function flagGobbler(uint256 tokenId, bool _flagged) external;
+
     /*//////////////////////////////////////////////////////////////
     // External: Mutating, Unrestricted
     //////////////////////////////////////////////////////////////*/
@@ -198,7 +201,7 @@ interface IGoober is IERC721Receiver {
         returns (uint256 fractions);
 
     /// @notice Deposits the supplied gobblers/goo from the owner and mints GBR to the
-    ///         receiver while ensuring a deadline and minimum amount of fractions were minted.
+    /// @notice receiver while ensuring a deadline and minimum amount of fractions were minted.
     /// @param gobblers - array of gobbler ids.
     /// @param gooTokens - amount of goo to withdraw.
     /// @param receiver - address to receive GBR.
