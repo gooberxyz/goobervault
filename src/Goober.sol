@@ -68,7 +68,7 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
 
     /// @notice Last block timestamp
     /// @dev Yes, the oracle accumulators will reset in 2036.
-    uint32 private blockTimestampLast; // uses single storage slot, accessible via getReserves
+    uint32 public blockTimestampLast; // uses single storage slot, accessible via getReserves
 
     /// @notice Flagged NFTs cannot be deposited or swapped in.
     mapping(uint256 => bool) public flagged;
