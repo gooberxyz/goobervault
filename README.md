@@ -12,7 +12,7 @@ vault for Art Gobblers.
 Art Gobblers is an experimental, decentralized, art factory using two new 
 innovations, [GOO](https://www.paradigm.xyz/2022/09/goo) and 
 [VRGDA](https://www.paradigm.xyz/2022/08/vrgda). Art Gobblers NFTs produce 
-Goo according to this formula: $\sqrt{Goo * Mult}=Goo per day$
+Goo according to this formula: $\sqrt{Goo * Mult}=ΔGooProduction$
 
 Goober allows a user to effectively pool their Goo and/or Gobblers with other 
 users, such that they all receive more Goo emissions together than they would 
@@ -20,10 +20,10 @@ on their own.
 
 The point of maximization for $\sqrt{x * y}$ happens to be at the point where 
 $x=y$. However, due to market forces, that may not always be the point with 
-the highest yield in outside terms. Thus, Goober optimizes $Δk$ for $x+y$ 
+the highest yield in outside terms. Thus, Goober optimizes $+Δk$ for $x+y$ 
 using an $x*y=k$ constant function market maker, where $x=Goo$, $y=Mult$, 
-and $k=Goo per day$, allowing market forces to maintain the optimal 
-ratio of Goo/Gobblers in the pool. 
+$k={Goo * Mult}$  and $Δk=ΔGooProduction$, allowing market forces to 
+maintain the optimal ratio of Goo/Gobblers in the pool. 
 
 <img width="583" alt="Screen Shot 2022-11-14 at 4 50 03 PM" src="https://user-images.githubusercontent.com/94731243/201802003-d8583ddd-3799-48d1-a02d-3e4976005f64.png">
 
