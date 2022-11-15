@@ -22,8 +22,9 @@ The point of maximization for $\sqrt{x * y}$ happens to be at the point where
 $x=y$. However, due to market forces, that may not always be the point with 
 the highest yield in outside terms. Thus, Goober optimizes $+Δk$ for $x+y$ 
 using an $x*y=k$ constant function market maker, where $x=Goo$, $y=Mult$, 
-$k={Goo * Mult}$  and $Δk=ΔGooProduction$, allowing market forces to 
-maintain the optimal ratio of Goo/Gobblers in the pool. 
+$k={Goo * Mult}$  and $\sqrt{k}=GooProduction$, allowing market forces to 
+maintain the optimal ratio of Goo/Gobblers in the pool while still 
+maximizing $+ΔGooProduction$ and area of assets under the bonding curve. 
 
 <img width="583" alt="Screen Shot 2022-11-14 at 4 50 03 PM" src="https://user-images.githubusercontent.com/94731243/201802003-d8583ddd-3799-48d1-a02d-3e4976005f64.png">
 
