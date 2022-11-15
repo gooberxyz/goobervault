@@ -38,7 +38,7 @@ Documentation can be found [here](https://docs.goober.xyz/).
 
 ## Deployments
 
-| Contract      | Mainnet                                                                                                                 |                                 |                                                                                                                         |
+| Contract      | Mainnet                                                                                                                 |                 
 |---------------|-------------------------------------------------------------------------------------------------------------------------|
 | `Goober`      | [`0x2275d4937b6bFd3c75823744d3EfBf6c3a8dE473`](https://etherscan.io/address/0x2275d4937b6bfd3c75823744d3efbf6c3a8de473) |
 
@@ -87,5 +87,5 @@ forge coverage
 
 ## License
 
-(MIT)[https://github.com/gooberxyz/goobervault/blob/master/LICENSE] © 2022 Goober
+[MIT](https://github.com/gooberxyz/goobervault/blob/master/LICENSE) © 2022 Goober
 
