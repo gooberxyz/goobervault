@@ -2,6 +2,33 @@
 
 pragma solidity ^0.8.17;
 
+/*                                                                                                                                                                                                      
+                                                                                                                 .^^:   ~J:                                                                             
+                                                                                                               .!5PPP55PBG7                                                       :~                    
+                                                                                                               JBGPPPGGGPG?                                             ^?J~    !5GG^                   
+                                                                                                               7#GPPPPPPPG7                           ^7?77~^.     :?~!YBBGY  .5#GPG~                   
+                                                                                                                5BGPPPPGPG!   :~7???7~:.       .~777?YGBGGGGPPY7^   5BBGGPPP. JBPPGP:                   
+                                                                                                                ~PGPG!^Y5G7 ~YGBBGGGGGP5J~   .?GBBGGGGGPPGGGPPGGPY~ !BPPPPPPY5GPPG57                    
+                                 :^~!!!!!!~~:                                                                    ^GPG^~^~G5JGGPPPPPPPPPPGGY:.P#GPPPPP5JYPJ?YPPPPPGG?JGPPPPPPPPPP5!                      
+                             .~?PGBGGGGGGGGGP5?~                                                  ~7?7!~^:       ^GPP^::?GPGPPPPPPPPPPPPPPG5?BGPPPPPP.  .   JGPPPPPGGPPPPPPGPPPP^                       
+                           ~YGBBGPPPPPPPPPPP555J:                     :::..               .^~7??JPBBGGGGGPY?^    ^GPP5JYPPPPP5YJ7?J5PPPPPPPPGGPPPPPPP7777??YPPPPPPPGPPPPPGP7PPGY                        
+                         ~PBBGPPPPPGGPPP5PPYJ^                 ..::^75GGGP55J!^        :75GGGGBGGGPPPPPPPPGGGY:  ^GPPPGGPPP557:   75P5PPPPPPPPPPPPPPPGPGGGGP5YY55Y7~:^PPPY5 JGG?                        
+                       .JBBPPPPPPGPJ!:..:~!?!              .~JY5PGGGGGPPPPPPGGPY~    .JGGGPPPPPP5YYJ5GPPPPPPPGP~ :PPPPPPPPPP?     !?..!GPPPPPPPPPPPPG!.:^~~^:..:77   .5G5.J^!GGJ                        
+                      .5#GPPPPPP5?:                      :JPGGGPPPPP5P5PGPPPPGPGG?. :PBGPPPPPPPY?:  .!5GG?:JGGPP: YGPPPPPPPG^         :PPPPPPPPPPPPPG?.    .:.        YGG7~~7GGY                        
+                     .5#GPPPPP5Y~        ...::^^~!77!.  ~BBGPPPPPP5J!::^?PPP?~5GGG5YP#PPPPPPPY?JJ     :5PP:~57PGJ !GPPPPPPPGJ.        ~GGPPPG7YGPPPPPGP5Y5PGG5^^~7Y:  7GPG55PPPP:                       
+                     !BBPPPPPPJ?       ^PGGGGGGGGBBGG~ ^BBPPPPPPPJJY.    ^PP5.75YPPGGGPPPPPPP:  ^.     7GG^^7 5GP..5PPPPPPPPGY~.    .~PBGPPP57:5GGPPPPPGGGGGPGGGGP?   :PGGPPPPPP7                       
+                     JBGPPPPPP5?       ?BGPGGGPPPPPPP5?PGPPPPPPG7 .~.     ?GP:!!:PPGPPPPPPPPP^         7GPY!!JPPP: ?GPPPPPPGGGGP5YY5GBGPPPP5Y~ .~?YPGPPPPPPP5Y?7~.     JYYPPPY?7^                       
+                     JBPPPGPPP5J~      :^JP?~!5PPPPPPPGGPPPPPPPG!         7GPJ~~JPGY^PPPPPPPP5^       ~PPPPGGGPGJ  JGPPPPP5JYPGPPGGPPPPPPPPJ7      ^YGP5YJYPJ^            ?PJ~                          
+                     !BB5^7PPPPYJ~       7~   :PPPPPGGPPPPPPPPPP5~       ~5PPGGGGPG~ JGPPPPPPGGY7~~~7YGPPPPPPYJ7.  YG55PG5:  ~JPGGPPPPY?~~7^        .5YJ^ .~:             .JY:                          
+                     .5GGJ YGPPP557.          ^PPGPP??G!^GPPPPPPPG57~~~7YPPPPPPPYJ!  :5GGPPPPY!5GP5GGGPPPPY57:.    J?. ^P5.    :!J55J7~.             ~57                   .^                           
+                      ~GPP:!5.^PJJP5?~:     :7GGP?55 ?G? 7PGGPPPP!JGPYPGGPPPPYY!:.    .!J5PGGP7.JJ 5PPJ55YJ!       .    ?P.       ...                 ^.                                                
+                       7GG:!J  ?~^GPGGP5YJY5GBGPG~:P.7GP. ^7YPPGGJ:7Y YP5JY5JJ~          .:~!?Y?^~~YJ!. :^.             :?                                                                              
+                        ~P!^~~7::!GPPPPGGGGGGPPPG5~!~5PP^    .:~!?J~!!YJ~  .:.                 ^YPPJ7                                                                                                   
+                         .~^!5G5YPGPPGPPPPPGGGGGPPGPGPPY7         .?PGJ!            .            !?^                                                                                                    
+                             ^7~:~YP5YYPPP5?777!.!GPPPPJ?           :!:            ^7.                                                                                                                  
+                                  .:   !GY.      .YJJYYJ~                                                                                                                                               
+                                        ~^        ....:./*/
+
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
