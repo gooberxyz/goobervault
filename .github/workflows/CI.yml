@@ -37,6 +37,15 @@ jobs:
           forge coverage --report lcov
         id: coverage
 
+      # - name: Update coverage report
+      #   run: touch 
+
+      - name: Archive coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-report
+          path: lcov.info
+
       - uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
