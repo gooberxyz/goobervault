@@ -32,24 +32,17 @@ jobs:
       - name: Run tests and check snapshot
         run: forge snapshot --check --optimize -vvv
 
-      - name: Coverage
+      - name: Run coverage
+        run: forge coverage --report summary --report lcov
+
+      - name: Filter coverage directories
         run: |
-          forge coverage --report lcov
-        id: coverage
-
-      # - name: Update coverage report
-      #   run: touch 
-
-      - name: Archive coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: code-coverage-report
-          path: lcov.info
+          sudo apt update && sudo apt install -y lcov
+          lcov --remove lcov.info 'src/math/*' 'src/interfaces/*' 'test/*' 'script/*' --output-file lcov.info --rc lcov_branch_coverage=1
 
       - uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          
 
   static-analysis:
     name: Slither static analysis
