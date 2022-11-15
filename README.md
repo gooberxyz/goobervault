@@ -34,7 +34,7 @@ the pool's internal pricing.
 
 ## Resources
 
-Documentation can be found [here](https://docs.goober.xyz/).
+Documentation can be found [here]().
 
 ## Deployments
 
