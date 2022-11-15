@@ -12,7 +12,7 @@ vault for Art Gobblers.
 Art Gobblers is an experimental, decentralized, art factory using two new 
 innovations, [GOO](https://www.paradigm.xyz/2022/09/goo) and 
 [VRGDA](https://www.paradigm.xyz/2022/08/vrgda). Art Gobblers NFTs produce 
-Goo according to this formula: $\sqrt{Goo * Mult}=ΔGooProduction$
+Goo according to this formula: $\sqrt{Goo * Mult}=GooProduction$
 
 Goober allows a user to effectively pool their Goo and/or Gobblers with other 
 users, such that they all receive more Goo emissions together than they would 
