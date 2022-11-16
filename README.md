@@ -12,20 +12,21 @@ vault for Art Gobblers.
 Art Gobblers is an experimental, decentralized, art factory using two new 
 innovations, [Goo](https://www.paradigm.xyz/2022/09/goo) and 
 [VRGDA](https://www.paradigm.xyz/2022/08/vrgda). Art Gobblers NFTs produce 
-Goo according to this formula: $\sqrt{Goo * Mult}=GooProduction$
+Goo according to the formula: 
+
+$$\sqrt{Goo * Mult} = GooProduction$$
 
 Goober allows a user to effectively pool their Goo and/or Gobblers with other 
 users, such that they all receive more Goo emissions together than they would 
-on their own.
+on their own, allowing market forces to maintain the optimal ratio of Goo/Gobblers in the pool.
 
-The point of maximization for $\sqrt{x * y}$ happens to be at the point where 
+The point of maximization for $\sqrt{x * y}$  happens to be at the point where 
 $x=y$. However, due to market forces, that may not always be the point with 
 the highest yield in outside terms. 
 
 Thus, Goober optimizes $+Δk$ for $x+y$ 
-using an $x*y=k$ constant function market maker, where $x=Goo$, $y=Mult$, 
-$k={Goo * Mult}$  and $\sqrt{k}=GooProduction$, allowing market forces to 
-maintain the optimal ratio of Goo/Gobblers in the pool.
+using an $x*y=k$ constant function market maker, where $$x=Goo$$ $$y=Mult$$ 
+$$k={Goo * Mult}$$ $$\sqrt{k}=GooProduction$$
 
 
 To optimize tank Goo emission, the pool wants to incentivize increasing $k$ upon deposits. 
@@ -33,11 +34,11 @@ To optimize tank Goo emission, the pool wants to incentivize increasing $k$ upon
 The total rate of emission of the vault is tracked by a constant $k$, where
 
 $$
-k = \sqrt{(Goo * Mult)}
+\sqrt{k} = \sqrt{(Goo * Mult)}
 $$
 
 
-When a`deposit` is made to the pool, a new $n$ value of reserves is calculated based on the amount of each asset added by depositor $d$, where
+When a `deposit` is made to the pool, a new $n$ value of reserves is calculated based on the amount of each asset added by depositor $d$, where
 
 $$
 Goo_{n} = Goo_{i} + Goo_{d} 
