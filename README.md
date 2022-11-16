@@ -20,23 +20,24 @@ on their own.
 
 The point of maximization for $\sqrt{x * y}$ happens to be at the point where 
 $x=y$. However, due to market forces, that may not always be the point with 
-the highest yield in outside terms. Thus, Goober optimizes $+Δk$ for $x+y$ 
+the highest yield in outside terms. 
+
+Thus, Goober optimizes $+Δk$ for $x+y$ 
 using an $x*y=k$ constant function market maker, where $x=Goo$, $y=Mult$, 
 $k={Goo * Mult}$  and $\sqrt{k}=GooProduction$, allowing market forces to 
-maintain the optimal ratio of Goo/Gobblers in the pool while still 
-maximizing $+ΔGooProduction$ and area of assets under the bonding curve. 
+maintain the optimal ratio of Goo/Gobblers in the pool.
 
 
-Since we want to optimize Goo emission, we want to incentivize increasing $K$ upon deposits. 
+To optimize tank Goo emission, the pool wants to incentivize increasing $k$ upon deposits. 
 
-The total rate of emission of the vault is tracked by a constant $K$, where
+The total rate of emission of the vault is tracked by a constant $k$, where
 
 $$
-K = \sqrt{(Goo * Mult)}
+k = \sqrt{(Goo * Mult)}
 $$
 
 
-When a`deposit` is made to the pool, a new $n$ value of reserves is calculated based on the amount of each asset added by depositor $d$.
+When a`deposit` is made to the pool, a new $n$ value of reserves is calculated based on the amount of each asset added by depositor $d$, where
 
 $$
 Goo_{n} = Goo_{i} + Goo_{d} 
@@ -51,45 +52,42 @@ $$
 Now that we have some increase in our emission
 
 $$
-{K}_{n} > K_{i}
+k_{n} > k_{i}
 $$
 
 the depositor should be rewarded accordingly. Thus, the vault mints some amount of $F_{d}$ to transfer to the depositor, where 
 
 
 $$
-{ F }_{d}={ F }_{i} * {\sqrt{(Goo_{n} * Mult_{n})} - \sqrt{(Goo_{i} * Mult_{i})} \over \sqrt{(Goo_{i} * Mult_{i})}}
+F_{d} = F_{i} * {\sqrt{(Goo_{n} * Mult_{n})} - \sqrt{(Goo_{i} * Mult_{i})} \over \sqrt{(Goo_{i} * Mult_{i})}}
 $$
 
-which can be simplified to:
+which can be simplified to
 
 $$
-{ F }_{d}={ F }_{i} * ({\sqrt{(Goo_{n} * Mult_{n})} \over \sqrt{(Goo_{i} * Mult_{i})}} -1)
+F_{d} = F_{i} * ({\sqrt{(Goo_{n} * Mult_{n})} \over \sqrt{(Goo_{i} * Mult_{i})}} -1)
 $$
 
-or even further:
+or even further
 
 $$
-{ F }_{d}={ F }_{i} * \Delta K
+F_{d} = F_{i} * \Delta k
 $$
 
-Since $\text {F}$ represents a fixed fraction of the pool. As the pool grows, so too will the assets redeemable by the fraction.
+Since $\text {F}$ represents a fixed fraction of the pool. As the pool grows, so too will the assets redeemable by the fraction. On `withdraw`, a user exchanges some $\text {f}$ for $Goo$ and/or $Mult$, burning the respective amount of $\text {F}$ in the process. 
 
-On `withdraw`, a user exchanges some $\text {F}$ for $Goo$ and/or $Mult$, burning the respective amount of $\text {F}$ in the process. 
-
-Since, a withdrawal decreases the reserves, then post `withdraw`:
+Since, a withdrawal decreases the reserves, then post `withdraw` we have 
 
 $$
-{K}_{n} < K_{i}
+k_{n} < k_{i}
 $$
 
-Since the pool's rate of $Goo$ emission has decreased, then so too must its supply of outstanding fractions by a proportionate amount.
-
-We can derive the amount of reserves alloted to an amount of ${ F }_{d}$ from the inverse of the issuance calculation: 
+As the pool's rate of $Goo$ emission has decreased, then so too must its supply of outstanding fractions by a proportionate amount.
+We can derive the amount of reserves alloted to an amount of $F_{d}$ from the inverse of the issuance calculation
 
 
 $$
-{ F }_{d}={ F }_{i} * ({\sqrt{(Goo_{w} * Mult_{w})} \over \sqrt{(Goo_{i} * Mult_{i})}} -1)
+F_{d} = F_{i} * ({\sqrt{(Goo_{w} * Mult_{w})} \over \sqrt{(Goo_{i} * Mult_{i})}} -1)
 $$
 
 which can be rearranged to
@@ -99,7 +97,9 @@ $$
 {Goo_{w}} = {{(Goo_{i} * Mult_{i})}({{ F }_{d} \over { F }_{i}} + 1)^2 \over Mult_{w}} 
 $$
 
-Autonomous market forces keep the pool balanced, and thus producing the most goo per goo possible. 
+where $Goo_{w}$ and $Mult_{w}$ represent the respective reserves (each can be solved for interchangably) that can be withdrawn in tandem for some amount of fractions $F_{d}$.
+
+Autonomous market forces keep the pool balanced, through the aligned incentives of maximizing $+Δk$, and thus producing the most goo per goo possible. This can be visualized as the area under the bonding curve of Goo and Mult:
 
 <img width="583" alt="Screen Shot 2022-11-14 at 4 50 03 PM" src="https://user-images.githubusercontent.com/94731243/201802003-d8583ddd-3799-48d1-a02d-3e4976005f64.png">
 
