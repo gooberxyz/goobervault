@@ -10,7 +10,7 @@ vault for Art Gobblers.
 ## Abstract
 
 Art Gobblers is an experimental, decentralized, art factory using two new 
-innovations, [GOO](https://www.paradigm.xyz/2022/09/goo) and 
+innovations, [Goo](https://www.paradigm.xyz/2022/09/goo) and 
 [VRGDA](https://www.paradigm.xyz/2022/08/vrgda). Art Gobblers NFTs produce 
 Goo according to this formula: $\sqrt{Goo * Mult}=GooProduction$
 
@@ -25,6 +25,81 @@ using an $x*y=k$ constant function market maker, where $x=Goo$, $y=Mult$,
 $k={Goo * Mult}$  and $\sqrt{k}=GooProduction$, allowing market forces to 
 maintain the optimal ratio of Goo/Gobblers in the pool while still 
 maximizing $+ΔGooProduction$ and area of assets under the bonding curve. 
+
+
+Since we want to optimize Goo emission, we want to incentivize increasing $K$ upon deposits. 
+
+The total rate of emission of the vault is tracked by a constant $K$, where
+
+$$
+K = \sqrt{(Goo * Mult)}
+$$
+
+
+When a`deposit` is made to the pool, a new $n$ value of reserves is calculated based on the amount of each asset added by depositor $d$.
+
+$$
+Goo_{n} = Goo_{i} + Goo_{d} 
+$$
+
+and
+
+$$
+Mult_{n} = Mult_{i} + Mult_{d}
+$$
+
+Now that we have some increase in our emission
+
+$$
+{K}_{n} > K_{i}
+$$
+
+the depositor should be rewarded accordingly. Thus, the vault mints some amount of $F_{d}$ to transfer to the depositor, where 
+
+
+$$
+{ F }_{d}={ F }_{i} * {\sqrt{(Goo_{n} * Mult_{n})} - \sqrt{(Goo_{i} * Mult_{i})} \over \sqrt{(Goo_{i} * Mult_{i})}}
+$$
+
+which can be simplified to:
+
+$$
+{ F }_{d}={ F }_{i} * ({\sqrt{(Goo_{n} * Mult_{n})} \over \sqrt{(Goo_{i} * Mult_{i})}} -1)
+$$
+
+or even further:
+
+$$
+{ F }_{d}={ F }_{i} * \Delta K
+$$
+
+Since $\text {F}$ represents a fixed fraction of the pool. As the pool grows, so too will the assets redeemable by the fraction.
+
+On `withdraw`, a user exchanges some $\text {F}$ for $Goo$ and/or $Mult$, burning the respective amount of $\text {F}$ in the process. 
+
+Since, a withdrawal decreases the reserves, then post `withdraw`:
+
+$$
+{K}_{n} < K_{i}
+$$
+
+Since the pool's rate of $Goo$ emission has decreased, then so too must its supply of outstanding fractions by a proportionate amount.
+
+We can derive the amount of reserves alloted to an amount of ${ F }_{d}$ from the inverse of the issuance calculation: 
+
+
+$$
+{ F }_{d}={ F }_{i} * ({\sqrt{(Goo_{w} * Mult_{w})} \over \sqrt{(Goo_{i} * Mult_{i})}} -1)
+$$
+
+which can be rearranged to
+
+
+$$
+{Goo_{w}} = {{(Goo_{i} * Mult_{i})}({{ F }_{d} \over { F }_{i}} + 1)^2 \over Mult_{w}} 
+$$
+
+Autonomous market forces keep the pool balanced, and thus producing the most goo per goo possible. 
 
 <img width="583" alt="Screen Shot 2022-11-14 at 4 50 03 PM" src="https://user-images.githubusercontent.com/94731243/201802003-d8583ddd-3799-48d1-a02d-3e4976005f64.png">
 
