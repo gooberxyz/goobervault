@@ -1,5 +1,7 @@
-# Goober Vault
 
+![unknown (15)](https://user-images.githubusercontent.com/94731243/202322792-51390670-d6e0-466d-8c8d-457dc2d4dde6.png) dot xyz
+
+# Goober Vault
 
 ![ci](https://github.com/gooberxyz/goobervault/actions/workflows/CI.yml/badge.svg)
 [![codecov](https://codecov.io/gh/gooberxyz/goobervault/branch/main/graph/badge.svg?token=R24WD80X6N)](https://codecov.io/gh/gooberxyz/goobervault)
