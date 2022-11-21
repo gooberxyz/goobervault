@@ -8,12 +8,11 @@ interface IGoober {
     //  Events
     //////////////////////////////////////////////////////////////*/
 
-    // Deposit
+    // Deposit and Withdraw
     event Deposit(
         address indexed caller, address indexed receiver, uint256[] gobblers, uint256 gooTokens, uint256 fractions
     );
 
-    // Withdraw
     event Withdraw(
         address indexed caller,
         address indexed receiver,
@@ -21,6 +20,16 @@ interface IGoober {
         uint256[] gobblers,
         uint256 gooTokens,
         uint256 fractions
+    );
+
+    // Swap
+    event Swap(
+        address indexed caller,
+        address indexed receiver,
+        uint256 gooTokensIn,
+        uint256 gobblersMultIn,
+        uint256 gooTokensOut,
+        uint256 gobblerMultOut
     );
 
     // Accounting and Fees
@@ -33,13 +42,18 @@ interface IGoober {
 
     // Balance Errors
     error InsufficientAllowance();
+    error InsufficientGoo(uint256 amount, uint256 actualK, uint256 expectedK);
 
-    // Deposit Errors
+    // Deposit and Withdraw
     error InsufficientLiquidityDeposited();
-
-    // Withdraw Errors
     error InsufficientLiquidityWithdrawn();
     error BurnAboveLimit();
+
+    // Swap
+    error InsufficientInputAmount(uint256 amount0In, uint256 amount1In);
+    error InsufficientOutputAmount(uint256 gooOut, uint256 gobblersOut);
+    error InvalidReceiver(address receiver);
+    error ExcessiveErroneousGoo(uint256 actualErroneousGoo, uint256 allowedErroneousGoo);
 
     // K Calculation Errors
     error MustLeaveLiquidity(uint256 gooBalance, uint256 gobblerBalance);
@@ -143,4 +157,41 @@ interface IGoober {
         uint256 maxFractionsIn,
         uint256 deadline
     ) external returns (uint256 fractions);
+
+    /*//////////////////////////////////////////////////////////////
+    //  SWAP
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Simulates a swap.
+    /// @param gobblersIn - Array of Gobbler ids to swap in.
+    /// @param gooIn - Amount of Goo to swap in.
+    /// @param gobblersOut - Array of Gobbler ids to swap out.
+    /// @param gooOut - Amount of Goo to swap out.
+    /// @return erroneousGoo - The amount in wei by which to increase or decrease gooIn/Out to balance the swap.
+    function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
+        external
+        view
+        returns (int256 erroneousGoo);
+
+    /// @notice Swaps supplied Gobblers/Goo for Gobblers/Goo in the pool.
+    function swap(
+        uint256[] calldata gobblersIn,
+        uint256 gooIn,
+        uint256[] calldata gobblersOut,
+        uint256 gooOut,
+        address receiver,
+        bytes calldata data
+    ) external returns (int256 erroneousGoo);
+
+    /// @notice Swaps supplied Gobblers/Goo for Gobblers/Goo in the pool, with slippage and deadline control.
+    function safeSwap(
+        uint256 erroneousGooAbs,
+        uint256 deadline,
+        uint256[] calldata gobblersIn,
+        uint256 gooIn,
+        uint256[] calldata gobblersOut,
+        uint256 gooOut,
+        address receiver,
+        bytes calldata data
+    ) external returns (int256 erroneousGoo);
 }

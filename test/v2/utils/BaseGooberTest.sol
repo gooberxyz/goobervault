@@ -15,7 +15,7 @@ import "art-gobblers/utils/GobblerReserve.sol";
 import "../../../src/v2/Goober.sol";
 import "../../../src/v2/interfaces/IGoober.sol";
 
-abstract contract GooberTest is Test {
+abstract contract BaseGooberTest is Test {
     //
     using stdStorage for StdStorage;
 

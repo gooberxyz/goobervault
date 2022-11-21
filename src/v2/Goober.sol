@@ -9,14 +9,16 @@ import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {ReentrancyGuard} from "solmate/utils/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import "./math/UQ112x112.sol";
+import "./interfaces/IERC721Receiver.sol";
 
 import "./interfaces/IGoober.sol";
+import "./interfaces/IGooberCallee.sol";
 
 /// @title goober_xyz
 /// @author XYZ
 /// @notice Goober is an experimental Uniswap V2 and EIP-4626 flavored vault to optimize Art
 /// @notice production for the decentralized art factory by Justin Roiland and Paradigm.
-contract Goober is ReentrancyGuard, ERC20, IGoober {
+contract Goober is ReentrancyGuard, ERC20, IERC721Receiver, IGoober {
     //
 
     // We want to ensure all ERC721 transfers are safe.
@@ -77,6 +79,9 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @dev Yes, the oracle accumulators will reset in 2036.
     uint32 public blockTimestampLast; // uses single storage slot, accessible via getReserves
 
+    /// @notice Flagged NFTs cannot be deposited or swapped in.
+    mapping(uint256 => bool) public flagged;
+
     /*//////////////////////////////////////////////////////////////
     // Modifiers
     //////////////////////////////////////////////////////////////*/
@@ -88,6 +93,22 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
             revert Expired(block.timestamp, deadline);
         }
         _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    //  Structs
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Intermediary struct for swap calculation.
+    struct SwapData {
+        uint256 gooReserve;
+        uint256 gobblerReserve;
+        uint256 gooBalance;
+        uint256 gobblerBalance;
+        uint256 multOut;
+        uint256 amount0In;
+        uint256 amount1In;
+        int256 erroneousGoo;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -107,6 +128,36 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         minter = _minter;
         artGobblers = ArtGobblers(_gobblersAddress);
         goo = Goo(_gooAddress);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    //  IERC165
+    //////////////////////////////////////////////////////////////*/
+
+    // TODO supportsInterface
+
+    /*//////////////////////////////////////////////////////////////
+    //  IERC721Receiver
+    //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IERC721Receiver
+    /// @notice Handles deposits of Art Gobblers with an on receive hook, verifying characteristics.
+    /// @dev We don't accept non Art Gobbler NFTs, flagged Gobblers, or unrevealed Gobblers.
+    function onERC721Received(address, address, uint256 tokenId, bytes calldata) external view returns (bytes4) {
+        /// @dev We only want Art Gobblers NFTs.
+        if (msg.sender != address(artGobblers)) {
+            revert InvalidNFT();
+        }
+        /// @dev Revert on flagged NFTs.
+        if (flagged[tokenId] == true) {
+            revert InvalidNFT();
+        }
+        /// @dev We want to make sure the Gobblers we are getting are revealed.
+        uint256 gobMult = artGobblers.getGobblerEmissionMultiple(tokenId);
+        if (gobMult < 6) {
+            revert InvalidMultiplier(tokenId);
+        }
+        return IERC721Receiver.onERC721Received.selector;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -359,7 +410,231 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     }
 
     /*//////////////////////////////////////////////////////////////
-    //  Internal
+    //  SWAP
+    //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IGoober
+    function previewSwap(uint256[] calldata gobblersIn, uint256 gooIn, uint256[] calldata gobblersOut, uint256 gooOut)
+        public
+        view
+        returns (int256 erroneousGoo)
+    {
+        (uint256 _gooReserve, uint256 _gobblerReserve,) = getReserves();
+        // Simulate the transfers out.
+        uint256 _gooBalance = _gooReserve - gooOut;
+        uint256 _gobblerBalance = _gobblerReserve;
+        uint256 multOut = 0;
+        uint256 gobblerMult;
+        for (uint256 i = 0; i < gobblersOut.length; i++) {
+            if (artGobblers.ownerOf(gobblersOut[i]) != address(this)) {
+                revert InvalidNFT();
+            }
+            gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblersOut[i]);
+            if (gobblerMult < 6) {
+                revert InvalidMultiplier(gobblersOut[i]);
+            }
+            _gobblerBalance -= gobblerMult;
+            multOut += gobblerMult;
+        }
+        // Simulate the transfers in.
+        _gooBalance += gooIn;
+        for (uint256 i = 0; i < gobblersIn.length; i++) {
+            gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblersIn[i]);
+            if (gobblerMult < 6) {
+                revert InvalidMultiplier(gobblersIn[i]);
+            }
+            _gobblerBalance += gobblerMult;
+        }
+        // Run swap calculations and return error term.
+        (erroneousGoo,,) =
+            _swapCalculations(_gooReserve, _gobblerReserve, _gooBalance, _gobblerBalance, gooOut, multOut, false);
+    }
+
+    /// @inheritdoc IGoober
+    function swap(
+        uint256[] calldata gobblersIn,
+        uint256 gooIn,
+        uint256[] calldata gobblersOut,
+        uint256 gooOut,
+        address receiver,
+        bytes calldata data
+    ) public nonReentrant returns (int256) {
+        if (!(gooOut > 0 || gobblersOut.length > 0)) {
+            revert InsufficientOutputAmount(gooOut, gobblersOut.length);
+        }
+
+        if (receiver == address(goo) || receiver == address(artGobblers)) {
+            revert InvalidReceiver(receiver);
+        }
+
+        // Intermediary struct so that the stack doesn't get too deep.
+        SwapData memory internalData = SwapData({
+            gooReserve: 0,
+            gobblerReserve: 0,
+            gooBalance: 0,
+            gobblerBalance: 0,
+            multOut: 0,
+            amount0In: 0,
+            amount1In: 0,
+            erroneousGoo: 0
+        });
+
+        (internalData.gooReserve, internalData.gobblerReserve,) = getReserves();
+
+        // Transfer out.
+
+        // Optimistically transfer Goo, if any.
+        if (gooOut > 0) {
+            // Will underflow and revert if we don't have enough Goo, by design.
+            artGobblers.removeGoo(gooOut);
+            goo.safeTransfer(receiver, gooOut);
+        }
+
+        // Optimistically transfer Gobblers, if any.
+        if (gobblersOut.length > 0) {
+            for (uint256 i = 0; i < gobblersOut.length; i++) {
+                uint256 gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblersOut[i]);
+                if (gobblerMult < 6) {
+                    revert InvalidMultiplier(gobblersOut[i]);
+                }
+                internalData.multOut += gobblerMult;
+                artGobblers.transferFrom(address(this), receiver, gobblersOut[i]);
+            }
+        }
+
+        /// @dev Flash loan call out.
+        /// @dev Unlike Uni V2, we only need to send the data,
+        /// @dev because token transfers in are pulled below.
+        if (data.length > 0) IGooberCallee(receiver).gooberCall(data);
+
+        // Transfer in.
+
+        // Transfer in Goo, if any.
+        if (gooIn > 0) {
+            goo.safeTransferFrom(msg.sender, address(this), gooIn);
+            artGobblers.addGoo(gooIn);
+        }
+
+        // Transfer in Gobblers, if any
+        for (uint256 i = 0; i < gobblersIn.length; i++) {
+            artGobblers.safeTransferFrom(msg.sender, address(this), gobblersIn[i]);
+        }
+
+        // Get updated balances.
+        (internalData.gooBalance, internalData.gobblerBalance,) = getReserves();
+
+        // Perform swap computation.
+        (internalData.erroneousGoo, internalData.amount0In, internalData.amount1In) = _swapCalculations(
+            internalData.gooReserve,
+            internalData.gobblerReserve,
+            internalData.gooBalance,
+            internalData.gobblerBalance,
+            gooOut,
+            internalData.multOut,
+            true
+        );
+
+        // Update oracle.
+        _updateAccounting(
+            internalData.gooBalance,
+            internalData.gobblerBalance,
+            internalData.gooReserve,
+            internalData.gobblerReserve,
+            false,
+            false
+        );
+
+        emit Swap(msg.sender, receiver, internalData.amount0In, internalData.amount1In, gooOut, internalData.multOut);
+
+        return internalData.erroneousGoo;
+    }
+
+    /// @inheritdoc IGoober
+    function safeSwap(
+        uint256 erroneousGooAbs,
+        uint256 deadline,
+        uint256[] calldata gobblersIn,
+        uint256 gooIn,
+        uint256[] calldata gobblersOut,
+        uint256 gooOut,
+        address receiver,
+        bytes calldata data
+    ) external ensure(deadline) returns (int256 erroneousGoo) {
+        erroneousGoo = previewSwap(gobblersIn, gooIn, gobblersOut, gooOut);
+        if (erroneousGoo < 0) {
+            uint256 additionalGooOut = uint256(-erroneousGoo);
+            if (additionalGooOut > erroneousGooAbs) {
+                revert ExcessiveErroneousGoo(additionalGooOut, erroneousGooAbs);
+            }
+            gooOut += additionalGooOut;
+        } else if (erroneousGoo > 0) {
+            uint256 additionalGooIn = uint256(erroneousGoo);
+            if (additionalGooIn > erroneousGooAbs) {
+                revert ExcessiveErroneousGoo(additionalGooIn, erroneousGooAbs);
+            }
+            gooIn += additionalGooIn;
+        }
+
+        erroneousGoo = swap(gobblersIn, gooIn, gobblersOut, gooOut, receiver, data);
+    }
+
+    /// @dev Internal swap calculations from Uniswap V2 modified to return an integer error term.
+    function _swapCalculations(
+        uint256 _gooReserve,
+        uint256 _gobblerReserve,
+        uint256 _gooBalance,
+        uint256 _gobblerBalance,
+        uint256 gooOut,
+        uint256 multOut,
+        bool revertInsufficient
+    ) internal pure returns (int256 erroneousGoo, uint256 amount0In, uint256 amount1In) {
+        erroneousGoo = 0;
+        amount0In = _gooBalance > _gooReserve - gooOut ? _gooBalance - (_gooReserve - gooOut) : 0;
+        amount1In = _gobblerBalance > _gobblerReserve - multOut ? _gobblerBalance - (_gobblerReserve - multOut) : 0;
+        if (!(amount0In > 0 || amount1In > 0)) {
+            revert InsufficientInputAmount(amount0In, amount1In);
+        }
+        {
+            uint256 balance0Adjusted = (_gooBalance * 1000) - (amount0In * 3);
+            uint256 balance1Adjusted = (_gobblerBalance * 1000) - (amount1In * 3);
+            uint256 adjustedBalanceK = ((balance0Adjusted * balance1Adjusted));
+            uint256 expectedK = ((_gooReserve * _gobblerReserve) * 1000 ** 2);
+
+            if (adjustedBalanceK < expectedK) {
+                uint256 error = FixedPointMathLib.mulWadUp(
+                    FixedPointMathLib.divWadUp(
+                        (
+                            FixedPointMathLib.mulWadUp(FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1)
+                                - balance0Adjusted
+                        ),
+                        997
+                    ),
+                    1
+                );
+                if (revertInsufficient) {
+                    revert InsufficientGoo(error, adjustedBalanceK, expectedK);
+                }
+                erroneousGoo += int256(error);
+            } else if (adjustedBalanceK > expectedK) {
+                erroneousGoo -= int256(
+                    FixedPointMathLib.mulWadDown(
+                        FixedPointMathLib.divWadDown(
+                            (
+                                balance0Adjusted
+                                    - FixedPointMathLib.mulWadUp(FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1)
+                            ),
+                            1000
+                        ),
+                        1
+                    )
+                );
+            }
+            // Otherwise return 0.
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    //  Accounting and Fees
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Update reserves and, on the first call per block, price accumulators.
