@@ -68,9 +68,27 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
     /// @notice after mints by the minter, before gobblers' multipliers are revealed.
     uint112 public kDebt;
 
+    /// @notice Price oracle accumulator for goo.
+    uint256 public priceGooCumulativeLast;
+    /// @notice Price oracle accumulator for gobbler multipliers.
+    uint256 public priceGobblerCumulativeLast;
+
     /// @notice Last block timestamp
     /// @dev Yes, the oracle accumulators will reset in 2036.
     uint32 public blockTimestampLast; // uses single storage slot, accessible via getReserves
+
+    /*//////////////////////////////////////////////////////////////
+    // Modifiers
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice This modifier ensures the transaction is included before a specified deadline.
+    /// @param deadline - Unix timestamp after which the transaction will revert.
+    modifier ensure(uint256 deadline) {
+        if (block.timestamp > deadline) {
+            revert Expired(block.timestamp, deadline);
+        }
+        _;
+    }
 
     /*//////////////////////////////////////////////////////////////
     //  Constructor
@@ -142,9 +160,271 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
         fractions -= _previewManagementFee(fractions);
     }
 
+    /// @inheritdoc IGoober
+    function deposit(uint256[] calldata gobblers, uint256 gooTokens, address receiver)
+        public
+        nonReentrant
+        returns (uint256 fractions)
+    {
+        // Get reserve balances before they are updated from deposit transfers.
+        (uint256 _gooReserve, uint256 _gobblerReserveMult,) = getReserves();
+
+        // Assess performance fee since last transaction.
+        _performanceFee(_gooReserve, _gobblerReserveMult);
+
+        // Transfer goo if any.
+        if (gooTokens > 0) {
+            goo.safeTransferFrom(msg.sender, address(this), gooTokens);
+            artGobblers.addGoo(gooTokens);
+        }
+
+        // Transfer gobblers if any.
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            artGobblers.safeTransferFrom(msg.sender, address(this), gobblers[i]);
+        }
+
+        // Get the new reserves after transfers in.
+        (uint256 _gooBalance, uint256 _gobblerBalanceMult,) = getReserves();
+        {
+            // Check the total token supply.
+            uint256 _totalSupply = totalSupply;
+
+            // Calculate issuance.
+            uint256 _kLast = FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult);
+            // Calculate the fractions to create based on the changes in K.
+            (uint256 _k,,, uint256 _kDelta,) = _kCalculations(_gooBalance, _gobblerBalanceMult, _kLast, 0, true);
+            if (_totalSupply == 0) {
+                // We want to start the fractions at the right order of magnitude at init, so
+                // we scale this by 1e9 to simulate 2 ERC20s, because Gobbler mult are integers
+                // rather than 1e18 ERC20s from the Uni V2 design.
+                fractions = _k * 1e9 - MINIMUM_LIQUIDITY;
+            } else {
+                fractions = FixedPointMathLib.mulWadDown(_totalSupply, _kDelta);
+            }
+            if (fractions == 0) {
+                revert InsufficientLiquidityDeposited();
+            }
+        }
+
+        // Mint fractions less management fee to depositor.
+        fractions -= _managementFee(fractions);
+        _mint(receiver, fractions);
+
+        // Update kLast and accumulators.
+        _updateAccounting(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false, true);
+
+        emit Deposit(msg.sender, receiver, gobblers, gooTokens, fractions);
+    }
+
+    /// @inheritdoc IGoober
+    function safeDeposit(
+        uint256[] calldata gobblers,
+        uint256 gooTokens,
+        address receiver,
+        uint256 minFractionsOut,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256 fractions) {
+        fractions = deposit(gobblers, gooTokens, receiver);
+
+        if (fractions < minFractionsOut) {
+            revert MintBelowLimit();
+        }
+    }
+
     /*//////////////////////////////////////////////////////////////
-    //  Fee Math
+    //  WITHDRAW
     //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc IGoober
+    function previewWithdraw(uint256[] calldata gobblers, uint256 gooTokens)
+        external
+        view
+        returns (uint256 fractions)
+    {
+        // Collect a virtual performance fee.
+        (uint256 _gooReserve, uint256 _gobblerReserveMult,) = getReserves();
+        uint256 _totalSupply = totalSupply;
+        (uint256 pFee,,) = _previewPerformanceFee(_gooReserve, _gobblerReserveMult);
+        // Increment virtual total supply.
+        _totalSupply += pFee;
+        // Simulate transfers.
+        uint256 _gooBalance = _gooReserve - gooTokens;
+        uint256 _gobblerBalanceMult = _gobblerReserveMult;
+        uint256 gobblerMult;
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            if (artGobblers.ownerOf(gobblers[i]) != address(this)) {
+                revert InvalidNFT();
+            }
+            gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblers[i]);
+            if (gobblerMult < 6) {
+                revert InvalidMultiplier(gobblers[i]);
+            }
+            _gobblerBalanceMult -= gobblerMult;
+        }
+        uint256 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
+        if (!(_gobblerAmountMult > 0 || gooTokens > 0)) {
+            revert InsufficientLiquidityWithdrawn();
+        }
+        {
+            // Calculate the fractions which will be destroyed based on the changes in K.
+            (,,, uint256 _kDelta,) = _kCalculations(
+                _gooBalance, _gobblerBalanceMult, FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult), 0, true
+            );
+            // Update fractions for return.
+            fractions = FixedPointMathLib.mulWadUp(_totalSupply, _kDelta);
+        }
+    }
+
+    /// @inheritdoc IGoober
+    function withdraw(uint256[] calldata gobblers, uint256 gooTokens, address receiver, address owner)
+        public
+        nonReentrant
+        returns (uint256 fractions)
+    {
+        // Get the starting reserves.
+        (uint256 _gooReserve, uint256 _gobblerReserveMult,) = getReserves();
+        (uint256 _gooBalance, uint256 _gobblerBalanceMult) = (_gooReserve, _gobblerReserveMult);
+
+        // Assess performance fee since the last update of K.
+        _performanceFee(_gooReserve, _gobblerReserveMult);
+
+        // Optimistically transfer Goo, if any.
+        if (gooTokens > 0) {
+            artGobblers.removeGoo(gooTokens);
+            goo.safeTransfer(receiver, gooTokens);
+            _gooBalance -= gooTokens;
+        }
+
+        // Optimistically transfer Gobblers, if any.
+        uint256 gobblerMult;
+        for (uint256 i = 0; i < gobblers.length; i++) {
+            gobblerMult = artGobblers.getGobblerEmissionMultiple(gobblers[i]);
+            if (gobblerMult < 6) {
+                revert InvalidMultiplier(gobblers[i]);
+            }
+            artGobblers.transferFrom(address(this), receiver, gobblers[i]);
+            _gobblerBalanceMult -= gobblerMult;
+        }
+
+        // Measure the change in Gobbler mult.
+        uint256 _gobblerAmountMult = _gobblerReserveMult - _gobblerBalanceMult;
+
+        if (!(_gobblerAmountMult > 0 || gooTokens > 0)) {
+            revert InsufficientLiquidityWithdrawn();
+        }
+
+        {
+            // Calculate the fractions to destroy based on the changes in K.
+            (,,, uint256 _kDelta,) = _kCalculations(
+                _gooBalance, _gobblerBalanceMult, FixedPointMathLib.sqrt(_gooReserve * _gobblerReserveMult), 0, true
+            );
+            uint256 _totalSupply = totalSupply;
+            fractions = FixedPointMathLib.mulWadUp(_totalSupply, _kDelta);
+        }
+        // If we are withdrawing on behalf of someone else, we need to check that they have approved us to do so.
+        if (msg.sender != owner) {
+            uint256 allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
+
+            // Check that we can withdraw the requested amount of liquidity.
+            if (allowed < fractions) {
+                revert InsufficientAllowance();
+            }
+
+            if (allowed != type(uint256).max) allowance[owner][msg.sender] = allowed - fractions;
+        }
+
+        // Destroy the fractions from owner.
+        _burn(owner, fractions);
+
+        // Update the reserves.
+        _updateAccounting(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false, true);
+
+        emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, fractions);
+    }
+
+    /// @inheritdoc IGoober
+    function safeWithdraw(
+        uint256[] calldata gobblers,
+        uint256 gooTokens,
+        address receiver,
+        address owner,
+        uint256 maxFractionsIn,
+        uint256 deadline
+    ) external ensure(deadline) returns (uint256 fractions) {
+        fractions = withdraw(gobblers, gooTokens, receiver, owner);
+
+        if (fractions > maxFractionsIn) {
+            revert BurnAboveLimit();
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+    //  Internal
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Update reserves and, on the first call per block, price accumulators.
+    /// @param _gooBalance - The new Goo balance.
+    /// @param _gobblerBalance - The new Gobbler multiplier.
+    /// @param _gooReserve - The previous Goo reserve.
+    /// @param _gobblerReserve - The previous Gobbler multiplier.
+    function _updateAccounting(
+        uint256 _gooBalance,
+        uint256 _gobblerBalance,
+        uint256 _gooReserve,
+        uint256 _gobblerReserve,
+        bool recordDebt,
+        bool updateK
+    ) internal {
+        /// @dev The accumulators will reset in 2036 due to modulo.
+        //slither-disable-next-line weak-prng
+        uint32 blockTimestamp = uint32(block.timestamp % 2 ** 32);
+
+        uint32 timeElapsed;
+        unchecked {
+            // The time elapsed since the last update.
+            timeElapsed = blockTimestamp - blockTimestampLast; // Overflow is desired.
+        }
+
+        // These are accumulators which can be used for a Goo/Gobbler mult TWAP.
+        (uint112 castGooReserve, uint112 castGobblerReserve) = (uint112(_gooReserve), uint112(_gobblerReserve));
+        if (timeElapsed > 0 && _gooReserve != 0 && _gobblerReserve != 0) {
+            unchecked {
+                // * Never overflows, and + overflow is desired.
+                priceGooCumulativeLast +=
+                    uint256(UQ112x112.encode(uint112(castGooReserve)).uqdiv(castGobblerReserve)) * timeElapsed;
+                priceGobblerCumulativeLast +=
+                    uint256(UQ112x112.encode(uint112(castGobblerReserve)).uqdiv(uint112(castGooReserve))) * timeElapsed;
+            }
+        }
+
+        // Update the last update.
+        blockTimestampLast = blockTimestamp;
+
+        /// @dev We don't store reserves here as they were already stored in other contracts and there was no
+        // need to duplicate the state changes.
+
+        // Do we need to update historic K values?
+        if (updateK || recordDebt) {
+            // Get the present K.
+            uint112 _k = uint112(FixedPointMathLib.sqrt(_gooBalance * _gobblerBalance));
+
+            // Read the last K from storage.
+            uint112 _kLast = kLast;
+
+            // If K decreased, record the debt.
+            if ((_k < _kLast) && recordDebt) {
+                kDebt += _kLast - _k;
+            }
+
+            if (updateK) {
+                // Update historic K.
+                kLast = _k;
+            }
+        }
+
+        // Emit the reserves which can be used to chart the state of the pool.
+        emit Sync(_gooBalance, _gobblerBalance);
+    }
 
     /// @notice Returns various calculations about the value of K.
     function _kCalculations(uint256 _gooBalance, uint256 _gobblerBalance, uint256 _kLast, uint256 _kDebt, bool _roundUp)
@@ -226,5 +506,31 @@ contract Goober is ReentrancyGuard, ERC20, IGoober {
                 kDebtChange = uint112(_kDebtChange);
             }
         }
+    }
+
+    /// @notice Accrues the performance fee on the growth of K if any, offset by kDebt.
+    /// @param _gooBalance - The balance of Goo to use in calculating the growth of K.
+    /// @param _gobblerBalanceMult - The balance of Gobbler mult to use in calculating the growth of K.
+    function _performanceFee(uint256 _gooBalance, uint256 _gobblerBalanceMult) internal returns (uint256) {
+        (uint256 fee, uint256 kDebtChange, uint256 deltaK) = _previewPerformanceFee(_gooBalance, _gobblerBalanceMult);
+        if (kDebtChange > 0) {
+            kDebt -= uint112(kDebtChange);
+        }
+        if (fee > 0) {
+            _mint(feeTo, fee);
+            // Emit info about the fees, and the growth of K.
+            emit FeesAccrued(feeTo, fee, true, deltaK);
+        }
+        return fee;
+    }
+
+    /// @notice Mints and returns the management fee given an amount of new fractions created on deposit.
+    /// @param fractions - New fractions created for a deposit.
+    /// @return fee - The managment fee assesed.
+    function _managementFee(uint256 fractions) internal returns (uint256 fee) {
+        fee = _previewManagementFee(fractions);
+        _mint(feeTo, fee);
+        // _deltaK is 0 here because there isn't actually growth in K.
+        emit FeesAccrued(feeTo, fee, false, 0);
     }
 }
