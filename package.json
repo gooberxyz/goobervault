@@ -1,25 +1,25 @@
 {
-  "name": "goobervault",
-  "author": "Alcibiades",
-  "version": "1.0.0",
-  "description": "",
-  "homepage": "https://goober.xyz",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gooberxyz/goobervault.git"
-  },
-  "scripts": {
-    "fmt": "forge fmt",
-    "fmt:check": "forge fmt --check",
-    "solhint": "solhint --config ./.solhint.json 'src/**/*.sol' --fix",
-    "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
-    "lint": "npm run fmt && npm run solhint && forge snapshot",
-    "lint:check": "npm run fmt:check && npm run solhint:check",
-    "test": "forge test -vvv --optimize"
-  },
-  "devDependencies": {
-    "solhint": "^3.3.6"
-  },
-  "dependencies": {
-  }
+    "name": "goobervault",
+    "author": "Alcibiades",
+    "version": "1.0.0",
+    "description": "",
+    "homepage": "https://goober.xyz",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/gooberxyz/goobervault.git"
+    },
+    "scripts": {
+        "fmt": "forge fmt",
+        "fmt:check": "forge fmt --check",
+        "solhint": "solhint --config ./.solhint.json 'src/**/*.sol' --fix",
+        "solhint:check": "solhint --config ./.solhint.json 'src/**/*.sol'",
+        "snapshot": "forge test --no-match-contract 'Invariant|Fuzz' --gas-report |tee .gas-snapshot",
+        "lint": "npm run fmt && npm run solhint && npm run snapshot",
+        "lint:check": "npm run fmt:check && npm run solhint:check",
+        "test": "forge test -vvv --optimize"
+    },
+    "devDependencies": {
+        "solhint": "^3.3.6"
+    },
+    "dependencies": {}
 }

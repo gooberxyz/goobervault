@@ -9,11 +9,17 @@ contract DepositUnitTestv2 is BaseUnitTest {
 
     /*//////////////////////////////////////////////////////////////
     //
-    // Feature: User deposits into Goober farm
+    // Feature: User deposits into Goober
     //
     // As a Goober,
-    // I want to Y,
-    // so that Z.
+    // I want to deposit my Goo and/or Gobblers with my fellow Goober community,
+    // so that we produce more Goo emissions together than we would on our own.
+    //
+    // Acceptance Criteria:
+    // - Should be able to preview deposit
+    // - Should be able to deposit Goo and/or Gobblers in exchange for minting GBR vault fractions
+    // - Should be able to safe deposit, which ensures a deadline after which the tx will revert, 
+    //   and minimum amount of GBR fractions to be minted
     //
     // Background: Starting balances and approvals (same for all unit tests)
     //
@@ -35,7 +41,7 @@ contract DepositUnitTestv2 is BaseUnitTest {
     // Then Alice should see TODO GBR as the amount of fractions to be minted
     //
     */
-    
+
     function testPreviewDeposit() public {
         gobblersOne = [1]; // tokenID 1
 
@@ -93,5 +99,4 @@ contract DepositUnitTestv2 is BaseUnitTest {
     // TODO just Goo, just Gobblers
     // TODO with other receiver
     // TODO sad paths
-
 }

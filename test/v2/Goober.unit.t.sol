@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "../utils/GooberTest.sol";
+import "./utils/BaseUnitTest.sol";
 
-contract UnitInitialTestv2 is GooberTest {
+contract InitialUnitTestv2 is BaseUnitTest {
     //
     function testInitial() public {
         assertEq(goober.name(), "Goober");

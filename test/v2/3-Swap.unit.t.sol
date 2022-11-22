@@ -3,21 +3,38 @@ pragma solidity ^0.8.17;
 
 import "./utils/BaseUnitTest.sol";
 
+/// @dev Unit test suite for Swap behavior
 contract SwapUnitTestv2 is BaseUnitTest {
     //
 
     /*//////////////////////////////////////////////////////////////
-    // Background: Starting balances and approvals
-    // Given Alice has 2000 Goo and 3 Gobblers (mult9, mult8, mult6)
-    // And Bob has 2000 Goo and 1 Gobbler (mult9)
-    // And Other has 2000 Goo and 2 Gobblers (mult6, mult7)
-    // And Alice has approved Goober to spend her Goo and Gobblers
-    // And Bob has approved Goober to spend his Goo and Gobblers
-    // And Other deposits 1000 Goo and 2 Gobblers (mult7, mult6) into the Vault
-    //////////////////////////////////////////////////////////////*/
-
-    /*//////////////////////////////////////////////////////////////
-    //  SWAP
+    //
+    // Feature: User swaps with Goober
+    //
+    // As a Goober,
+    // I want to swap Goo and/or Gobblers for Goo and/or Gobblers,
+    // so that Z.
+    //
+    // Acceptance Criteria:
+    // - Should be able to preview swap
+    // - Should be able to swap Goo and/or Gobblers in exchange for Goo and/or Gobblers,
+    //   with a potential surplus or deficit of erroneous Goo required
+    // - Should be able to safe swap, which ensures a deadline after which the tx will revert,
+    //   and a maximum amount of potential surplus or deficit of erroneous Goo required
+    // - Should be able to flash swap, using any assets in the Goober vault for 1 tx, provided
+    //   those assets can be deposited back plus swap fee on the amount withdrawn by the end of tx
+    // - Should be able to swap ETH for Goo and/or Gobblers
+    //
+    // Background: Starting balances and approvals (same for all unit tests)
+    //
+    // Given Alice, Bob, Carol, and Dave each have 2000 Goo
+    // And Alice mints 3 Gobblers (mult9, mult8, mult6)
+    // And Bob mints 1 Gobbler (mult9)
+    // And Carol mints 2 Gobblers (mult6, mult7)
+    // And Dave mints 0 Gobblers
+    // And Alice, Bob, Carol, and Dave have approved Goober to spend their Goo and Gobblers
+    // And Carol deposits 1000 Goo and 2 Gobblers (mult6, mult7) into Goober
+    //
     //////////////////////////////////////////////////////////////*/
 
     // TODO preview swap
@@ -28,9 +45,8 @@ contract SwapUnitTestv2 is BaseUnitTest {
     // When Alice swaps a Gobbler mult9 for a Gobbler mult7
     // Then Alice user mult should be 21
     // And Alice should receive TODO Goo
-    //////////////////////////////////////////////////////////////*/
-
-    // TODO preview swap
+    //
+    */
 
     function testSwap() public {
         // precondition
@@ -59,4 +75,8 @@ contract SwapUnitTestv2 is BaseUnitTest {
     // TODO sad paths
 
     // TODO safe swap
+
+    // TODO flash swap
+
+    // TODO ETH swap
 }

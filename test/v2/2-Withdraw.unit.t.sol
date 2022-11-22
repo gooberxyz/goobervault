@@ -9,14 +9,27 @@ contract WithdrawUnitTestv2 is BaseUnitTest {
 
     /*//////////////////////////////////////////////////////////////
     //
-    // Background: Starting balances and approvals
+    // Feature: User withdraws from Goober
     //
-    // Given Alice has 2000 Goo and 3 Gobblers (mult9, mult8, mult6)
-    // And Bob has 2000 Goo and 1 Gobbler (mult9)
-    // And Other has 2000 Goo and 2 Gobblers (mult6, mult7)
-    // And Alice has approved Goober to spend her Goo and Gobblers
-    // And Bob has approved Goober to spend his Goo and Gobblers
-    // And Other deposits 1000 Goo and 2 Gobblers (mult6, mult7) into the Vault
+    // As a Goober,
+    // I want to withdraw my Goo and/or Gobblers,
+    // so that I can realize some of the Goo my Goober fractions have produced.
+    //
+    // Acceptance Criteria:
+    // - Should be able to preview withdraw
+    // - Should be able to withdraw Goo and/or Gobblers in exchange for burning GBR vault fractions
+    // - Should be able to safe withdraw, which ensures a deadline after which the tx will revert,
+    //   and maximum amount of GBR fractioned to be burned
+    //
+    // Background: Starting balances and approvals (same for all unit tests)
+    //
+    // Given Alice, Bob, Carol, and Dave each have 2000 Goo
+    // And Alice mints 3 Gobblers (mult9, mult8, mult6)
+    // And Bob mints 1 Gobbler (mult9)
+    // And Carol mints 2 Gobblers (mult6, mult7)
+    // And Dave mints 0 Gobblers
+    // And Alice, Bob, Carol, and Dave have approved Goober to spend their Goo and Gobblers
+    // And Carol deposits 1000 Goo and 2 Gobblers (mult6, mult7) into Goober
     //
     //////////////////////////////////////////////////////////////*/
 
@@ -78,7 +91,7 @@ contract WithdrawUnitTestv2 is BaseUnitTest {
     // Then Alice should burn TODO GBR fractions
     //
     */
-    
+
     function testSafeWithdrawGoo() public {
         gobblersOne = [1];
 
