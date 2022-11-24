@@ -141,8 +141,8 @@ FOUNDRY_PROFILE="intense" forge test
 
 ### Running Slither
 
-After installing [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer), run:
-
+After installing [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer) and [Slither](https://github.com/crytic/slither#how-to-install) run:
+[Slither on Apple Silicon](https://github.com/crytic/slither/issues/1051)
 ```sh
 poetry install
 poetry shell
