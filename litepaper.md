@@ -59,7 +59,7 @@ The pool charges a 30 basis point swap fee, which accrues to GBR holders.
 
 ### Issuance
 
-Since we want to optimize Goo emission, create an incentive increasing $\sqrt{K}$ upon `deposit()`.
+Since we want to optimize Goo emission, we create an incentive for increasing $\sqrt{K}$ upon `deposit()`.
 
 The total rate of emission of the vault is tracked by a constant $\sqrt{K}$, where
 
