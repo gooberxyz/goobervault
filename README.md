@@ -124,9 +124,12 @@ Documentation can be found [here]().
 
 ### Running Tests
 
+[Install Foundry](https://github.com/foundry-rs/foundry/tree/master/foundryup)
+
 In order to run unit tests, run:
 
 ```sh
+forge install
 forge test
 ```
 
@@ -138,10 +141,10 @@ FOUNDRY_PROFILE="intense" forge test
 
 ### Running Slither
 
-After installing poetry, run:
+After installing [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer), run:
 
 ```sh
-poetry intstall
+poetry install
 poetry shell
 slither src/Goober.sol --config-file slither.config.json
 ```
