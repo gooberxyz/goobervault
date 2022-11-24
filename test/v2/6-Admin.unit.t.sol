@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.17;
 
 import "./utils/BaseUnitTest.sol";
 
 /// @dev Unit test suite for Admin behavior
 contract AdminUnitTestv2 is BaseUnitTest {
     //
-
+    
     /*//////////////////////////////////////////////////////////////
     //
     // Feature: Protocol Admin administers Goober farm
@@ -16,13 +16,11 @@ contract AdminUnitTestv2 is BaseUnitTest {
     // so that we can maintain a healthy user ecosystem and sustainable farm economics.
     //
     // Acceptance Criteria:
-    // - Protocol Admin should be able to update any of the 4 fees, which then slow-grow over
-    //   the next 7 days, taking into account any currently active slow-grow fee updates
     // - Protocol Admin should be able to flag/unflag a Gobbler, disallowing deposit
-    // - Protocol Admin should be able to skim any misplaced Goo, which is not being accounted
-    //   for in K accounting
-    // - Protocol Admin should be able to set new Protocol Admin
-    // - Protocol Admin should be able to set new Minter
+    // - Protocol Admin should be able to skim any misplaced ERC20 tokens to force balances to match reserves
+    // - Protocol Admin should be able to sync to force reserves to match balances
+    // - Protocol Admin should be able to set new Protocol Admin address
+    // - Protocol Admin should be able to set new Minter address
     //
     // Background: Starting balances and approvals (same for all unit tests)
     //
@@ -39,4 +37,16 @@ contract AdminUnitTestv2 is BaseUnitTest {
     function testTrue() public {
         assertTrue(true);
     }
+
+    // TODO flag Gobbler
+
+    // TODO unflag Gobbler
+
+    // TODO skim
+
+    // TODO sync
+
+    // TODO setNewFeeTo
+
+    // TODO setNewMinter
 }

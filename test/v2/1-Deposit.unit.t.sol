@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.17;
 
 import "./utils/BaseUnitTest.sol";
 
@@ -20,6 +20,7 @@ contract DepositUnitTestv2 is BaseUnitTest {
     // - Should be able to deposit Goo and/or Gobblers in exchange for minting GBR vault fractions
     // - Should be able to safe deposit, which ensures a deadline after which the tx will revert, 
     //   and minimum amount of GBR fractions to be minted
+    // - K Accounting: TODO
     //
     // Background: Starting balances and approvals (same for all unit tests)
     //
@@ -71,6 +72,41 @@ contract DepositUnitTestv2 is BaseUnitTest {
         vm.stopPrank();
 
         assertEq(fractionsMinted, expected);
+
+        // TODO add assertion helpers
+        /*
+        assertUserBalances()
+            - User fractions
+            - User Goo balance
+            - User Gobbler ownership
+            - User Mult
+
+        assertVaultAccounting()
+            - Vault total fractions
+            - Vault Gobbler ownership
+            - Vault Goo balance from totalAssets()
+            - Vault Mult from totalAssets()
+            - Vault Goo balance from totalAssets()
+            - Vault Mult from totalAssets()
+            - Vault last liquidity event timestamp from totalAssets()
+        
+        assertK()
+            - Delta K
+            - kLast
+            - kDebt
+        
+        assertFees()
+            - Liquidity Fee via Vault
+            - Liquidity Fee via User
+            - Liquidity Fee via FeeTo
+            - Performance Fee via Vault
+            - Performance Fee via User
+            - Performance Fee via FeeTo
+        
+        assertAccumulators()
+            - Goo cumulative price
+            - Mult cumulative price
+        */
     }
 
     // TODO just Goo, just Gobblers

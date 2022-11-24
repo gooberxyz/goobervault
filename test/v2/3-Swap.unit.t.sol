@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.17;
 
 import "./utils/BaseUnitTest.sol";
 
@@ -18,12 +18,12 @@ contract SwapUnitTestv2 is BaseUnitTest {
     // Acceptance Criteria:
     // - Should be able to preview swap
     // - Should be able to swap Goo and/or Gobblers in exchange for Goo and/or Gobblers,
-    //   with a potential surplus or deficit of erroneous Goo required
+    //   with a potential surplus or deficit of erroneous Goo required to complete the swap
     // - Should be able to safe swap, which ensures a deadline after which the tx will revert,
     //   and a maximum amount of potential surplus or deficit of erroneous Goo required
-    // - Should be able to flash swap, using any assets in the Goober vault for 1 tx, provided
+    // - K Accounting: TODO (btw swap does not record kLast)
+    // - TODO Should be able to flash swap, using any assets in the Goober vault for 1 tx, provided
     //   those assets can be deposited back plus swap fee on the amount withdrawn by the end of tx
-    // - Should be able to swap ETH for Goo and/or Gobblers
     //
     // Background: Starting balances and approvals (same for all unit tests)
     //

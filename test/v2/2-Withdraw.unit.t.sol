@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.17;
 
 import "./utils/BaseUnitTest.sol";
 
@@ -17,9 +17,10 @@ contract WithdrawUnitTestv2 is BaseUnitTest {
     //
     // Acceptance Criteria:
     // - Should be able to preview withdraw
-    // - Should be able to withdraw Goo and/or Gobblers in exchange for burning GBR vault fractions
+    // - Should be able to withdraw Goo and/or Gobblers in exchange for redeeming GBR vault fractions
     // - Should be able to safe withdraw, which ensures a deadline after which the tx will revert,
     //   and maximum amount of GBR fractioned to be burned
+    // - K Accounting: TODO
     //
     // Background: Starting balances and approvals (same for all unit tests)
     //

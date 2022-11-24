@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.17;
 
 import "art-gobblers/Goo.sol";
 import "art-gobblers/ArtGobblers.sol";
@@ -42,7 +42,7 @@ contract Goober is ReentrancyGuard, ERC20, IERC721Receiver, IGoober {
     /// @notice The liquidity locked forever in the pool.
     uint16 private constant MINIMUM_LIQUIDITY = 1e3;
     /// @notice A scalar for scaling up and down to basis points.
-    uint16 private constant BPS_SCALAR = 1e4;
+    uint16 private constant BPS_SCALAR = 1e4; // TODO update scalar to 1e5
     /// @notice The management fee in basis points, charged on deposits.
     uint16 public constant MANAGEMENT_FEE_BPS = 200;
     /// @notice The performance fee in basis points, taken in the form
@@ -258,11 +258,11 @@ contract Goober is ReentrancyGuard, ERC20, IERC721Receiver, IGoober {
         }
 
         // Mint fractions less management fee to depositor.
-        fractions -= _managementFee(fractions);
+        fractions -= _managementFee(fractions); // TODO rationalize with Liquidity Fee
         _mint(receiver, fractions);
 
         // Update kLast and accumulators.
-        _updateAccounting(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false, true);
+        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false, true);
 
         emit Deposit(msg.sender, receiver, gobblers, gooTokens, fractions);
     }
@@ -385,10 +385,10 @@ contract Goober is ReentrancyGuard, ERC20, IERC721Receiver, IGoober {
         }
 
         // Destroy the fractions from owner.
-        _burn(owner, fractions);
+        _burn(owner, fractions); // TODO add Liquidity Fee
 
         // Update the reserves.
-        _updateAccounting(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false, true);
+        _update(_gooBalance, _gobblerBalanceMult, _gooReserve, _gobblerReserveMult, false, true);
 
         emit Withdraw(msg.sender, receiver, owner, gobblers, gooTokens, fractions);
     }
@@ -535,7 +535,7 @@ contract Goober is ReentrancyGuard, ERC20, IERC721Receiver, IGoober {
         );
 
         // Update oracle.
-        _updateAccounting(
+        _update(
             internalData.gooBalance,
             internalData.gobblerBalance,
             internalData.gooReserve,
@@ -607,7 +607,7 @@ contract Goober is ReentrancyGuard, ERC20, IERC721Receiver, IGoober {
                             FixedPointMathLib.mulWadUp(FixedPointMathLib.divWadUp(expectedK, balance1Adjusted), 1)
                                 - balance0Adjusted
                         ),
-                        997
+                        997  // TODO rationalize with Liquidity Fee
                     ),
                     1
                 );
@@ -642,7 +642,7 @@ contract Goober is ReentrancyGuard, ERC20, IERC721Receiver, IGoober {
     /// @param _gobblerBalance - The new Gobbler multiplier.
     /// @param _gooReserve - The previous Goo reserve.
     /// @param _gobblerReserve - The previous Gobbler multiplier.
-    function _updateAccounting(
+    function _update(
         uint256 _gooBalance,
         uint256 _gobblerBalance,
         uint256 _gooReserve,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.17;
 
 import "./utils/BaseUnitTest.sol";
 
@@ -16,12 +16,14 @@ contract AccountingUnitTestv2 is BaseUnitTest {
     // so that I can understand current liquidity, emissions, underlying value, and mint/hold balance.
     //
     // Acceptance Criteria:
-    // - Should be able to check total assets
-    // - Should be able to check total assets with a timestamp of last vault update
-    // - Should be able to convert how many GBR fractions would be minted for depositing
+    // - Should be able to check reserves like a vault with totalAssets()
+    // - Should be able to check reserves like a pool with getReserves()
+    // - Should be able to check how many GBR fractions would be minted for depositing
     //   a given amount of Goo and/or Mult
-    // - Should be able to convert how much Goo and Mult would be withdrawn for redeeming
+    // - Should be able to check how much Goo and Mult would be withdrawn for redeeming
     //   a given amount of GBR fractions
+    // - Should be able to check Goo oracle price accumulator
+    // - Should be able to check Mult oracle price accumulator
     //
     // Background: Starting balances and approvals (same for all unit tests)
     //
@@ -38,4 +40,16 @@ contract AccountingUnitTestv2 is BaseUnitTest {
     function testTrue() public {
         assertTrue(true);
     }
+
+    // TODO totalAssets
+
+    // TODO getReserves
+
+    // TODO checkConvertToAssets
+
+    // TODO checkConvertToFractions
+
+    // TODO gooPriceAccumulator // TWAP
+
+    // TODO multPriceAccumulator // TWAP
 }
