@@ -10,104 +10,35 @@ vault for Art Gobblers.
 
 ## Abstract
 
-Art Gobblers is an experimental, decentralized, art factory using two new 
-innovations, [Goo](https://www.paradigm.xyz/2022/09/goo) and 
-[VRGDA](https://www.paradigm.xyz/2022/08/vrgda). Art Gobblers NFTs produce 
-Goo according to the formula: 
+[Art Gobblers](https://artgobblers.com/) was constructed using two new innovations, [GOO](https://www.paradigm.xyz/2022/09/goo) (an emission mechanism) and [VRGDA](https://www.paradigm.xyz/2022/08/vrgda) (a Dutch auction mechanism). Gobblers continuously produce Goo, an ERC20 token, proportional to their multiplier and how much Goo is already in their "tank", a balance held per Ethereum address.
+
+[Goober](https://goober.xyz) is a yield-optimized farm and liquidity engine for Goo and Gobblers. Goober allows a user to effectively pool their Goo and/or Gobblers with other users, such that they all receive more Goo emissions together than they would on their own, allowing market forces to maintain the optimal ratio of Goo/Gobblers in the pool. A unique flavor of of Uniswap V2 and EIP-4626 forms a special purpose AMM with vault-like characteristics and unique minting mechanics. Aside from bonding an ERC20 with an ERC721, Goober diverges from Uni-V2 via its internal bonding maintenance mechanics. The vault can mint new Gobblers when it’s profitable to do so under calculated contraints from the constant product formula and pool reserves, increasing the rate of future Goo emissions whilst continuing to keeping the pool balanced. 
+
+Through Goober users can permissionlessly swap Gobblers and Goo, as well as deposit Goo and fractionalize their Gobblers in order to maximize their Goo accrual without the need for active management. By depositing Gobblers and/or Goo into the vault, users receive GBR in return, an ERC20 token that gives depositors claim to the assets in the vault.
+
+![](https://i.imgur.com/LEUdsyV.png)
+
+## Motivation
+
+The Gobblers economy in its current form inherently converges towards a monopolization of resources. Since early, well funded actors possess the most Gobblers, they produce the most Goo, in turn continuously driving the price of the auction beyond any new entrants' reach - at a [quadratically](https://www.paradigm.xyz/2022/09/goo#:~:text=following%20differential%20equation%3A-,Solving%20it%20yields,-and%20expanding%2C%20we) increasing rate. Thus, a user with one or two Gobblers who has just gotten involved will likely never be able to mint another Gobbler with their Goo holdings.
+
+Compounded by the fact that there is also low liquidity for Goo across decentralized exchanges, this dynamic makes it even more difficult for the average user to get the Goo flywheel turning without owning a Gobbler themselves. It has also caused large holders to mint from auction at an irrationally high Goo cost compared to the outstanding Goo supply. Since Gobbler prices on secondary markets inherently trade at a premium to the auction price, the average user has been effectively boxed out of the game.
+
+## Mechanism
+
+Utilizing an amalgamation of Uniswap V2's constant function market math, an ERC4626 yield-bearing vault (with GBR as the vault token), and automated VRGDA minting (using probabilistic computation compared to internal pricing) Goober aligns incentives to create an optimal balance of Goo and Gobbler multiplier for increased liquidity and Goo production across market conditions.
+
+Since Art Gobblers NFTs produce Goo according to the formula: 
 
 $$\sqrt{Goo * Mult} = GooProduction$$
 
-Goober allows a user to effectively pool their Goo and/or Gobblers with other 
-users, such that they all receive more Goo emissions together than they would 
-on their own, allowing market forces to maintain the optimal ratio of Goo/Gobblers in the pool.
-
-The point of maximization for $\sqrt{x * y}$  happens to be at the point where 
-$x=y$. However, due to market forces, that may not always be the point with 
-the highest yield in outside terms. 
+The rate of growth of Goo happens to be maximized when Goo = Mult. There is an evident comparison with Uniswap v2's $x * y = k$ constant product market maker design, where the point of maximization is also the point at which $X = Y$.
 
 Thus, Goober optimizes $+Δk$ for $x+y$ 
 using an $x*y=k$ constant function market maker, where $$x=Goo$$ $$y=Mult$$ 
 $$k={Goo * Mult}$$ $$\sqrt{k}=GooProduction$$
 
-
-To optimize tank Goo emission, the pool wants to incentivize increasing $k$ upon deposits. 
-
-The total rate of emission of the vault is tracked by a constant $k$, where
-
-$$
-\sqrt{k} = \sqrt{(Goo * Mult)}
-$$
-
-
-When a `deposit` is made to the pool, a new $n$ value of reserves is calculated based on the amount of each asset added by depositor $d$, where
-
-$$
-Goo_{n} = Goo_{i} + Goo_{d} 
-$$
-
-and
-
-$$
-Mult_{n} = Mult_{i} + Mult_{d}
-$$
-
-Now that we have some increase in our emission
-
-$$
-k_{n} > k_{i}
-$$
-
-the depositor should be rewarded accordingly. Thus, the vault mints some amount of $F_{d}$ to transfer to the depositor, where 
-
-
-$$
-F_{d} = F_{i} * {\sqrt{(Goo_{n} * Mult_{n})} - \sqrt{(Goo_{i} * Mult_{i})} \over \sqrt{(Goo_{i} * Mult_{i})}}
-$$
-
-which can be simplified to
-
-$$
-F_{d} = F_{i} * ({\sqrt{(Goo_{n} * Mult_{n})} \over \sqrt{(Goo_{i} * Mult_{i})}} -1)
-$$
-
-or even further
-
-$$
-F_{d} = F_{i} * \Delta k
-$$
-
-Since $\text {F}$ represents a fixed fraction of the pool. As the pool grows, so too will the assets redeemable by the fraction. On `withdraw`, a user exchanges some $\text {f}$ for $Goo$ and/or $Mult$, burning the respective amount of $\text {F}$ in the process. 
-
-Since, a withdrawal decreases the reserves, then post `withdraw` we have 
-
-$$
-k_{n} < k_{i}
-$$
-
-As the pool's rate of $Goo$ emission has decreased, then so too must its supply of outstanding fractions by a proportionate amount.
-We can derive the amount of reserves alloted to an amount of $F_{d}$ from the inverse of the issuance calculation
-
-
-$$
-F_{d} = F_{i} * ({\sqrt{(Goo_{w} * Mult_{w})} \over \sqrt{(Goo_{i} * Mult_{i})}} -1)
-$$
-
-which can be rearranged to
-
-
-$$
-{Goo_{w}} = {{(Goo_{i} * Mult_{i})}({{ F }_{d} \over { F }_{i}} + 1)^2 \over Mult_{w}} 
-$$
-
-where $Goo_{w}$ and $Mult_{w}$ represent the respective reserves (each can be solved for interchangably) that can be withdrawn in tandem for some amount of fractions $F_{d}$.
-
-Autonomous market forces keep the pool balanced, through the aligned incentives of maximizing $+Δk$, and thus producing the most goo per goo possible. This can be visualized as the area under the bonding curve of Goo and Mult:
-
-<img width="583" alt="Screen Shot 2022-11-14 at 4 50 03 PM" src="https://user-images.githubusercontent.com/94731243/201802003-d8583ddd-3799-48d1-a02d-3e4976005f64.png">
-
-Goober additionally uses this market to optimally mint new Gobblers to 
-the pool using probabilistic pricing per gobbler multiplier compared to
-the pool's internal pricing.
+![](https://i.imgur.com/QSd4PE2.png)
 
 ## Resources
 
