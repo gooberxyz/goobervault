@@ -42,7 +42,7 @@ $$k={Goo * Mult}$$ $$\sqrt{k}=GooProduction$$
 
 ## Resources
 
-Documentation can be found [here](https://goober.xyz).
+Documentation can be found [here](https://docs.goober.xyz).
 
 ## Deployments
 
