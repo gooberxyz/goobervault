@@ -1,5 +1,4 @@
-
-![unknown (15)](https://user-images.githubusercontent.com/94731243/202322792-51390670-d6e0-466d-8c8d-457dc2d4dde6.png) [dot xyz](https://goober.xyz)
+<a href="https://goober.xyz" target="_blank"><img src="https://user-images.githubusercontent.com/94731243/202322792-51390670-d6e0-466d-8c8d-457dc2d4dde6.png" alt="Goober"/></a> <a href="https://goober.xyz" target="_blank">dot xyz</a>
 
 # Goober Vault
 
